@@ -2744,7 +2744,9 @@ document.getElementById('btnCopyIban').onclick = function(){
     toast('IBAN is not ready yet', true);
   }
 };
-document.getElementById('btnOrder').onclick = placeOrder;
+var btnOrder_ = document.getElementById('btnOrder');
+if (btnOrder_) btnOrder_.onclick = placeOrder;
+
 var btnNO = document.getElementById('btnNewOrder');
 if (btnNO) btnNO.onclick = newOrder;
 
