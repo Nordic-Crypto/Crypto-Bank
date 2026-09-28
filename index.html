@@ -1028,7 +1028,14 @@ body::before{
 .nc3-primary{background:linear-gradient(135deg,#46dfff,#238cff);color:#03111b;border:0;box-shadow:0 13px 28px rgba(36,154,255,.2)}
 .nc3-ghost:hover{background:rgba(255,255,255,.065);transform:translateY(-2px)}
 .nc3-primary:hover{transform:translateY(-2px);box-shadow:0 18px 34px rgba(36,154,255,.3)}
-.nc3-overview{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(380px,.88fr);gap:18px}
+.nc3-overview{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(420px,480px);
+  gap:18px;
+}
+@media (max-width: 1100px){
+  .nc3-overview{grid-template-columns:1fr}
+}
 .nc3-balance-card,.nc3-card-wrap,.nc3-chart-panel,.nc3-transactions,.nc3-iban{
   background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));
   border:1px solid var(--nc3-line);border-radius:22px;box-shadow:0 22px 55px rgba(0,0,0,.22)
@@ -1070,16 +1077,36 @@ body::before{
 .nc3-balance-chart{position:absolute;left:0;right:0;bottom:0;height:190px;padding:18px 25px 10px;
   background:linear-gradient(180deg,transparent,rgba(71,220,255,.018))}
 .nc3-chart-labels{display:flex;justify-content:space-between;color:#59677b;font-size:.64rem;margin-bottom:5px}
-.nc3-card-wrap{padding:18px;background:linear-gradient(145deg,rgba(18,23,37,.92),rgba(9,13,23,.96))}
+.nc3-card-wrap{
+  padding:20px;
+  background:linear-gradient(145deg,rgba(18,23,37,.92),rgba(9,13,23,.96));
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 .nc3-section-label{color:#77869d;text-transform:uppercase;font-size:.62rem;letter-spacing:.12em;font-weight:800;margin:1px 3px 11px}
 .nc3-bank-card{
-  width:100%!important;height:280px!important;min-height:0!important;
-  border-radius:20px!important;padding:26px!important;
+  width:100%!important;
+  aspect-ratio:1.6/1!important;
+  height:auto!important;
+  min-height:220px!important;
+  max-height:280px!important;
+  border-radius:22px!important;
+  padding:26px!important;
   background:
-    radial-gradient(500px 250px at 90% -10%,rgba(255,83,190,.44),transparent 58%),
-    radial-gradient(400px 240px at 0% 110%,rgba(95,76,255,.48),transparent 64%),
-    linear-gradient(135deg,#251446,#42176d 50%,#68184d)!important;
-  box-shadow:0 28px 55px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.19)!important;
+    radial-gradient(500px 250px at 90% -10%,rgba(255,83,190,.5),transparent 58%),
+    radial-gradient(400px 240px at 0% 110%,rgba(95,76,255,.55),transparent 64%),
+    linear-gradient(135deg,#2a1750 0%,#4a1a7a 50%,#751a55 100%)!important;
+  box-shadow:
+    0 35px 70px rgba(0,0,0,.4),
+    0 0 80px rgba(255,83,190,.22),
+    0 0 100px rgba(95,76,255,.18),
+    inset 0 1px 0 rgba(255,255,255,.22)!important;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
 }
 .nc3-bank-card .pn{font-size:1.13rem!important;letter-spacing:.16em}
 .nc3-bank-card .chip-real{transform:scale(.9);transform-origin:left center}
