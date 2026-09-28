@@ -905,7 +905,9 @@ function drawChart(elId, prices, color){
   }
 
   var linePath = 'M' + points.join(' L');
-  var fillPath = linePath + ' L' + (w - pad) + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
+  // Закрываем область заливки до конца
+var lastX = parseFloat(svgPoints[svgPoints.length - 1].split(',')[0]);
+var fillPath = linePath + ' L' + lastX + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
 
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
     '<defs>' +
@@ -1345,7 +1347,7 @@ for (var d = 0; d < daysBack; d++) {
   points.push({ t: dayEnd, v: depositsSoFar + ethValue });
 }
 
-  points.push({ t: now, v: st.usd });      // ← используем текущий баланс
+  points.push({ t: now - dayMs * 0.5, v: st.usd });      // ← используем текущий баланс
 
   var w = 500;
   var h = 180;
