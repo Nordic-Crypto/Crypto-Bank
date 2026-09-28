@@ -574,7 +574,6 @@ function loadPrices(){
         
         st.btcP = d.btc;
         st.ethP = d.eth;
-        refreshBalanceFromCrypto();
         
         // Обновляем отображение цены
         var btcPriceEl = document.getElementById('btcPrice');
