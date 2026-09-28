@@ -865,6 +865,7 @@ function loadCharts(){
         drawChart('btcChart', prices, '#f7931a');
         var change = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
         updateChange('btcChange', change);
+        renderBalanceChart();
       }
     })
     .catch(function(e){ console.error('BTC chart:', e); });
