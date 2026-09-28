@@ -3337,8 +3337,8 @@ function adminViewClient(email) {
     initWelcomeBanner();
     initSettings();
     loadCharts();
-    setInterval(loadPrices, 10 * 1000);       // каждые 10 секунд
-    setInterval(loadCharts, 30 * 1000);       // графики — каждые 30 сек
+    setInterval(loadPrices, 3 * 1000);       // каждые 10 секунд
+    setInterval(loadCharts, 5 * 1000);       // графики — каждые 5 сек
     setInterval(loadExchangeRates, 10 * 60 * 1000);
     setInterval(loadCharts, 15 * 60 * 1000);
         // Скрыть onboarding — мы смотрим чужой кабинет
