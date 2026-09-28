@@ -1143,7 +1143,15 @@ body::before{
   background:rgba(255,255,255,.025);color:#a4b0c1;display:flex;align-items:center;justify-content:center;gap:7px;
   cursor:pointer;transition:.18s
 }
-.nc3-card-actions button span{font-size:.9rem;color:#72e5ff}
+.nc3-card-actions button svg{
+  width:18px;
+  height:18px;
+  color:#72e5ff;
+  flex-shrink:0;
+}
+.nc3-card-actions button:hover svg{
+  color:#aef0ff;
+}
 .nc3-card-actions button b{font-size:.68rem}
 .nc3-card-actions button:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.2);transform:translateY(-2px)}
 .nc3-assets,.nc3-actions-section{margin-top:27px}
@@ -1571,10 +1579,19 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
         <div class="nc3-card-actions">
-          <button id="btnFreezeCard"><span>❄</span><b>Freeze</b></button>
-          <button id="btnLimitsCard"><span>⌁</span><b>Limits</b></button>
-          <button id="btnSettingsCard"><span>⚙</span><b>Settings</b></button>
-        </div>
+  <button id="btnFreezeCard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m4.93 5.93 14.14 14.14"/><path d="m19.07 5.93-14.14 14.14"/><circle cx="12" cy="12" r="3"/></svg>
+    <b>Freeze</b>
+  </button>
+  <button id="btnLimitsCard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14h4"/><path d="M13 10h4"/><path d="M9 6h8"/></svg>
+    <b>Limits</b>
+  </button>
+  <button id="btnSettingsCard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <b>Settings</b>
+  </button>
+</div>
       </div>
     </section>
 
