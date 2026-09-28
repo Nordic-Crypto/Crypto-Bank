@@ -1136,9 +1136,40 @@ body::before{
 .nc3-transactions .recent-tx-list{max-height:285px;overflow:auto;margin-top:4px}
 .nc3-transactions .recent-tx-item{padding:11px 5px!important;border-bottom:1px solid rgba(255,255,255,.045)!important}
 .nc3-bottom-row{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
-.nc3-iban{padding:20px;min-height:170px;position:relative}
+.nc3-iban{
+  padding:22px;
+  min-height:200px;
+  position:relative;
+  background:
+    radial-gradient(400px 200px at 100% 0%, rgba(71,220,255,.08), transparent 60%),
+    linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));
+  border:1px solid rgba(71,220,255,.18);
+  overflow:hidden;
+}
+.nc3-iban::before{
+  content:'';
+  position:absolute;
+  top:-50%;right:-20%;
+  width:300px;height:300px;
+  background:radial-gradient(circle,rgba(71,220,255,.12),transparent 70%);
+  pointer-events:none;
+}
 .nc3-iban-copy{display:flex;gap:12px;align-items:center}
-.nc3-icon-circle{width:42px;height:42px;border-radius:13px;background:rgba(71,220,255,.09);border:1px solid rgba(71,220,255,.14);display:flex;align-items:center;justify-content:center;color:#6ce4ff}
+.nc3-icon-circle{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  background:linear-gradient(135deg,rgba(71,220,255,.2),rgba(140,108,255,.2));
+  border:1px solid rgba(71,220,255,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#7ee5ff;
+  box-shadow:0 0 20px rgba(71,220,255,.15);
+  position:relative;
+  z-index:1;
+}
+.nc3-icon-circle svg{width:22px;height:22px}
 .nc3-iban h3{font-size:.9rem;margin-top:3px}
 .nc3-iban p{font-size:.67rem;color:#68768c;margin-top:4px}
 .nc3-iban-details{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:15px}
@@ -1147,10 +1178,53 @@ body::before{
 .nc3-iban-details b{display:block;font-size:.65rem;margin-top:4px;overflow:hidden;text-overflow:ellipsis}
 .nc3-copy-iban{position:absolute;right:18px;top:18px;border:1px solid rgba(71,220,255,.18);background:rgba(71,220,255,.055);color:#74e4ff;border-radius:9px;padding:8px 11px;font-size:.64rem;cursor:pointer}
 .nc3-stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--nc3-line);border-radius:16px;overflow:hidden;background:var(--nc3-line)}
-.nc3-stat{padding:17px;background:rgba(13,19,30,.8);min-height:84px}
+.nc3-stat{
+  padding:17px;
+  background:rgba(13,19,30,.8);
+  min-height:110px;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.nc3-stat-icon{
+  width:32px;
+  height:32px;
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.nc3-stat-icon svg{width:16px;height:16px}
+.nc3-stat-icon.green{background:rgba(54,226,163,.12);color:#5ae7b5}
+.nc3-stat-icon.red{background:rgba(239,68,68,.12);color:#ff7676}
+.nc3-stat-icon.cyan{background:rgba(71,220,255,.12);color:#69e3ff}
+.nc3-stat-icon.violet{background:rgba(140,108,255,.14);color:#ad9aff}
+.nc3-stat-body{flex:1}
 .nc3-stat span{display:block;color:#64738a;font-size:.62rem}
-.nc3-stat strong{display:block;font-size:1rem;margin-top:6px}
-.nc3-stat small{display:block;color:#4edca9;font-size:.6rem;margin-top:4px}
+.nc3-stat strong{display:block;font-size:1rem;margin-top:3px}
+.nc3-stat small{display:block;color:#4edca9;font-size:.6rem;margin-top:3px}
+.nc3-stat-spark{
+  position:absolute;
+  right:12px;
+  bottom:12px;
+  width:60px;
+  height:24px;
+  opacity:.5;
+  pointer-events:none;
+}
+.nc3-stat-spark::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 24' preserveAspectRatio='none'><polyline points='0,18 10,15 20,17 30,10 40,12 50,6 60,3' fill='none' stroke='%234edca9' stroke-width='2'/></svg>") no-repeat center;
+  background-size:100% 100%;
+}
+.nc3-stat-spark[data-trend="down"]::after{
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 24' preserveAspectRatio='none'><polyline points='0,6 10,9 20,7 30,14 40,12 50,18 60,20' fill='none' stroke='%23ff7676' stroke-width='2'/></svg>") no-repeat center;
+  background-size:100% 100%;
+}
 @media(max-width:1100px){
   .nc3-overview,.nc3-lower,.nc3-bottom-row{grid-template-columns:1fr}
   .nc3-action-grid{grid-template-columns:1fr 1fr}
@@ -1509,12 +1583,52 @@ document.addEventListener('DOMContentLoaded', function(){
         <button class="nc3-copy-iban" id="btnCopyIban">Copy details</button>
       </div>
 
-      <div class="nc3-stat-strip" id="statsGrid">
-        <div class="nc3-stat"><span>Deposited</span><strong id="statIncome">$0.00</strong><small id="statIncomeChange">↑ +12.4%</small></div>
-        <div class="nc3-stat"><span>Spent</span><strong id="statSpending">$0.00</strong><small id="statSpendingChange">↓ 0.0%</small></div>
-        <div class="nc3-stat"><span>Transactions</span><strong id="statTxCount">0</strong><small id="statTxChange">↑ +100%</small></div>
-        <div class="nc3-stat"><span>Days with us</span><strong id="statDays">1</strong><small id="statDaysChange">↑ +100%</small></div>
-      </div>
+    <div class="nc3-stat-strip" id="statsGrid">
+  <div class="nc3-stat">
+    <div class="nc3-stat-icon green">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    </div>
+    <div class="nc3-stat-body">
+      <span>Deposited</span>
+      <strong id="statIncome">$0.00</strong>
+      <small id="statIncomeChange">↑ +12.4%</small>
+    </div>
+    <div class="nc3-stat-spark" data-trend="up"></div>
+  </div>
+  <div class="nc3-stat">
+    <div class="nc3-stat-icon red">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
+    </div>
+    <div class="nc3-stat-body">
+      <span>Spent</span>
+      <strong id="statSpending">$0.00</strong>
+      <small id="statSpendingChange">↓ 0.0%</small>
+    </div>
+    <div class="nc3-stat-spark" data-trend="down"></div>
+  </div>
+  <div class="nc3-stat">
+    <div class="nc3-stat-icon cyan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-4 4"/></svg>
+    </div>
+    <div class="nc3-stat-body">
+      <span>Transactions</span>
+      <strong id="statTxCount">0</strong>
+      <small id="statTxChange">↑ +100%</small>
+    </div>
+    <div class="nc3-stat-spark" data-trend="up"></div>
+  </div>
+  <div class="nc3-stat">
+    <div class="nc3-stat-icon violet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div class="nc3-stat-body">
+      <span>Days with us</span>
+      <strong id="statDays">1</strong>
+      <small id="statDaysChange">↑ +100%</small>
+    </div>
+    <div class="nc3-stat-spark" data-trend="up"></div>
+  </div>
+</div>
     </section>
   </div>
 </div>
