@@ -1107,12 +1107,12 @@ body::before{
   height:50px;
   opacity:1;
   pointer-events:none;
+  filter:drop-shadow(0 0 4px currentColor);
 }
 .nc3-asset .crypto-chart svg{
   width:100%;
   height:100%;
   display:block;
-  filter:drop-shadow(0 0 6px currentColor);
 }
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
 .nc3-action{
@@ -1176,7 +1176,39 @@ body::before{
 .nc3-iban-details div{background:rgba(255,255,255,.025);padding:8px 10px;border-radius:9px}
 .nc3-iban-details span{display:block;font-size:.57rem;color:#617087;text-transform:uppercase}
 .nc3-iban-details b{display:block;font-size:.65rem;margin-top:4px;overflow:hidden;text-overflow:ellipsis}
-.nc3-copy-iban{position:absolute;right:18px;top:18px;border:1px solid rgba(71,220,255,.18);background:rgba(71,220,255,.055);color:#74e4ff;border-radius:9px;padding:8px 11px;font-size:.64rem;cursor:pointer}
+.nc3-copy-iban{
+  position:absolute;
+  right:18px;
+  top:18px;
+  border:1px solid rgba(71,220,255,.25);
+  background:linear-gradient(135deg,rgba(71,220,255,.1),rgba(140,108,255,.1));
+  color:#74e4ff;
+  border-radius:10px;
+  padding:9px 13px;
+  font-size:.68rem;
+  font-weight:650;
+  cursor:pointer;
+  font-family:inherit;
+  transition:.2s;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  box-shadow:0 4px 14px rgba(71,220,255,.12);
+}
+.nc3-copy-iban svg{
+  width:13px;
+  height:13px;
+  flex-shrink:0;
+}
+.nc3-copy-iban:hover{
+  background:linear-gradient(135deg,rgba(71,220,255,.18),rgba(140,108,255,.18));
+  border-color:rgba(71,220,255,.5);
+  transform:translateY(-1px);
+  box-shadow:0 8px 22px rgba(71,220,255,.25);
+}
+.nc3-copy-iban:active{
+  transform:translateY(0);
+}
 .nc3-stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--nc3-line);border-radius:16px;overflow:hidden;background:var(--nc3-line)}
 .nc3-stat{
   padding:17px;
@@ -1480,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', function(){
             <strong id="btcPrice">$—</strong>
             <span id="btcChange">—</span>
           </div>
-          <div class="crypto-chart" id="btcChart"></div>
+          <div class="crypto-chart" id="btcChart" style="color:#f7931a"></div>
         </div>
         <div class="nc3-asset">
           <div class="nc3-asset-icon eth">
@@ -1494,7 +1526,7 @@ document.addEventListener('DOMContentLoaded', function(){
             <strong id="ethPrice">$—</strong>
             <span id="ethChange">—</span>
           </div>
-          <div class="crypto-chart" id="ethChart"></div>
+          <div class="crypto-chart" id="ethChart" style="color:#8c6cff"></div>
         </div>
       </div>
     </section>
@@ -1580,7 +1612,10 @@ document.addEventListener('DOMContentLoaded', function(){
           <div><span>Bank</span><b id="myBank">NordicCrypto Bank AB</b></div>
           <div><span>Country</span><b id="myCountry">—</b></div>
         </div>
-        <button class="nc3-copy-iban" id="btnCopyIban">Copy details</button>
+        <button class="nc3-copy-iban" id="btnCopyIban">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+  <span>Copy details</span>
+</button>
       </div>
 
     <div class="nc3-stat-strip" id="statsGrid">
