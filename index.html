@@ -1357,13 +1357,8 @@ body::before{
 }
 </style>
 
- <script>
+<script>
 document.addEventListener('DOMContentLoaded', function(){
-  // Имя
-  var n = localStorage.getItem('user_name');
-  var el = document.getElementById('nc3HeroName');
-  if(el && n) el.textContent = n.split(' ')[0];
-
   // Приветствие по времени
   var greet = document.getElementById('nc3Greeting');
   if(greet){
@@ -1374,6 +1369,17 @@ document.addEventListener('DOMContentLoaded', function(){
     else if (hour >= 18 && hour < 23) text = 'Good evening';
     else text = 'Good night';
     greet.textContent = text;
+  }
+
+  // Имя клиента
+  var nameEl = document.getElementById('nc3HeroName');
+  if(nameEl){
+    var n = localStorage.getItem('user_name');
+    if(n && n.trim() !== '' && n !== 'User' && n !== 'Admin'){
+      nameEl.textContent = ' ' + n.split(' ')[0];   // пробел + имя
+    } else {
+      nameEl.textContent = '';                       // пусто, если нет имени
+    }
   }
 });
 </script>
@@ -1507,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <section class="nc3-hero">
       <div class="nc3-hero-copy">
         <div class="nc3-eyebrow"><span class="nc3-live-dot"></span> Personal finance overview</div>
-        <h1><span id="nc3Greeting">Welcome back</span><span id="nc3HeroName"></span></h1>
+        <h1><span id="nc3Greeting">Welcome back</span> <span id="nc3HeroName"></span></h1>
         <p>Everything important about your money, in one clean view.</p>
       </div>
       <div class="nc3-hero-actions">
