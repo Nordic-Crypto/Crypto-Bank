@@ -1345,7 +1345,7 @@ for (var d = 0; d < daysBack; d++) {
   points.push({ t: dayEnd, v: depositsSoFar + ethValue });
 }
 
-  points.push({ t: now, v: running });
+  points.push({ t: now, v: st.usd });      // ← используем текущий баланс
 
   var w = 500;
   var h = 180;
