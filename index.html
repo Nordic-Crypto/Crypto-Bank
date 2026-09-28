@@ -6,21 +6,21 @@
 <title>NordicCrypto</title>
 <style>
 :root{
-  /* Colors */
-  --pri:#5b8def;--pri2:#8b5cf6;--acc:#00d4a3;
-  --bg:#0a0e1a;--pan:#131a2b;--pan2:#1a2338;
-  --txt:#eef4ff;--mut:#7d8ba3;
-  --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.12);
-  --ok:#00e08a;--bad:#ff5470;--warn:#ffb020;
+  /* Colors — по шпаргалке */
+  --pri:#00E5FF;--pri2:#8B5CF6;--acc:#10B981;
+  --bg:#0B1220;--pan:#111827;--pan2:#1A1F2E;
+  --txt:#F8FAFC;--mut:#94A3B8;
+  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);
+  --ok:#10B981;--bad:#EF4444;--warn:#F59E0B;
   /* Layout */
-  --sidebar-width:235px;
-  --header-height:58px;
+  --sidebar-width:280px;
+  --header-height:64px;
   --page-padding:20px;
   --grid-gap:18px;
   /* Radii */
   --radius-sm:10px;--radius-md:13px;--radius-lg:16px;
   /* Card */
-  --card-height:200px;
+  --card-height:240px;
   /* Icons */
   --icon-sm:20px;--icon-md:24px;--icon-lg:32px;
   /* Avatar */
@@ -51,7 +51,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg)
   html { font-size: 12px; }
 }
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(900px 500px at 15% -10%,rgba(0,212,255,.10),transparent 60%),radial-gradient(800px 500px at 100% 110%,rgba(124,58,237,.12),transparent 60%)}
-.side{width:235px;background:linear-gradient(180deg,rgba(19,26,36,.95),rgba(13,18,25,.95));border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
+.side{width:280px;background:linear-gradient(180deg,rgba(19,26,36,.95),rgba(13,18,25,.95));border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
 .brand{font-size:1.3rem;font-weight:800;margin-bottom:34px;display:flex;align-items:center;gap:11px}
 .blogo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center}
 .blogo svg{width:18px;height:18px;stroke:#04121a;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -66,7 +66,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .av{width:42px;height:42px;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:.9rem;color:#05070a;flex-shrink:0}
 .umi h4{font-size:.86rem;font-weight:600}.umi p{font-size:.72rem;color:var(--ok);margin-top:2px}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
-.top{height:58px;background:rgba(13,18,25,.7);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 32px;flex-shrink:0;gap:20px}
+.top{height:64px;background:rgba(13,18,25,.7);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 32px;flex-shrink:0;gap:20px}
 .top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:12px;transition:.2s}
 .top-search:focus-within{border-color:var(--pri);box-shadow:0 0 0 4px rgba(91,141,239,.15)}
 .top-search svg{width:18px;height:18px;stroke:var(--mut);fill:none;stroke-width:2;flex-shrink:0}
@@ -80,7 +80,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .body{flex:1;padding:24px 32px;overflow-y:auto}
 .pg{display:none;animation:fade .35s ease}.pg.on{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,440px);gap:20px;align-items:start}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:18px;align-items:start}
 @media (max-width:1100px){
   .grid{grid-template-columns:1fr}
 }
@@ -1991,7 +1991,7 @@ body.light-theme .stat-change.down { color: #dc2626; }
 /* ============ CARD WITH ACTIONS ============ */
 .card-with-actions {
   display: grid;
-  grid-template-columns: 460px 200px;
+  grid-template-columns: 360px 200px;
   gap: 14px;
   align-items: start;
 }
@@ -2063,9 +2063,9 @@ body.light-theme .stat-change.down { color: #dc2626; }
   /* ============ BIG CARD ============ */
 .pay.pay-large {
   height: 240px;
-  padding: 24px;
+  padding: 22px;
   margin-bottom: 0;
-  max-width: 460px;
+  max-width: 360px;
   width: 100%;
   background:
     radial-gradient(500px 250px at 100% 0%, rgba(236,72,153,.5), transparent 60%),
