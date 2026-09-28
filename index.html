@@ -1099,7 +1099,21 @@ body::before{
 .nc3-asset-value{text-align:right}
 .nc3-asset-value strong{display:block;font-size:.84rem}
 .nc3-asset-value span{font-size:.66rem;color:#57dfad}
-.nc3-asset .crypto-chart{position:absolute;right:105px;bottom:7px;width:70px;height:28px;opacity:.7}
+.nc3-asset .crypto-chart{
+  position:absolute;
+  right:100px;
+  bottom:10px;
+  width:130px;
+  height:50px;
+  opacity:1;
+  pointer-events:none;
+}
+.nc3-asset .crypto-chart svg{
+  width:100%;
+  height:100%;
+  display:block;
+  filter:drop-shadow(0 0 6px currentColor);
+}
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
 .nc3-action{
   border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);
@@ -1381,7 +1395,9 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
       <div class="nc3-asset-grid">
         <div class="nc3-asset">
-          <div class="nc3-asset-icon btc">₿</div>
+          <div class="nc3-asset-icon btc">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M23.638 14.904c-1.602 6.43-8.113 10.34-14.542 8.736C2.67 22.05-1.244 15.525.362 9.105 1.962 2.67 8.475-1.243 14.9.358c6.43 1.605 10.342 8.115 8.738 14.548v-.002zm-6.35-4.613c.24-1.59-.974-2.45-2.64-3.03l.54-2.153-1.315-.328-.525 2.107c-.345-.087-.705-.167-1.064-.25l.526-2.127-1.32-.33-.54 2.165c-.285-.067-.565-.132-.84-.2l-.001-.007-1.815-.45-.35 1.407s.975.225.955.238c.535.136.63.486.615.766l-.617 2.478c.037.008.085.02.138.04l-.14-.035-.866 3.47c-.066.163-.233.408-.61.315.014.02-.955-.24-.955-.24l-.66 1.51 1.71.43c.32.08.63.164.94.244l-.54 2.19 1.32.33.54-2.18c.36.1.71.19 1.05.275l-.54 2.16 1.32.33.54-2.18c2.24.42 3.93.25 4.64-1.77.57-1.63-.03-2.57-1.2-3.18.85-.2 1.49-.76 1.66-1.92z"/></svg>
+</div>
           <div class="nc3-asset-main">
             <div class="nc3-asset-name">Bitcoin <span>BTC</span></div>
             <div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div>
@@ -1393,7 +1409,9 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="crypto-chart" id="btcChart"></div>
         </div>
         <div class="nc3-asset">
-          <div class="nc3-asset-icon eth">◆</div>
+          <div class="nc3-asset-icon eth">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg>
+</div>
           <div class="nc3-asset-main">
             <div class="nc3-asset-name">Ethereum <span>ETH</span></div>
             <div class="nc3-asset-amount" id="ethB">0.00000000 ETH</div>
