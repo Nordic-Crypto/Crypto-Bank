@@ -309,7 +309,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
   max-height: 320px;
   overflow-y: auto;
   display: none;
-  z-index: 100;
+  z-index: 9999;
   animation: currFadeIn .2s ease;
 }
 .curr-menu::-webkit-scrollbar {
@@ -1021,6 +1021,8 @@ body::before{
   padding:0 30px!important;
   background:rgba(7,10,18,.72)!important;
   backdrop-filter:blur(26px);
+  position:relative;
+  z-index:100!important;
 }
 .top-search{
   border-radius:14px!important;
