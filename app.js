@@ -2699,16 +2699,44 @@ document.getElementById('btnGoOrder').onclick = function(){
 };
 
 /* ========== EVENTS ========== */
-document.getElementById('btnAdd').onclick = function(){ openModal('add'); };
-document.getElementById('btnTransfer').onclick = function(){ openModal('transfer'); };
-document.getElementById('mCancel').onclick = closeModal;
-document.getElementById('mOk').onclick = confirmModal;
-document.getElementById('mMethod').onchange = refreshDest;
+var btnAdd_ = document.getElementById('btnAdd') || document.getElementById('btnAddV2');
+if (btnAdd_) btnAdd_.onclick = function(){ openModal('add'); };
 
-document.getElementById('btnCopy').onclick = function(){
+var btnTransfer_ = document.getElementById('btnTransfer') || document.getElementById('btnTransferV2');
+if (btnTransfer_) btnTransfer_.onclick = function(){ openModal('transfer'); };
+
+var btnExchange_ = document.getElementById('btnExchange') || document.getElementById('btnExchangeV2');
+if (btnExchange_) btnExchange_.onclick = function(){ toast('Exchange: coming soon'); };
+
+var mCancel_ = document.getElementById('mCancel');
+if (mCancel_) mCancel_.onclick = closeModal;
+
+var mOk_ = document.getElementById('mOk');
+if (mOk_) mOk_.onclick = confirmModal;
+
+var mMethod_ = document.getElementById('mMethod');
+if (mMethod_) mMethod_.onchange = refreshDest;
+
+var btnCopy_ = document.getElementById('btnCopy') || document.getElementById('btnCopyCardV2');
+if (btnCopy_) btnCopy_.onclick = function(){
   if (!st.card){ toast('No card yet', true); return; }
   copyText(st.card.num, 'Card number copied');
 };
+
+var btnCopyIban_ = document.getElementById('btnCopyIban');
+if (btnCopyIban_) btnCopyIban_.onclick = function(){
+  if (st.user && st.user.iban){
+    copyText(st.user.iban, 'IBAN copied');
+  } else {
+    toast('IBAN is not ready yet', true);
+  }
+};
+
+var btnReceiveHero_ = document.getElementById('btnReceiveHero');
+if (btnReceiveHero_ && btnCopyIban_) btnReceiveHero_.onclick = function(){ btnCopyIban_.click(); };
+
+var btnReceiveMoney_ = document.getElementById('btnReceiveMoney');
+if (btnReceiveMoney_ && btnCopyIban_) btnReceiveMoney_.onclick = function(){ btnCopyIban_.click(); };
 document.getElementById('btnCopyIban').onclick = function(){
   if (st.user && st.user.iban){
     copyText(st.user.iban, 'IBAN copied');
