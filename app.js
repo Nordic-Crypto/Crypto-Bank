@@ -568,16 +568,50 @@ function loadPrices(){
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d && d.btc && d.eth){
+        // Сохраняем предыдущие цены для расчёта движения
+        var prevBtc = st.btcP || d.btc;
+        var prevEth = st.ethP || d.eth;
+        
         st.btcP = d.btc;
         st.ethP = d.eth;
+        
+        // Обновляем отображение цены
         var btcPriceEl = document.getElementById('btcPrice');
         if (btcPriceEl) btcPriceEl.textContent = fmt(d.btc);
         var ethPriceEl = document.getElementById('ethPrice');
         if (ethPriceEl) ethPriceEl.textContent = fmt(d.eth);
+        
+        // Обновляем % изменения за последние 24ч (или с последнего обновления)
+        updateCryptoTrends(prevBtc, prevEth);
+        
+        // Пересчитываем баланс
+        refreshBalanceFromCrypto();
+        
+        // Перерисовываем всё
         render();
       }
     })
     .catch(function(e){ console.error('Prices load failed:', e); });
+}
+
+// Движение % (BTC/ETH)
+function updateCryptoTrends(prevBtc, prevEth) {
+  var btcTrend = document.getElementById('btcChange');
+  var ethTrend = document.getElementById('ethChange');
+  
+  if (btcTrend) {
+    var btcChg = ((st.btcP - prevBtc) / prevBtc) * 100;
+    var btcSign = btcChg >= 0 ? '▲ +' : '▼ ';
+    btcTrend.textContent = btcSign + btcChg.toFixed(2) + '%';
+    btcTrend.className = 'crypto-change ' + (btcChg >= 0 ? 'up' : 'down');
+  }
+  
+  if (ethTrend) {
+    var ethChg = ((st.ethP - prevEth) / prevEth) * 100;
+    var ethSign = ethChg >= 0 ? '▲ +' : '▼ ';
+    ethTrend.textContent = ethSign + ethChg.toFixed(2) + '%';
+    ethTrend.className = 'crypto-change ' + (ethChg >= 0 ? 'up' : 'down');
+  }
 }
 
 /* ========== CURRENCY SWITCHER ========== */
@@ -843,6 +877,7 @@ function loadCharts(){
         drawChart('ethChart', prices, '#627eea');
         var change = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
         updateChange('ethChange', change);
+        renderBalanceChart();
       }
     })
     .catch(function(e){ console.error('ETH chart:', e); });
@@ -3259,7 +3294,8 @@ function adminViewClient(email) {
     initWelcomeBanner();
     initSettings();
     loadCharts();
-    setInterval(loadPrices, 5 * 60 * 1000);
+    setInterval(loadPrices, 10 * 1000);       // каждые 10 секунд
+    setInterval(loadCharts, 30 * 1000);       // графики — каждые 30 сек
     setInterval(loadExchangeRates, 10 * 60 * 1000);
     setInterval(loadCharts, 15 * 60 * 1000);
         // Скрыть onboarding — мы смотрим чужой кабинет
