@@ -1248,13 +1248,14 @@ function renderBalanceChart(){
   var txs = st.txs || [];
   var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
 
-  if (txs.length < 1){
-    if (txs.length < 1){
-    wrap.innerHTML = '<div class="chart-empty">' +
+   if (txs.length < 1){
+    var emptyHtml = '<div class="chart-empty">' +
       '<div style="font-size:2rem;opacity:.4">📊</div>' +
       '<div>No activity yet</div>' +
       '<div style="font-size:.72rem;opacity:.7">Balance chart will appear after your first transaction</div>' +
     '</div>';
+    if (wrap) wrap.innerHTML = emptyHtml;
+    if (wrap2) wrap2.innerHTML = emptyHtml;
     return;
   }
 
