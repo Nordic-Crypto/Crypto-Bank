@@ -1340,7 +1340,6 @@ function renderBalanceChart(){
     if (wrap) wrap.innerHTML = svg;
   if (wrap2) wrap2.innerHTML = svg;
 }
-}
 
 /* ========== STATS ========== */
 function renderStats(){
