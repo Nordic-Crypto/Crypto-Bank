@@ -3778,6 +3778,21 @@ function initExchangeButton() {
   };
 }
 
+/* ========== DYNAMIC BALANCE FROM CRYPTO ========== */
+function refreshBalanceFromCrypto() {
+  var ethValue = (st.eth || 0) * (st.ethP || 0);
+  var btcValue = (st.btc || 0) * (st.btcP || 0);
+  var cashValue = st.usdCash || 0;
+  var newUsd = ethValue + btcValue + cashValue;
+  
+  if (Math.abs(newUsd - st.usd) > 0.01) {
+    st.usd = newUsd;
+    console.log('[Balance] Updated:', st.usd.toFixed(2), 'USD');
+    return true;
+  }
+  return false;
+}
+
 /* ========== INIT ========== */
 initLoginLogout();
 initSignup();
