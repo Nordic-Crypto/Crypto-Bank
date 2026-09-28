@@ -1403,8 +1403,18 @@ for (var d = 0; d < daysBack; d++) {
   '</svg>' +
   '<div class="balance-chart-labels">' + labelsHtml + '</div>';
 
-    if (wrap) wrap.innerHTML = svg;
-  if (wrap2) wrap2.innerHTML = svg;
+   if (wrap) {
+  wrap.style.transition = 'opacity .4s ease';
+  wrap.style.opacity = '0';
+  wrap.innerHTML = svg;
+  setTimeout(function(){ wrap.style.opacity = '1'; }, 50);
+}
+if (wrap2) {
+  wrap2.style.transition = 'opacity .4s ease';
+  wrap2.style.opacity = '0';
+  wrap2.innerHTML = svg;
+  setTimeout(function(){ wrap2.style.opacity = '1'; }, 50);
+}
 }
 
 /* ========== STATS ========== */
