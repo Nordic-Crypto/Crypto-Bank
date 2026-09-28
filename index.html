@@ -296,7 +296,32 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .curr-switch { position: relative; }
 .curr-btn-top { display: flex; align-items: center; gap: 7px; padding: 7px 12px; background: rgba(255,255,255,.04); border: 1px solid var(--bd2); border-radius: 999px; color: var(--txt); cursor: pointer; font-family: inherit; font-size: .82rem; font-weight: 600; transition: .2s; }
 .curr-btn-top:hover { background: rgba(255,255,255,.08); border-color: var(--pri); }
-.curr-menu { position: absolute; top: calc(100% + 8px); right: 0; background: linear-gradient(180deg, var(--pan2), #0f151e); border: 1px solid var(--bd2); border-radius: 12px; box-shadow: 0 20px 50px -10px rgba(0,0,0,.8); padding: 6px; min-width: 200px; display: none; z-index: 100; animation: currFadeIn .2s ease; }
+.curr-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: linear-gradient(180deg, var(--pan2), #0f151e);
+  border: 1px solid var(--bd2);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,.8);
+  padding: 6px;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: none;
+  z-index: 100;
+  animation: currFadeIn .2s ease;
+}
+.curr-menu::-webkit-scrollbar {
+  width: 4px;
+}
+.curr-menu::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.15);
+  border-radius: 2px;
+}
+.curr-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,.25);
+}
 .curr-menu.on { display: block; }
 @keyframes currFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 .curr-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: .88rem; transition: .15s; }
@@ -1321,11 +1346,24 @@ body::before{
 }
 </style>
 
-<script>
+ <script>
 document.addEventListener('DOMContentLoaded', function(){
+  // Имя
   var n = localStorage.getItem('user_name');
   var el = document.getElementById('nc3HeroName');
   if(el && n) el.textContent = n.split(' ')[0];
+
+  // Приветствие по времени
+  var greet = document.getElementById('nc3Greeting');
+  if(greet){
+    var hour = new Date().getHours();
+    var text;
+    if (hour >= 5 && hour < 12) text = 'Good morning';
+    else if (hour >= 12 && hour < 18) text = 'Good afternoon';
+    else if (hour >= 18 && hour < 23) text = 'Good evening';
+    else text = 'Good night';
+    greet.textContent = text;
+  }
 });
 </script>
 
@@ -1458,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <section class="nc3-hero">
       <div class="nc3-hero-copy">
         <div class="nc3-eyebrow"><span class="nc3-live-dot"></span> Personal finance overview</div>
-        <h1>Good morning, <span id="nc3HeroName">Eva</span></h1>
+        <h1><span id="nc3Greeting">Welcome back</span><span id="nc3HeroName"></span></h1>
         <p>Everything important about your money, in one clean view.</p>
       </div>
       <div class="nc3-hero-actions">
