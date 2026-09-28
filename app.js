@@ -873,12 +873,12 @@ function drawChart(elId, prices, color){
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
     '<defs>' +
       '<linearGradient id="grad_' + elId + '" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.35"/>' +
+        '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.55"/>' +
         '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
       '</linearGradient>' +
     '</defs>' +
     '<path d="' + fillPath + '" fill="url(#grad_' + elId + ')"/>' +
-    '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 4px ' + color + ')"/>' +
   '</svg>';
 
   el.innerHTML = svg;
