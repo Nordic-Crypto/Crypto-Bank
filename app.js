@@ -586,6 +586,7 @@ function loadPrices(){
         
         // Пересчитываем баланс
         refreshBalanceFromCrypto();
+        renderBalanceChart();
         
         // Перерисовываем всё
         render();
@@ -1308,12 +1309,41 @@ function renderBalanceChart(){
 
   points.push({ t: now - days * dayMs, v: 0 });
 
-  for (var i = 0; i < sorted.length; i++){
-    var tx = sorted[i];
-    var ts = tx.ts || created;
-    running += (tx.amt || 0);
-    points.push({ t: ts, v: running });
+  // Считаем баланс на каждый день за 7 дней
+// Баланс = сумма депозитов до этого дня + (стоимость ETH на этот день)
+
+var daysBack = 7;
+var nowMs = Date.now();
+var msPerDay = 24 * 60 * 60 * 1000;
+
+// Начальная точка — 7 дней назад
+points.push({ t: nowMs - daysBack * msPerDay, v: 0 });
+
+// Проходим по дням
+for (var d = 0; d < daysBack; d++) {
+  var dayStart = nowMs - (daysBack - d) * msPerDay;
+  var dayEnd = nowMs - (daysBack - d - 1) * msPerDay;
+  
+  // Сумма депозитов до этого дня (из txs)
+  var depositsSoFar = 0;
+  for (var j = 0; j < sorted.length; j++) {
+    var txTs = sorted[j].ts || created;
+    if (txTs <= dayEnd) depositsSoFar += (sorted[j].amt || 0);
   }
+  
+  // Плюс движение ETH (только последний день — реальная цена)
+  // Для предыдущих дней — берём сохранённые исторические цены (если есть)
+  var ethValue = 0;
+  if (d === daysBack - 1) {
+    // Последний день — текущая цена
+    ethValue = (st.eth || 0) * (st.ethP || 0);
+  } else {
+    // Предыдущие дни — используем статическую цену (примерно)
+    ethValue = (st.eth || 0) * (st.ethP || 0);  // временно та же цена
+  }
+  
+  points.push({ t: dayEnd, v: depositsSoFar + ethValue });
+}
 
   points.push({ t: now, v: running });
 
