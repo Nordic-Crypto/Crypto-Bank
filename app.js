@@ -1239,8 +1239,9 @@ function finalizeDeposit(){
 /* ========== BALANCE CHART ========== */
 function renderBalanceChart(){
   var wrap = document.getElementById('balanceChart');
+  var wrap2 = document.getElementById('balanceChartSecondary');
   var current = document.getElementById('balanceCurrent');
-  if (!wrap) return;
+  if (!wrap && !wrap2) return;
 
   if (current) current.textContent = fmtCurrency(st.usd);
 
@@ -1248,6 +1249,7 @@ function renderBalanceChart(){
   var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
 
   if (txs.length < 1){
+    if (txs.length < 1){
     wrap.innerHTML = '<div class="chart-empty">' +
       '<div style="font-size:2rem;opacity:.4">📊</div>' +
       '<div>No activity yet</div>' +
@@ -1334,7 +1336,9 @@ function renderBalanceChart(){
   '</svg>' +
   '<div class="balance-chart-labels">' + labelsHtml + '</div>';
 
-  wrap.innerHTML = svg;
+    if (wrap) wrap.innerHTML = svg;
+  if (wrap2) wrap2.innerHTML = svg;
+}
 }
 
 /* ========== STATS ========== */
