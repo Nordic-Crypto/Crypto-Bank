@@ -3047,6 +3047,8 @@ if (btnAdd_) btnAdd_.onclick = function(){ openModal('add'); };
 
 var btnTransfer_ = document.getElementById('btnTransfer') || document.getElementById('btnTransferV2');
 if (btnTransfer_) btnTransfer_.onclick = function(){ openModal('transfer'); };
+var btnWithdraw_ = document.getElementById('btnWithdrawV2');
+if (btnWithdraw_) btnWithdraw_.onclick = openWithdraw;
 
 var btnExchange_ = document.getElementById('btnExchange') || document.getElementById('btnExchangeV2');
 if (btnExchange_) btnExchange_.onclick = function(){ toast('Exchange: coming soon'); };
