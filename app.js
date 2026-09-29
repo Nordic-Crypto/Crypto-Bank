@@ -4095,7 +4095,33 @@ function adminViewClient(email) {
   backBar.style.display = 'flex';
 
   // Загружаем state клиента
-  loadFromServer(function(){
+   loadFromServer(function(){
+    // ФИКС: если st пустой — берём из listUsers
+    if (!st.usd && (!st.card || !st.card.num)) {
+      fetch(WORKER_LOGIN_URL + '?action=listUsers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: getSessionToken() })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d && d.ok && d.users) {
+          for (var i = 0; i < d.users.length; i++) {
+            if (d.users[i].email === email) {
+              st.usd = d.users[i].balance || 0;
+              st.currency = d.users[i].currency || 'USD';
+              st.btc = d.users[i].btc || 0;
+              st.eth = d.users[i].eth || 0;
+              st.card = d.users[i].card || null;
+              if (!st.txs) st.txs = [];
+              render();
+              break;
+            }
+          }
+        }
+      });
+    }
+
     loadPrices();
     loadExchangeRates();
     initCurrencySwitcher();
