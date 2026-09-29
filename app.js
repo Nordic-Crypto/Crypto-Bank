@@ -1288,8 +1288,8 @@ function showWithdrawStatus(method, amount) {
   setTimeout(function() {
     icon.className = 'tx-status-icon review';
     icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-    title.textContent = 'Pending approval';
-    desc.textContent = 'Your withdrawal is waiting for admin approval. You will be notified when it is processed.';
+    title.textContent = 'Under review';
+ desc.textContent = 'Your withdrawal is being processed. We will notify you once it is complete.';
     step3.className = 'tx-status-step done';
   }, 3000);
 
@@ -1873,7 +1873,24 @@ function renderRecentTx(){
   var listEl = document.getElementById('recentTxList');
   if (!listEl) return;
 
-  var txs = (st.txs || []).slice(0, 5);
+    // Объединяем st.txs + st.withdrawals
+  var txs = (st.txs || []).slice();
+  if (st.withdrawals && st.withdrawals.length){
+    st.withdrawals.forEach(function(w){
+      txs.push({
+        ts: w.createdAt,
+        desc: 'Withdrawal via ' + (w.method || 'iban').toUpperCase(),
+        amt: -w.amount,
+        status: w.status === 'pending' ? 'Under Review' :
+                w.status === 'approved' ? 'Completed' :
+                w.status === 'rejected' ? 'Rejected' :
+                w.status,
+        isWithdrawal: true
+      });
+    });
+  }
+  txs.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+  txs = txs.slice(0, 5);
   if (txs.length === 0){
     listEl.innerHTML = '<div class="recent-tx-empty"><div style="font-size:2rem;opacity:.4;margin-bottom:8px">📭</div><div>No transactions yet</div></div>';
     return;
@@ -1888,6 +1905,8 @@ function renderRecentTx(){
       icon = '💰'; iconClass = 'deposit';
     } else if (t.desc && t.desc.toLowerCase().indexOf('transfer') !== -1){
       icon = '💸'; iconClass = 'transfer';
+    } else if (t.desc && t.desc.toLowerCase().indexOf('withdrawal') !== -1){
+     icon = '💸'; iconClass = 'withdrawal';
     } else if (t.desc && t.desc.toLowerCase().indexOf('card') !== -1){
       icon = '💳'; iconClass = 'card';
     }
