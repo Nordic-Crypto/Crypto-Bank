@@ -522,6 +522,7 @@ function loadFromServer(cb, targetEmail){
       }
       if (!st.txs) st.txs = [];
       if (!st.balanceHistory) st.balanceHistory = [];
+      if (!st.withdrawals) st.withdrawals = [];
       if (!st.card || typeof st.card !== 'object') st.card = null;
       stateLoaded = true;
       render();
