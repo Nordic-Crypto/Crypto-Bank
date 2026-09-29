@@ -2589,7 +2589,6 @@ function checkOnboarding(){
   $('onboard').classList.remove('on');
   return false;
 }
-}
 
 function renderCard(){
   if (!st.card){
