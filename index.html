@@ -1456,7 +1456,12 @@ body::before{
 }
 .wd-modal-card h3 {
   margin: 0 0 4px;
-  color: #e8f4ff; font-size: 20px;
+  background: linear-gradient(135deg, #00d4ff, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 20px;
+  font-weight: 700;
 }
 .wd-sub {
   margin: 0 0 16px;
@@ -1515,6 +1520,15 @@ body::before{
   color: #fff;
 }
     html, body { color-scheme: dark; }
+ .wd-input option,
+select.wd-input option {
+  background: #0f1420;
+  color: #e8f4ff;
+}
+select.wd-input {
+  background-color: #0f1420 !important;
+  color: #e8f4ff;
+}
   </style>
 
 <script>
