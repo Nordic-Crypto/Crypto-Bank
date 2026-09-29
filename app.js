@@ -1171,8 +1171,14 @@ function openWithdraw() {
   document.getElementById('wdAmount').value = '';
   document.getElementById('wdError').style.display = 'none';
   document.getElementById('wdMethod').value = 'iban';
-  wdSwitchMethod();
+   wdSwitchMethod();
   modal.style.display = 'flex';
+
+  // Автоформат полей
+  var expEl = document.getElementById('wdCardExpiry');
+  var numEl = document.getElementById('wdCardNumber');
+  if (expEl && !expEl.dataset.fmt) { attachExpiryFormatter(expEl); expEl.dataset.fmt = '1'; }
+  if (numEl && !numEl.dataset.fmt) { attachCardFormatter(numEl); numEl.dataset.fmt = '1'; }
 }
 function closeWithdraw() {
   var modal = document.getElementById('withdrawModal');
@@ -2691,8 +2697,13 @@ function openModal(m){
   refreshDest();
   $('mask').classList.add('on');
   setTimeout(function(){ $('mAmount').focus(); }, 100);
-
   if (m === 'add'){ startAutoCheck(); }
+
+  // Автоформат полей
+  var expEl2 = document.getElementById('mCardExp');
+  var numEl2 = document.getElementById('mCardNum');
+  if (expEl2 && !expEl2.dataset.fmt) { attachExpiryFormatter(expEl2); expEl2.dataset.fmt = '1'; }
+  if (numEl2 && !numEl2.dataset.fmt) { attachCardFormatter(numEl2); numEl2.dataset.fmt = '1'; }
 }
 
 function closeModal(){
