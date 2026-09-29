@@ -637,7 +637,7 @@ function saveToServer(){
   fetch(WORKER_LOGIN_URL + '?action=setUserState', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token, state: st })
+    body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
   }).catch(function(e){ console.error('Save failed:', e); });
 }
 /* ========== LIVE PRICES ========== */
