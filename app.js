@@ -3261,7 +3261,8 @@ document.getElementById('btnCreateCard').onclick = function(){
     var ms = document.querySelectorAll('.mi');
     for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
     document.querySelector('.mi[data-p="dash"]').classList.add('on');
-    $('ttl').textContent = 'Dashboard';
+        var ttl = document.getElementById('ttl');
+    if (ttl) ttl.textContent = 'Dashboard';
 
     // 6. Показать свечение на карте и пульс баланса
     renderCard();
