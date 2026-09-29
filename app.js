@@ -1403,7 +1403,31 @@ if (histForRange.length > 2) {
     svgPoints.push(x.toFixed(1) + ',' + y.toFixed(1));
   }
 
-  var linePath = 'M' + svgPoints.join(' L');
+  // Сглаженная кривая (Catmull-Rom → Bezier)
+  function smoothPath(pts) {
+    if (pts.length < 2) return 'M' + pts.join(' ');
+    var d = 'M' + pts[0];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = i === 0 ? pts[0].split(',') : pts[i - 1].split(',');
+      var p1 = pts[i].split(',');
+      var p2 = pts[i + 1].split(',');
+      var p3 = i + 2 < pts.length ? pts[i + 2].split(',') : pts[i + 1].split(',');
+      var x0 = parseFloat(p0[0]), y0 = parseFloat(p0[1]);
+      var x1 = parseFloat(p1[0]), y1 = parseFloat(p1[1]);
+      var x2 = parseFloat(p2[0]), y2 = parseFloat(p2[1]);
+      var x3 = parseFloat(p3[0]), y3 = parseFloat(p3[1]);
+      var cp1x = x1 + (x2 - x0) / 6;
+      var cp1y = y1 + (y2 - y0) / 6;
+      var cp2x = x2 - (x3 - x1) / 6;
+      var cp2y = y2 - (y3 - y1) / 6;
+      d += ' C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1) +
+           ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1) +
+           ' ' + x2 + ',' + y2;
+    }
+    return d;
+  }
+
+  var linePath = smoothPath(svgPoints);
   var fillPath = linePath +
     ' L' + (w - pad) + ',' + (h - pad) +
     ' L' + pad + ',' + (h - pad) + ' Z';
@@ -1425,16 +1449,25 @@ if (histForRange.length > 2) {
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
     '<defs>' +
       '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4"/>' +
-        '<stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>' +
-      '</linearGradient>' +
-      '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
-        '<stop offset="0%" stop-color="#00d4ff"/>' +
-        '<stop offset="100%" stop-color="#7c3aed"/>' +
-      '</linearGradient>' +
+      '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.55"/>' +
+      '<stop offset="40%" stop-color="#00d4ff" stop-opacity="0.25"/>' +
+      '<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.02"/>' +
+    '</linearGradient>' +
+          '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
+      '<stop offset="0%" stop-color="#00d4ff"/>' +
+      '<stop offset="50%" stop-color="#47dcff"/>' +
+      '<stop offset="100%" stop-color="#a855f7"/>' +
+    '</linearGradient>' +
+    '<filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">' +
+      '<feGaussianBlur stdDeviation="3" result="blur"/>' +
+      '<feMerge>' +
+        '<feMergeNode in="blur"/>' +
+        '<feMergeNode in="SourceGraphic"/>' +
+      '</feMerge>' +
+    '</filter>' +
     '</defs>' +
     '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
-    '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>' +
     pulseCircle +
     '</svg>' +
   '<div class="balance-chart-labels">' + labelsHtml + '</div>';
