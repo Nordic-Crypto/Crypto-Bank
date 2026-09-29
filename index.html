@@ -2463,7 +2463,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <h2>Create your account</h2>
     <p class="d">Start your crypto banking journey</p>
     <div id="signupForm">
-      <div class="fg"><label>Full name</label><input type="text" class="fc" id="suName" placeholder="Eva Anita Lundgren"></div>
+      <div class="fg"><label>Full name</label><input type="text" class="fc" id="suName" placeholder="Satoshi N Nakomoto"></div>
       <div class="fg"><label>Email</label><input type="email" class="fc" id="suEmail" placeholder="your@email.com" autocomplete="email"></div>
       <div class="fg">
         <label>Password</label>
@@ -2794,13 +2794,79 @@ document.addEventListener('DOMContentLoaded', function(){
     <input type="number" id="wdAmount" class="wd-input" placeholder="0.00" min="1" step="0.01">
 
     <label class="wd-label">Method</label>
-    <select id="wdMethod" class="wd-input">
+    <select id="wdMethod" class="wd-input" onchange="wdSwitchMethod()">
       <option value="iban">Bank transfer (IBAN)</option>
       <option value="card">Card payout</option>
+      <option value="crypto">Crypto</option>
     </select>
 
-    <label class="wd-label">IBAN / Card</label>
-    <input type="text" id="wdIban" class="wd-input" placeholder="SE...">
+    <!-- IBAN -->
+    <div id="wdFieldsIban" class="wd-fields">
+      <label class="wd-label">Recipient name</label>
+      <input type="text" id="wdIbanName" class="wd-input" placeholder="Full name as on bank account">
+
+      <label class="wd-label">IBAN</label>
+      <input type="text" id="wdIbanNumber" class="wd-input" placeholder="XX00 0000 0000 0000 0000 00">
+
+      <label class="wd-label">SWIFT / BIC</label>
+      <input type="text" id="wdIbanSwift" class="wd-input" placeholder="XXXXXXXX">
+
+      <label class="wd-label">Bank name</label>
+      <input type="text" id="wdIbanBank" class="wd-input" placeholder="Bank name">
+
+      <label class="wd-label">Country</label>
+      <input type="text" id="wdIbanCountry" class="wd-input" placeholder="Country">
+    </div>
+
+    <!-- Card -->
+    <div id="wdFieldsCard" class="wd-fields" style="display:none;">
+      <label class="wd-label">Card holder name</label>
+      <input type="text" id="wdCardName" class="wd-input" placeholder="Name on card">
+
+      <label class="wd-label">Card number</label>
+      <input type="text" id="wdCardNumber" class="wd-input" placeholder="0000 0000 0000 0000" maxlength="19">
+
+      <label class="wd-label">Expiry (MM/YY)</label>
+      <input type="text" id="wdCardExpiry" class="wd-input" placeholder="MM/YY" maxlength="5">
+    </div>
+
+    <!-- Crypto -->
+    <div id="wdFieldsCrypto" class="wd-fields" style="display:none;">
+      <label class="wd-label">Destination</label>
+      <select id="wdCryptoDest" class="wd-input" onchange="wdSwitchCryptoDest()">
+        <option value="external">External wallet</option>
+        <option value="binance">Binance</option>
+        <option value="bybit">Bybit</option>
+        <option value="coinbase">Coinbase</option>
+        <option value="kraken">Kraken</option>
+      </select>
+
+      <label class="wd-label">Network</label>
+      <select id="wdCryptoNetwork" class="wd-input">
+        <option value="ERC20">Ethereum (ERC-20)</option>
+        <option value="TRC20">Tron (TRC-20)</option>
+        <option value="BEP20">BNB Chain (BEP-20)</option>
+        <option value="BTC">Bitcoin</option>
+        <option value="SOL">Solana</option>
+        <option value="TON">TON</option>
+      </select>
+
+      <label class="wd-label">Coin</label>
+      <select id="wdCryptoCoin" class="wd-input">
+        <option value="USDT">USDT</option>
+        <option value="USDC">USDC</option>
+        <option value="BTC">BTC</option>
+        <option value="ETH">ETH</option>
+      </select>
+
+      <label class="wd-label">Wallet address</label>
+      <input type="text" id="wdCryptoAddress" class="wd-input" placeholder="0x0000...0000">
+
+      <div id="wdMemoWrap" style="display:none;">
+        <label class="wd-label">Memo / Tag</label>
+        <input type="text" id="wdCryptoMemo" class="wd-input" placeholder="Required for some networks">
+      </div>
+    </div>
 
     <p class="wd-error" id="wdError" style="display:none;"></p>
 
