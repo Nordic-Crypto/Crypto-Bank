@@ -4234,11 +4234,11 @@ if (balanceSave) balanceSave.onclick = async function(){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token: token,
-        email: adminTargetEmail,
-        amount: amount,
-        note: note || 'Admin bonus'
-      })
+  token: token,
+  email: adminTargetEmail,
+  newBalance: (currentBalance + amount),
+  note: note || 'Bonus'
+})
     });
     var data = await r.json();
     console.log('updateUserBalance:', data);
@@ -4251,7 +4251,7 @@ if (balanceSave) balanceSave.onclick = async function(){
           body: JSON.stringify({
             token: token,
             email: adminTargetEmail,
-            text: (amount > 0 ? '🎁 Bonus: +' : '⚠️ Adjustment: ') + amount + ' USD' + (note ? ' — ' + note : ''),
+            text: '🎁 Bonus: +' + amount + ' USD' + (note ? ' — ' + note : ''),
             icon: amount > 0 ? '🎁' : '⚠️'
           })
         });
