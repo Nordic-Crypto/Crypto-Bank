@@ -1361,8 +1361,21 @@ function renderBalanceChart(){
   var h = 180;
   var pad = 12;
 
-  var minT = now - days * dayMs;
-  var maxT = now;
+  // Если есть история — используем её реальный диапазон времени
+var minT, maxT;
+var histForRange = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+if (histForRange.length > 2) {
+  minT = histForRange[0].t;
+  maxT = Date.now();
+  // Если история короткая — растягиваем на минимум 30 минут для красоты
+  var minSpan = 5 * 60 * 1000;
+  if (maxT - minT < minSpan) {
+    minT = maxT - minSpan;
+  }
+} else {
+  minT = now - days * dayMs;
+  maxT = now;
+}
     // Авто-zoom: считаем реальный min/max по точкам + padding
   var minV = Infinity;
   var maxV = -Infinity;
