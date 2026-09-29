@@ -3446,7 +3446,9 @@ function playCardCreationAnimation(cardData, onComplete){
 
   stage.classList.add('on');
   card.classList.remove('visible', 'glow', 'flash', 'exit');
-  card.classList.add('visible');
+  setTimeout(function(){
+    card.classList.add('visible');
+}, 300);
   readyText.classList.remove('show');
   numLine.textContent = '';
   numLine.classList.remove('typing');
