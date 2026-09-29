@@ -4196,53 +4196,71 @@ function initAdminPanel() {
     document.getElementById('adminBalanceMask').classList.remove('on');
   };
 
-  if (balanceSave) balanceSave.onclick = async function(){
-    var amount = Number(document.getElementById('adminBalanceAmount').value);
-    var note = document.getElementById('adminBalanceNote').value.trim();
-    if (!amount || amount === 0) {
-      toast('Enter a valid amount', true);
-      return;
+ if (balanceSave) balanceSave.onclick = async function(){
+  var amount = Number(document.getElementById('adminBalanceAmount').value);
+  var note = document.getElementById('adminBalanceNote').value.trim();
+  if (!amount || amount === 0) {
+    toast('Enter a valid amount', true);
+    return;
+  }
+  try {
+    var token = getSessionToken();
+
+    // 1. Загрузить полный стейт клиента
+    var r1 = await fetch(WORKER_LOGIN_URL + '?action=getuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: adminTargetEmail })
+    });
+    var d1 = await r1.json();
+    var state = d1.state;
+    if (!state) { toast('Client state not found', true); return; }
+
+    // 2. Изменить баланс + добавить транзакцию
+    state.usd = (state.usd || 0) + amount;
+    if (!state.txs) state.txs = [];
+    state.txs.unshift({
+      ts: Date.now(),
+      desc: (amount > 0 ? 'Bonus' : 'Adjustment') + ' — ' + (note || 'Admin'),
+      amt: amount,
+      status: 'Completed'
+    });
+
+    // 3. Сохранить обновлённый стейт
+    var r2 = await fetch(WORKER_LOGIN_URL + '?action=saveuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: adminTargetEmail, state: state })
+    });
+    var d2 = await r2.json();
+
+    if (d2.ok) {
+      // 4. Отправить уведомление клиенту
+      try {
+        await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: token,
+            email: adminTargetEmail,
+            text: (amount > 0 ? '🎁 Bonus: +' : '⚠️ Adjustment: ') + amount + ' USD' + (note ? ' — ' + note : ''),
+            icon: amount > 0 ? '🎁' : '⚠️'
+          })
+        });
+      } catch(e) { console.warn('Notify failed', e); }
+
+      toast('✓ Balance updated: ' + (amount > 0 ? '+' : '') + amount);
+      document.getElementById('adminBalanceMask').classList.remove('on');
+      loadAdminUsers();
+      loadAdminStats();
+    } else {
+      toast('Error: ' + (d2.error || 'Failed'), true);
     }
-    try {
-      var res = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    token: getSessionToken(),
-    email: adminTargetEmail,
-    amount: amount,
-    note: note || 'Admin adjustment'
-  })
-});
-      var data = await res.json();
-        if (data.ok) {
-    toast('✓ Balance updated');
-    document.getElementById('adminBalanceMask').classList.remove('on');
-
-    // Отправить уведомление клиенту
-    try {
-      await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          token: getSessionToken(),
-          email: adminTargetEmail,
-          text: (amount > 0 ? 'Bonus: +' : 'Adjustment: ') + amount + ' USD. ' + (note || ''),
-          icon: amount > 0 ? '🎁' : '⚠️'
-        })
-      });
-    } catch (e) { console.warn('Notify failed', e); }
-
-    loadAdminUsers();
-    loadAdminStats();
-      } else {
-        toast('Error: ' + (data.error || 'failed'), true);
-      }
-    } catch (e) {
-      toast('Connection error', true);
-    }
-  };
-
+  } catch (e) {
+    console.error('Balance update failed', e);
+    toast('Connection error', true);
+  }
+};
   // Message modal
   if (msgCancel) msgCancel.onclick = function(){
     document.getElementById('adminMsgMask').classList.remove('on');
