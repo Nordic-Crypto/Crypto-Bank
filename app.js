@@ -3444,11 +3444,11 @@ function playCardCreationAnimation(cardData, onComplete){
     return;
   }
 
-  stage.classList.add('on');
+  // Сброс
+  stage.classList.remove('on');
   card.classList.remove('visible', 'glow', 'flash', 'exit');
-  setTimeout(function(){
-    card.classList.add('visible');
-}, 300);
+  card.style.transform = '';
+  card.style.opacity = '';
   readyText.classList.remove('show');
   numLine.textContent = '';
   numLine.classList.remove('typing');
@@ -3459,56 +3459,70 @@ function playCardCreationAnimation(cardData, onComplete){
   brandEl.textContent = 'NORDIC CRYPTO';
   typeEl.textContent = 'VIRTUAL ' + (cardData.type || 'VISA').toUpperCase();
 
-  setTimeout(function(){ playTone(880, 0.08, 'sine', 0.06); }, 50);
+  // 1. Показать сцену
+  stage.classList.add('on');
 
+  // 2. Карта вылетает
+  setTimeout(function(){
+    card.classList.add('visible');
+    playTone(880, 0.1, 'sine', 0.06);
+  }, 350);
+
+  // 3. Glow
   setTimeout(function(){
     card.classList.add('glow');
-  }, 800);
+  }, 1300);
 
-  var numStr = cardData.num.replace(/(.{4})/g, '$1 ').trim();
+  // 4. Печатаем номер
+  var numStr = (cardData.num || '').replace(/(.{4})/g, '$1 ').trim();
   setTimeout(function(){
     numLine.classList.add('typing');
     var i = 0;
-    var typeTimer = setInterval(function(){
+    var t = setInterval(function(){
       if (i >= numStr.length){
-        clearInterval(typeTimer);
+        clearInterval(t);
         numLine.classList.remove('typing');
         return;
       }
-      numLine.textContent += numStr[i];
-      i++;
-      playTone(1200 + Math.random() * 200, 0.02, 'square', 0.02);
+      numLine.textContent += numStr[i++];
+      playTone(1100 + Math.random() * 200, 0.02, 'square', 0.02);
     }, 55);
-  }, 1200);
+  }, 1500);
 
+  // 5. Имя + expiry
   setTimeout(function(){
     nameEl.textContent = cardData.name || 'CARD HOLDER';
-    expEl.textContent = cardData.expiry || '09/28';
+    expEl.textContent = cardData.expiry || '—/—';
     nameEl.classList.add('show');
     expEl.classList.add('show');
-  }, 2200);
+  }, 2800);
 
+  // 6. Flash + конфетти + звук
   setTimeout(function(){
     card.classList.add('flash');
     playChime();
     spawnConfetti();
-  }, 2600);
+  }, 3300);
 
+  // 7. "Card created!"
   setTimeout(function(){
     readyText.classList.add('show');
-  }, 3000);
+  }, 3700);
 
+  // 8. Exit
   setTimeout(function(){
     card.classList.add('exit');
-  }, 3600);
+  }, 4400);
 
+  // 9. Закрыть + callback
   setTimeout(function(){
     stage.classList.remove('on');
     card.classList.remove('visible', 'glow', 'flash', 'exit');
     readyText.classList.remove('show');
     if (onComplete) onComplete();
-  }, 4300);
+  }, 5200);
 }
+
 
 /* ========== SOUND (Web Audio API) ========== */
 var audioCtx = null;
