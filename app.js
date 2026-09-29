@@ -587,11 +587,16 @@ function loadPrices(){
         // Пересчитываем баланс
         refreshBalanceFromCrypto();
 // Сохраняем точку в историю
-var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
-balanceHistory.push({ t: Date.now(), v: st.usd });
-var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-balanceHistory = balanceHistory.filter(function(p){ return p.t > weekAgo; });
-localStorage.setItem('balanceHistory', JSON.stringify(balanceHistory));
+  var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+  // Пишем только если баланс разумный (>0 и не гигантский)
+  if (st.usd > 0 && st.usd < 1000000) {
+    balanceHistory.push({ t: Date.now(), v: st.usd });
+  }
+  var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  balanceHistory = balanceHistory.filter(function(p){
+    return p.t > weekAgo && p.v > 0 && p.v < 1000000;
+  });
+  localStorage.setItem('balanceHistory', JSON.stringify(balanceHistory));
 renderBalanceChart();
         
         // Перерисовываем всё
