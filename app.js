@@ -1383,6 +1383,12 @@ function renderBalanceChart(){
     labelsHtml += '<span>' + label + '</span>';
   }
 
+    // Пульсирующая точка в конце графика
+  var lastCoord = svgPoints[svgPoints.length - 1].split(',');
+  var pulseCircle = '<circle cx="' + lastCoord[0] + '" cy="' + lastCoord[1] + '" r="5" fill="#47dcff" filter="drop-shadow(0 0 8px #47dcff)">' +
+    '<animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>' +
+    '<animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>' +
+  '</circle>';
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
     '<defs>' +
       '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
@@ -1396,7 +1402,8 @@ function renderBalanceChart(){
     '</defs>' +
     '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
     '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-  '</svg>' +
+    pulseCircle +
+    '</svg>' +
   '<div class="balance-chart-labels">' + labelsHtml + '</div>';
 
    if (wrap) {
