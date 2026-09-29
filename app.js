@@ -586,7 +586,13 @@ function loadPrices(){
         
         // Пересчитываем баланс
         refreshBalanceFromCrypto();
-        renderBalanceChart();
+// Сохраняем точку в историю
+var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+balanceHistory.push({ t: Date.now(), v: st.usd });
+var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+balanceHistory = balanceHistory.filter(function(p){ return p.t > weekAgo; });
+localStorage.setItem('balanceHistory', JSON.stringify(balanceHistory));
+renderBalanceChart();
         
         // Перерисовываем всё
         render();
@@ -1319,29 +1325,37 @@ function renderBalanceChart(){
 // Баланс = сумма депозитов до этого дня + (стоимость ETH на этот день)
 
   // Проходим по 7 дням — считаем баланс на конец каждого дня
-  for (var d = 0; d <= days; d++) {
-    var dayT = now - (days - d) * dayMs;
-    
-    // Сумма всех транзакций до этого дня
-    var totalAtDay = 0;
-    for (var j = 0; j < sorted.length; j++) {
-      var txT = sorted[j].ts || created;
-      if (txT <= dayT) {
-        var tx = sorted[j];
-        if (tx.crypto && tx.symbol) {
-          var price = tx.symbol === 'ETH' ? (st.ethP || 0) : (st.btcP || 0);
-          totalAtDay += tx.crypto * price;
-        } else {
-          totalAtDay += (tx.amt || 0);
+  // Строим график из истории баланса (записанной каждые 10 сек)
+  var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+
+  if (balanceHistory.length > 2) {
+    // История есть — используем её
+    balanceHistory.forEach(function(p) {
+      points.push({ t: p.t, v: p.v });
+    });
+    // Финальная точка — текущий баланс
+    points.push({ t: Date.now(), v: st.usd });
+  } else {
+    // История пустая (клиент только зашёл) — используем старую логику по дням
+    for (var d = 0; d <= days; d++) {
+      var dayT = now - (days - d) * dayMs;
+      var totalAtDay = 0;
+      for (var j = 0; j < sorted.length; j++) {
+        var txT = sorted[j].ts || created;
+        if (txT <= dayT) {
+          var tx = sorted[j];
+          if (tx.crypto && tx.symbol) {
+            var price = tx.symbol === 'ETH' ? (st.ethP || 0) : (st.btcP || 0);
+            totalAtDay += tx.crypto * price;
+          } else {
+            totalAtDay += (tx.amt || 0);
+          }
         }
       }
+      points.push({ t: dayT, v: totalAtDay });
     }
-    
-    points.push({ t: dayT, v: totalAtDay });
+    points.push({ t: now, v: st.usd });
   }
-  
-  // Финальная точка — ровно сейчас, текущий баланс
-  points.push({ t: now, v: st.usd });
 
   var w = 500;
   var h = 180;
