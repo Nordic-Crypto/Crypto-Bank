@@ -1143,6 +1143,55 @@ function finalizeDeposit(){
   // Уведомление
   addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol + ' (' + fmtCurrency(credit) + ')', '✅');
 }
+/* ========== WITHDRAWALS ========== */
+function openWithdraw() {
+  var modal = document.getElementById('withdrawModal');
+  if (!modal) return;
+  var avail = document.getElementById('wdAvailable');
+  if (avail) avail.textContent = fmtCurrency(st.usd);
+  document.getElementById('wdAmount').value = '';
+  document.getElementById('wdError').style.display = 'none';
+  modal.style.display = 'flex';
+}
+function closeWithdraw() {
+  var modal = document.getElementById('withdrawModal');
+  if (modal) modal.style.display = 'none';
+}
+function submitWithdraw() {
+  var amount = parseFloat(document.getElementById('wdAmount').value) || 0;
+  var method = document.getElementById('wdMethod').value;
+  var iban = (document.getElementById('wdIban').value || '').trim();
+  var errEl = document.getElementById('wdError');
+
+  function showErr(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+  errEl.style.display = 'none';
+
+  if (amount <= 0) return showErr('Enter a valid amount');
+  if (amount > st.usd) return showErr('Amount exceeds available balance');
+  if (iban.length < 10) return showErr('Enter a valid IBAN or card number');
+
+  if (!st.withdrawals) st.withdrawals = [];
+  st.withdrawals.unshift({
+    id: 'wd_' + Date.now(),
+    amount: amount,
+    currency: (st.currency || 'SEK'),
+    iban: iban,
+    method: method,
+    status: 'pending',
+    createdAt: Date.now(),
+    reviewedAt: null,
+    reason: '',
+    reviewedBy: ''
+  });
+  if (typeof saveToServer === 'function') saveToServer();
+  addNotification('Withdraw request submitted: ' + fmtCurrency(amount), '⏳');
+  closeWithdraw();
+  if (typeof render === 'function') render();
+}
+
 /* ========== DEPOSIT VERIFICATION ========== */
 var depPendingTx = null;
 var depAnswers = { source: null, origin: null };
