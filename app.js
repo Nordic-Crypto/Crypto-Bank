@@ -3665,7 +3665,196 @@ async function loadAdminUsers() {
     listEl.innerHTML = '<div class="admin-empty">Connection error</div>';
   }
 }
+/* ========== ADMIN WITHDRAWALS ========== */
+async function loadAdminWithdrawals() {
+  var listEl = document.getElementById('adminWithdrawalsList');
+  var countEl = document.getElementById('adminWithdrawalsCount');
+  if (!listEl) return;
 
+  listEl.innerHTML = '<div class="admin-empty">Loading withdrawals...</div>';
+  if (countEl) countEl.textContent = 'Loading...';
+
+  try {
+    var token = getSessionToken();
+    var res = await fetch(WORKER_URL + '?action=listusers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await res.json();
+    if (!data.ok || !data.users) throw new Error('Failed to load users');
+
+    var allWd = [];
+    for (var i = 0; i < data.users.length; i++) {
+      var u = data.users[i];
+      try {
+        var r2 = await fetch(WORKER_URL + '?action=getuserstate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: u.email })
+        });
+        var d2 = await r2.json();
+        var wds = (d2.state && d2.state.withdrawals) || [];
+        wds.forEach(function(w) {
+          w.userEmail = u.email;
+          w.userName = u.name || u.email;
+          allWd.push(w);
+        });
+      } catch (e) {
+        console.warn('Failed withdrawals for', u.email, e);
+      }
+    }
+
+    allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+    var pending = allWd.filter(function(w) { return w.status === 'pending'; }).length;
+    if (countEl) countEl.textContent = pending + ' pending • ' + allWd.length + ' total';
+
+    if (!allWd.length) {
+      listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>';
+      return;
+    }
+
+    var html = '';
+    allWd.forEach(function(w) { html += renderAdminWithdrawalCard(w); });
+    listEl.innerHTML = html;
+  } catch (e) {
+    console.error('loadAdminWithdrawals failed', e);
+    listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+  }
+}
+
+function renderAdminWithdrawalCard(w) {
+  var statusMap = {
+    'pending':  { cls: 'pend', txt: '⏳ Pending' },
+    'approved': { cls: 'ok',   txt: '✅ Approved' },
+    'rejected': { cls: 'fail', txt: '❌ Rejected' }
+  };
+  var s = statusMap[w.status] || statusMap['pending'];
+  var d = w.details || {};
+
+  var details = '';
+  if (w.method === 'iban') {
+    details =
+      '<div class="awd-row"><span>Name</span><b>' + (d.name || '—') + '</b></div>' +
+      '<div class="awd-row"><span>IBAN</span><b>' + (d.iban || '—') + '</b></div>' +
+      '<div class="awd-row"><span>SWIFT</span><b>' + (d.swift || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Bank</span><b>' + (d.bank || '—') + '</b></div>';
+  } else if (w.method === 'card') {
+    details =
+      '<div class="awd-row"><span>Holder</span><b>' + (d.cardName || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Card</span><b>' + (d.cardNumber || '—') + '</b></div>';
+  } else if (w.method === 'crypto') {
+    details =
+      '<div class="awd-row"><span>Destination</span><b>' + (d.destination || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Network</span><b>' + (d.network || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Address</span><b>' + (d.address || '—') + '</b></div>';
+  }
+
+  var actions = '';
+  if (w.status === 'pending') {
+    actions =
+      '<div class="awd-actions">' +
+        '<button class="awd-btn awd-approve" onclick="adminApproveWithdrawal(\'' + w.userEmail + '\',\'' + w.id + '\')">✅ Approve</button>' +
+        '<button class="awd-btn awd-reject" onclick="adminRejectWithdrawal(\'' + w.userEmail + '\',\'' + w.id + '\')">❌ Reject</button>' +
+      '</div>';
+  }
+
+  return '<div class="awd-card">' +
+    '<div class="awd-head">' +
+      '<div><b>' + (w.userName || w.userEmail) + '</b><br><span class="awd-email">' + w.userEmail + '</span></div>' +
+      '<div class="awd-badge ' + s.cls + '">' + s.txt + '</div>' +
+    '</div>' +
+    '<div class="awd-amount">' + fmtCurrency(w.amount) + ' <span class="awd-method">via ' + (w.method || 'iban').toUpperCase() + '</span></div>' +
+    '<div class="awd-details">' + details + '</div>' +
+    '<div class="awd-date">' + new Date(w.createdAt).toLocaleString('en-GB') + '</div>' +
+    actions +
+  '</div>';
+}
+
+async function adminApproveWithdrawal(email, wdId) {
+  if (!confirm('Approve this withdrawal?\nFunds will be deducted from client balance.')) return;
+
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=getuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var d = await r.json();
+    var state = d.state;
+    if (!state || !state.withdrawals) throw new Error('State not found');
+
+    var wd = null;
+    for (var i = 0; i < state.withdrawals.length; i++) {
+      if (state.withdrawals[i].id === wdId) { wd = state.withdrawals[i]; break; }
+    }
+    if (!wd) throw new Error('Withdrawal not found');
+
+    wd.status = 'approved';
+    wd.reviewedAt = Date.now();
+    wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
+
+    state.usd = (state.usd || 0) - wd.amount;
+    if (!state.txs) state.txs = [];
+    state.txs.unshift({
+      ts: Date.now(),
+      desc: 'Withdrawal — ' + (wd.method || 'iban').toUpperCase(),
+      amt: -wd.amount,
+      status: 'Completed'
+    });
+
+    await fetch(WORKER_URL + '?action=saveuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, state: state })
+    });
+
+    alert('✅ Withdrawal approved');
+    loadAdminWithdrawals();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function adminRejectWithdrawal(email, wdId) {
+  var reason = prompt('Reason for rejection:');
+  if (reason === null) return;
+
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=getuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var d = await r.json();
+    var state = d.state;
+
+    var wd = null;
+    for (var i = 0; i < state.withdrawals.length; i++) {
+      if (state.withdrawals[i].id === wdId) { wd = state.withdrawals[i]; break; }
+    }
+    if (!wd) throw new Error('Withdrawal not found');
+
+    wd.status = 'rejected';
+    wd.reason = reason;
+    wd.reviewedAt = Date.now();
+    wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
+
+    await fetch(WORKER_URL + '?action=saveuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, state: state })
+    });
+
+    alert('❌ Withdrawal rejected');
+    loadAdminWithdrawals();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
 async function loadAdminStats() {
   try {
     var res = await fetch(WORKER_LOGIN_URL + '?action=getStats', {
