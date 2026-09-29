@@ -4303,7 +4303,7 @@ if (balanceSave) balanceSave.onclick = async function(){
     toast('Connection error: ' + e.message, true);
   }
 };
-};
+  
   // Message modal
   if (msgCancel) msgCancel.onclick = function(){
     document.getElementById('adminMsgMask').classList.remove('on');
