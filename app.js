@@ -521,6 +521,7 @@ function loadFromServer(cb, targetEmail){
         st = data || JSON.parse(JSON.stringify(def));
       }
       if (!st.txs) st.txs = [];
+      if (!st.balanceHistory) st.balanceHistory = [];
       if (!st.card || typeof st.card !== 'object') st.card = null;
       stateLoaded = true;
       render();
@@ -586,19 +587,23 @@ function loadPrices(){
         
         // Пересчитываем баланс
         refreshBalanceFromCrypto();
-// Сохраняем точку в историю
-    var userKey = (st.userId || (st.card && st.card.owner) || st.email || 'default');
-  var histKey = 'balanceHistory_' + userKey;
-  var balanceHistory = JSON.parse(localStorage.getItem(histKey) || '[]');
-  // Пишем только если баланс разумный (>0 и не гигантский)
-  if (st.usd > 0 && st.usd < 1000000) {
-    balanceHistory.push({ t: Date.now(), v: st.usd });
-  }
-  var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  balanceHistory = balanceHistory.filter(function(p){
-    return p.t > weekAgo && p.v > 0 && p.v < 1000000;
-  });
-  localStorage.setItem(histKey, JSON.stringify(balanceHistory));
+        // Сохраняем точку в историю (в st, чтобы синхронизировалось на сервер)
+        if (!st.balanceHistory) st.balanceHistory = [];
+        var lastPoint = st.balanceHistory[st.balanceHistory.length - 1];
+var nowTs = Date.now();
+if (st.usd > 0 && st.usd < 1000000 && (!lastPoint || nowTs - lastPoint.t > 60000)) {
+  st.balanceHistory.push({ t: nowTs, v: st.usd });
+}
+        var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        st.balanceHistory = st.balanceHistory.filter(function(p){
+          return p.t > weekAgo && p.v > 0 && p.v < 1000000;
+        });
+        // Ограничиваем 3000 точками (защита от переполнения)
+        if (st.balanceHistory.length > 3000) {
+          st.balanceHistory = st.balanceHistory.slice(-3000);
+        }
+        // Сохраняем в облако
+        if (typeof saveToServer === 'function') saveToServer();
 renderBalanceChart();
         
         // Перерисовываем всё
@@ -1334,7 +1339,7 @@ function renderBalanceChart(){
   // Проходим по 7 дням — считаем баланс на конец каждого дня
   // Строим график из истории баланса (записанной каждые 10 сек)
     var _userKey = (st.userId || (st.card && st.card.owner) || st.email || 'default');
-  var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory_' + _userKey) || '[]');
+  var balanceHistory = st.balanceHistory || [];
 
   if (balanceHistory.length > 2) {
     // История есть — используем её
@@ -1371,7 +1376,7 @@ function renderBalanceChart(){
 
   // Если есть история — используем её реальный диапазон времени
 var minT, maxT;
-var histForRange = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+var histForRange = st.balanceHistory || [];
 if (histForRange.length > 2) {
   minT = histForRange[0].t;
   maxT = Date.now();
