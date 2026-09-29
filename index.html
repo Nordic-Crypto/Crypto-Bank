@@ -1406,7 +1406,33 @@ body::before{
   .nc3-action i{display:none}
   .nc3-asset{grid-template-columns:38px 1fr auto}
 }
-</style>
+.nc3-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 12px 0 4px;
+}
+.nc3-mini-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(71, 220, 255, 0.05);
+  border: 1px solid rgba(71, 220, 255, 0.15);
+  border-radius: 10px;
+}
+.nc3-mini-label {
+  font-size: 10px;
+  color: #7c9cbb;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.nc3-mini-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #47dcff;
+}
+  </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -1592,17 +1618,22 @@ document.addEventListener('DOMContentLoaded', function(){
         <div id="pnlExplain" class="nc3-performance-note" style="display:none">
           Your crypto value has changed since deposit
         </div>
-        <div class="nc3-balance-chart">
-          <div class="nc3-chart-labels">
-  <span>Portfolio value</span>
-  <span style="display:inline-flex;gap:4px">
-    <span style="background:rgba(71,220,255,.15);color:#74e4ff;padding:2px 7px;border-radius:6px;font-weight:700">7D</span>
-    <span style="background:rgba(255,255,255,.06);color:#8899ad;padding:2px 7px;border-radius:6px">30D</span>
-    <span style="background:rgba(255,255,255,.06);color:#8899ad;padding:2px 7px;border-radius:6px">1Y</span>
-  </span>
-</div>
-          <div id="balanceChart"></div>
+              <div class="nc3-balance-chart">
+        <div class="nc3-mini-stats">
+          <div class="nc3-mini-stat">
+            <span class="nc3-mini-label">Income 30D</span>
+            <span class="nc3-mini-value" id="statIncome30">—</span>
+          </div>
+          <div class="nc3-mini-stat">
+            <span class="nc3-mini-label">Spending 30D</span>
+            <span class="nc3-mini-value" id="statSpending30">—</span>
+          </div>
+          <div class="nc3-mini-stat">
+            <span class="nc3-mini-label">Transactions</span>
+            <span class="nc3-mini-value" id="statTxCount">—</span>
+          </div>
         </div>
+      </div>
       </div>
 
       <div class="nc3-card-wrap">
