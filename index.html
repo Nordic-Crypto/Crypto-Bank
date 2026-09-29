@@ -3095,6 +3095,16 @@ document.addEventListener('DOMContentLoaded', function(){
       <input type="number" class="fc" id="adminBalanceAmount" placeholder="e.g. 100 or -50">
     </div>
     <div class="fg">
+              <div class="fg">
+          <label>Type</label>
+          <select class="fc" id="adminBalanceType">
+            <option value="bonus">🎁 Bonus</option>
+            <option value="bank">🏦 Bank deposit</option>
+            <option value="crypto">₿ Crypto deposit</option>
+            <option value="card">💳 Card deposit</option>
+            <option value="correction">🔧 Correction</option>
+          </select>
+        </div>
       <label>Note (optional)</label>
       <input type="text" class="fc" id="adminBalanceNote" placeholder="e.g. Bonus, Correction">
     </div>
