@@ -385,7 +385,7 @@ setInterval(function(){
     if (!d.ok || !d.users) return;
     var myEmail = localStorage.getItem('user_email');
     for (var i = 0; i < d.users.length; i++) {
-      if (d.users[i].email === myEmail) {
+      if (d.users[i].email.replace(/\s/g,'').toLowerCase() === myEmail.replace(/\s/g,'').toLowerCase()) {
         var newBal = Number(d.users[i].balance) || 0;
         if (Math.abs(newBal - (st.usd || 0)) > 0.01) {
           st.usd = newBal;
