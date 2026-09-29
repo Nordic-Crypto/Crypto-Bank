@@ -1610,6 +1610,24 @@ function renderStats(){
       daysEl.textContent = '1';
     }
   }
+    // Мини-статистика 30D
+  var now30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  var inc30 = 0, sp30 = 0, cnt30 = 0;
+  for (var k = 0; k < txs.length; k++) {
+    var t30 = txs[k].ts || (st.card && st.card.createdAt) || 0;
+    if (t30 >= now30) {
+      cnt30++;
+      var a30 = txs[k].amt || 0;
+      if (a30 > 0) inc30 += a30;
+      else if (a30 < 0) sp30 += Math.abs(a30);
+    }
+  }
+  var elInc30 = document.getElementById('statIncome30');
+  var elSp30 = document.getElementById('statSpending30');
+  var elCnt30 = document.getElementById('statTxCount');
+  if (elInc30) elInc30.textContent = inc30 > 0 ? '+' + fmtCurrency(inc30) : '—';
+  if (elSp30) elSp30.textContent = sp30 > 0 ? '-' + fmtCurrency(sp30) : '—';
+  if (elCnt30) elCnt30.textContent = cnt30;
     // P&L относительно депозитов
   var sumDeposits = 0;
   for (var p = 0; p < txs.length; p++) {
