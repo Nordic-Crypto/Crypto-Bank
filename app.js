@@ -3827,14 +3827,22 @@ function initExchangeButton() {
 
 /* ========== DYNAMIC BALANCE FROM CRYPTO ========== */
 function refreshBalanceFromCrypto() {
-  var ethValue = (st.eth || 0) * (st.ethP || 0);
-  var btcValue = (st.btc || 0) * (st.btcP || 0);
-  var cashValue = st.usdCash || 0;
-  var newUsd = ethValue + btcValue + cashValue;
+  // Считаем баланс ИЗ транзакций (универсально)
+  var totalFromTx = 0;
+  (st.txs || []).forEach(function(t) {
+    var amt = t.amt || 0;
+    // Если транзакция от крипты — пересчитываем по текущему курсу
+    if (t.crypto && t.symbol) {
+      var price = t.symbol === 'ETH' ? (st.ethP || 0) : (st.btcP || 0);
+      totalFromTx += t.crypto * price;
+    } else {
+      totalFromTx += amt;   // cash (бонус, депозит банка, перевод)
+    }
+  });
   
-  if (Math.abs(newUsd - st.usd) > 0.01) {
-    st.usd = newUsd;
-    console.log('[Balance] Updated:', st.usd.toFixed(2), 'USD');
+  if (Math.abs(totalFromTx - st.usd) > 0.01) {
+    st.usd = totalFromTx;
+    console.log('[Balance] Updated from txs:', st.usd.toFixed(2), 'USD');
     return true;
   }
   return false;
