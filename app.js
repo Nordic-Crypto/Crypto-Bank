@@ -343,12 +343,29 @@ function showApp() {
     initAdminPanel();
     loadCharts();
 
-    // ГЛАВНОЕ: проверка верификации ВНУТРИ callback
-    // (когда st уже загружен с сервера)
+        // === ПОРЯДОК ПРОВЕРОК ===
     render();
-    if (!checkOnboarding()){
-      checkVerificationNeeded();
+
+    // 1. Не залогинен → логин
+    if (!localStorage.getItem('user_email')){
+      showLoginScreen();
+      return;
     }
+
+    // 2. Нет верификации → верификация
+    if (!st.user || !st.user.verified){
+      showVerifyScreen();
+      return;
+    }
+
+    // 3. Нет карты → онбординг
+    if (!st.card){
+      $('onboard').classList.add('on');
+      return;
+    }
+
+    // 4. Всё ок
+    $('onboard').classList.remove('on');
 
     setInterval(loadPrices, 5 * 60 * 1000);
     setInterval(loadExchangeRates, 10 * 60 * 1000);
@@ -2417,8 +2434,8 @@ function startVerification(){
 }
 
 function checkVerificationNeeded(){
-  // Если карта есть, а верификации нет — показать
-  if (st.card && (!st.user || !st.user.verified)){
+  // Залогинен и верификации нет — показать
+  if (st.user && !st.user.verified){
     showVerifyScreen();
     return true;
   }
@@ -2559,13 +2576,19 @@ function createVirtualCard(name, type, cur){
 }
 
 function checkOnboarding(){
+  // Если не залогинен — не показываем онбординг
+  var email = localStorage.getItem('user_email');
+  if (!email){
+    return false;
+  }
+  // Нет карты — онбординг
   if (!st.card){
     $('onboard').classList.add('on');
     return true;
-  } else {
-    $('onboard').classList.remove('on');
-    return false;
   }
+  $('onboard').classList.remove('on');
+  return false;
+}
 }
 
 function renderCard(){
