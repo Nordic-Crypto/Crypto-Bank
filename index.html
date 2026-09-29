@@ -1242,16 +1242,19 @@ body::before{
   display:block;
 }
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
-.nc3-action{
-  border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);
+.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:background .2s,border-color .2s,transform .15s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6}
+.nc3-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px)}
   color:#e7edf6;display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:11px;text-align:left;cursor:pointer;transition:.2s
 }
 .nc3-action:hover{transform:translateY(-3px);border-color:rgba(71,220,255,.19);box-shadow:0 15px 30px rgba(0,0,0,.18)}
-.nc3-action-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
-.nc3-action-icon.violet{background:rgba(140,108,255,.14);color:#ad9aff}
-.nc3-action-icon.pink{background:rgba(238,98,185,.13);color:#ff87cc}
-.nc3-action-icon.green{background:rgba(54,226,163,.12);color:#5ae7b5}
-.nc3-action-icon.cyan{background:rgba(71,220,255,.12);color:#69e3ff}
+.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);transition:transform .2s ease,box-shadow .25s ease;flex-shrink:0}
+.nc3-action:hover .nc3-action-icon{transform:scale(1.08) translateY(-2px);box-shadow:0 8px 22px rgba(71,220,255,.35)}
+.nc3-action-icon svg{width:20px;height:20px;stroke:#fff}
+.nc3-action-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
+.nc3-action-icon.pink{background:linear-gradient(135deg,#ec4899,#f472b6)}
+.nc3-action-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
+.nc3-action-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
+.nc3-action-icon.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .nc3-action b{display:block;font-size:.77rem}
 .nc3-action small{display:block;color:#68768b;margin-top:4px;font-size:.63rem}
 .nc3-action i{font-style:normal;color:#536177}
@@ -1511,6 +1514,7 @@ body::before{
   background: linear-gradient(135deg, #f59e0b, #ef4444);
   color: #fff;
 }
+    html, body { color-scheme: dark; }
   </style>
 
 <script>
