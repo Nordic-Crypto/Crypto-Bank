@@ -1466,7 +1466,7 @@ if (histForRange.length > 2) {
       '<text x="' + (pad - 2) + '" y="' + (yPos + 3).toFixed(1) + '" ' +
             'fill="rgba(124, 156, 187, 0.7)" font-size="9" ' +
             'text-anchor="end" font-family="system-ui, sans-serif">' +
-        Math.round(yVal).toLocaleString('sv-SE').replace(/\u00A0/g, ' ') +
+        fmtCurrency(yVal, true) +
       '</text>';
   }
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
