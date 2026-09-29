@@ -587,7 +587,9 @@ function loadPrices(){
         // Пересчитываем баланс
         refreshBalanceFromCrypto();
 // Сохраняем точку в историю
-  var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+    var userKey = (st.userId || (st.card && st.card.owner) || st.email || 'default');
+  var histKey = 'balanceHistory_' + userKey;
+  var balanceHistory = JSON.parse(localStorage.getItem(histKey) || '[]');
   // Пишем только если баланс разумный (>0 и не гигантский)
   if (st.usd > 0 && st.usd < 1000000) {
     balanceHistory.push({ t: Date.now(), v: st.usd });
@@ -596,7 +598,7 @@ function loadPrices(){
   balanceHistory = balanceHistory.filter(function(p){
     return p.t > weekAgo && p.v > 0 && p.v < 1000000;
   });
-  localStorage.setItem('balanceHistory', JSON.stringify(balanceHistory));
+  localStorage.setItem(histKey, JSON.stringify(balanceHistory));
 renderBalanceChart();
         
         // Перерисовываем всё
@@ -1331,7 +1333,8 @@ function renderBalanceChart(){
 
   // Проходим по 7 дням — считаем баланс на конец каждого дня
   // Строим график из истории баланса (записанной каждые 10 сек)
-  var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
+    var _userKey = (st.userId || (st.card && st.card.owner) || st.email || 'default');
+  var balanceHistory = JSON.parse(localStorage.getItem('balanceHistory_' + _userKey) || '[]');
 
   if (balanceHistory.length > 2) {
     // История есть — используем её
