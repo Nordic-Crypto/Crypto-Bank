@@ -2086,11 +2086,41 @@ function renderIban(){
     if (swiftEl && st.user.swift) swiftEl.textContent = st.user.swift;
     var bankEl = document.getElementById('myBank');
     if (bankEl && st.user.bank) bankEl.textContent = st.user.bank;
+        var titleEl = document.getElementById('ibanTitle');
+    if (titleEl) {
+      var c = st.user.country || 'SE';
+      var tt = {
+        'SE': 'Receive EUR & SEK by IBAN',
+        'NO': 'Receive EUR & NOK by IBAN',
+        'DK': 'Receive EUR & DKK by IBAN',
+        'FI': 'Receive EUR by IBAN',
+        'DE': 'Receive EUR by IBAN',
+        'FR': 'Receive EUR by IBAN',
+        'ES': 'Receive EUR by IBAN',
+        'IT': 'Receive EUR by IBAN',
+        'NL': 'Receive EUR by IBAN',
+        'AT': 'Receive EUR by IBAN',
+        'PT': 'Receive EUR by IBAN',
+        'IE': 'Receive EUR by IBAN',
+        'GB': 'Receive GBP by IBAN',
+        'PL': 'Receive PLN by IBAN',
+        'CZ': 'Receive CZK by IBAN',
+        'CH': 'Receive CHF by IBAN',
+        'HU': 'Receive HUF by IBAN',
+        'RO': 'Receive RON by IBAN',
+        'US': 'Receive USD by Wire',
+        'CA': 'Receive CAD by Wire',
+        'AU': 'Receive AUD by IBAN',
+        'JP': 'Receive JPY by Wire'
+      };
+      titleEl.textContent = tt[c] || 'Receive EUR & USD by IBAN';
+    }
     var countryEl = document.getElementById('myCountry');
     if (countryEl) {
       var names = { SE:'Sweden', NO:'Norway', DK:'Denmark', FI:'Finland', DE:'Germany', FR:'France', ES:'Spain', IT:'Italy', NL:'Netherlands', GB:'United Kingdom', US:'United States' };
       var code = st.user.country || 'SE';
-      countryEl.textContent = (names[code] || code) + ' (' + code + ')';
+      var flags = { 'SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','DE':'🇩🇪','FR':'🇫🇷','ES':'🇪🇸','IT':'🇮🇹','NL':'🇳🇱','AT':'🇦🇹','PT':'🇵🇹','IE':'🇮🇪','GB':'🇬🇧','PL':'🇵🇱','CZ':'🇨🇿','CH':'🇨🇭','HU':'🇭🇺','RO':'🇷🇴','US':'🇺🇸','CA':'🇨🇦','AU':'🇦🇺','JP':'🇯🇵' };
+countryEl.textContent = (flags[code] || '') + ' ' + (names[code] || code) + ' (' + code + ')';
     }
   } else {
     pending.style.display = 'block';
