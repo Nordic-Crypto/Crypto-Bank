@@ -1131,7 +1131,10 @@ body::before{
 .nc3-bal
 
 .nc3-balance-top{display:flex;justify-content:space-between}
-.nc3-kicker{font-size:.63rem}
+.nc3-kicker{font-size:.68rem;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#47dcff;opacity:.85}
+.nc3-iban-copy{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.nc3-iban-copy h3{font-size:1rem;font-weight:700;color:#e8f4ff;margin:0 0 4px}
+.nc3-iban-copy p{font-size:.72rem;color:#7c9cbb;margin:0}
 .nc3-balance{
   font-size:2.75rem;
   font-weight:800;
@@ -1284,21 +1287,29 @@ body::before{
   background:radial-gradient(circle,rgba(71,220,255,.12),transparent 70%);
   pointer-events:none;
 }
-.nc3-iban-copy{display:flex;gap:12px;align-items:center}
+.nc3-iban-copy{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.nc3-iban-copy h3{font-size:1rem;font-weight:700;color:#e8f4ff;margin:0 0 4px}
+.nc3-iban-copy p{font-size:.72rem;color:#7c9cbb;margin:0}
 .nc3-icon-circle{
-  width:46px;
-  height:46px;
+  width:48px;
+  height:48px;
+  min-width:48px;
   border-radius:14px;
-  background:linear-gradient(135deg,rgba(71,220,255,.2),rgba(140,108,255,.2));
-  border:1px solid rgba(71,220,255,.25);
-  display:flex;
+  background:linear-gradient(135deg,#06b6d4,#22d3ee);
+  border:none;
+  display:inline-flex;
   align-items:center;
   justify-content:center;
-  color:#7ee5ff;
-  box-shadow:0 0 20px rgba(71,220,255,.15);
-  position:relative;
-  z-index:1;
+  color:#fff;
+  box-shadow:0 6px 18px rgba(6,182,212,.35);
+  transition:transform .2s,box-shadow .25s;
+  flex-shrink:0;
 }
+.nc3-iban:hover .nc3-icon-circle{
+  transform:scale(1.05);
+  box-shadow:0 8px 24px rgba(6,182,212,.45);
+}
+.nc3-icon-circle svg{width:22px;height:22px;stroke:#fff;fill:none}
 .nc3-icon-circle svg{width:22px;height:22px}
 .nc3-iban h3{font-size:.9rem;margin-top:3px}
 .nc3-iban p{font-size:.67rem;color:#68768c;margin-top:4px}
@@ -1642,6 +1653,52 @@ select.wd-input {
   align-self: flex-start;
   flex-shrink: 0;
   white-space: nowrap;
+}
+ .nc3-iban-copy {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.nc3-iban-copy > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nc3-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #47dcff;
+  opacity: 0.8;
+}
+.nc3-iban-copy h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e8f4ff;
+}
+.nc3-iban-copy p {
+  margin: 0;
+  font-size: 12px;
+  color: #7c9cbb;
+}
+  .nc3-chart-labels {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.nc3-chart-panel,
+.nc3-balance-chart {
+  position: relative;
+  overflow: hidden;
+}
+    .nc3-balance-card {
+  overflow: hidden !important;
 }
   </style>
 
@@ -2023,7 +2080,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <section class="nc3-bottom-row">
       <div class="nc3-iban">
         <div class="nc3-iban-copy">
-          <div class="nc3-icon-circle">⌁</div>
+          <div class="nc3-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/><circle cx="12" cy="11" r="1.5"/></svg></div>
           <div>
             <div class="nc3-kicker">Bank details</div>
             <h3>Receive EUR & SEK by IBAN</h3>
