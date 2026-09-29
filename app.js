@@ -661,6 +661,25 @@ function fmtCurrency(usdAmount){
   var formatted = Number(amount).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
   return symbol + formatted + suffix;
 }
+/* ========== INPUT FORMATTERS ========== */
+function attachExpiryFormatter(input) {
+  if (!input) return;
+  input.addEventListener('input', function(e) {
+    var v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+    e.target.value = v;
+  });
+}
+
+function attachCardFormatter(input) {
+  if (!input) return;
+  input.addEventListener('input', function(e) {
+    var v = e.target.value.replace(/\D/g, '').slice(0, 16);
+    var parts = v.match(/.{1,4}/g);
+    e.target.value = parts ? parts.join(' ') : v;
+  });
+}
+
 
 function loadExchangeRates(){
   fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD')
