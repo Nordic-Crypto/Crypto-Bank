@@ -2634,6 +2634,51 @@ function closeModal(){
   mode = null;
   stopAutoCheck();
 }
+/* ========== TRANSFER STATUS ANIMATION ========== */
+function showTxStatus(method, amount) {
+  var modal = document.getElementById('txStatus');
+  var icon = document.getElementById('txStatusIcon');
+  var title = document.getElementById('txStatusTitle');
+  var desc = document.getElementById('txStatusDesc');
+  var step1 = document.getElementById('txStep1');
+  var step2 = document.getElementById('txStep2');
+  var step3 = document.getElementById('txStep3');
+
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+  modal.classList.add('on');
+  icon.className = 'tx-status-icon processing';
+  icon.innerHTML = '<div class="tx-spinner"></div>';
+  title.textContent = 'Processing transfer...';
+  desc.textContent = 'Sending ' + fmtCurrency(amount) + ' via ' + method;
+  step1.className = 'tx-status-step done';
+  step2.className = 'tx-status-step';
+  step3.className = 'tx-status-step';
+
+  setTimeout(function() {
+    icon.className = 'tx-status-icon verifying';
+    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+    title.textContent = 'Verifying transaction...';
+    desc.textContent = 'We are checking the recipient details.';
+    step2.className = 'tx-status-step done';
+  }, 1500);
+
+  setTimeout(function() {
+    icon.className = 'tx-status-icon review';
+    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+    title.textContent = 'Under review';
+    desc.textContent = 'Your transfer is being reviewed. We will notify you within 24 hours.';
+    step3.className = 'tx-status-step done';
+  }, 3000);
+
+  setTimeout(function() {
+    modal.classList.remove('on');
+    setTimeout(function() {
+      modal.style.display = 'none';
+    }, 300);
+  }, 5000);
+}
 
 /* ========== CONFIRM (Add / Transfer) ========== */
 function isCrypto(m){ return m === 'Bitcoin (BTC)' || m === 'Ethereum (ETH)'; }
@@ -2657,6 +2702,7 @@ function confirmModal(){
     closeModal();
     render();
     saveToServer();
+    showTxStatus(m, a);
     return;
   }
 
