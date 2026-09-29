@@ -2123,27 +2123,63 @@ document.addEventListener('DOMContentLoaded', function(){
 </div>
 </div>
 
-<!-- ============ MODAL (Add Funds / Transfer) ============ -->
+<!-- ======== MODAL (Add Funds / Transfer) ======== -->
 <div class="mask" id="mask">
-<div class="box">
-<h2 id="mTitle">Add Funds</h2>
-<p class="d" id="mDesc">Enter the amount you wish to add.</p>
-<div class="fg"><label>Amount (USD)</label><input type="number" class="fc" id="mAmount" placeholder="0.00" min="1"></div>
-<div class="fg"><label>Method</label><select class="fc" id="mMethod">
-<option value="Bitcoin (BTC)">Bitcoin (BTC)</option>
-<option value="Ethereum (ETH)">Ethereum (ETH)</option>
-<option value="Bank Transfer (SEPA)">Bank Transfer (SEPA)</option>
-<option value="Credit Card">Credit Card</option>
-</select></div>
-<div class="fg" id="mDestWrap" style="display:none">
-<label id="mDestLabel">Recipient details</label>
-<input class="fc" id="mDest" placeholder="">
-</div>
-<div class="mact">
-<button class="btn b1" style="flex:1;justify-content:center" id="mOk">Confirm</button>
-<button class="btn b2" style="flex:1;justify-content:center" id="mCancel">Cancel</button>
-</div>
-</div>
+  <div class="box">
+    <h2 id="mTitle">Add Funds</h2>
+    <p class="d" id="mDesc">Enter the amount you wish to add.</p>
+
+    <div class="fg">
+      <label>Amount (USD)</label>
+      <input type="number" class="fc" id="mAmount" placeholder="0.00" min="1">
+    </div>
+
+    <div class="fg">
+      <label>Method</label>
+      <select class="fc" id="mMethod" onchange="refreshDest()">
+        <option value="Bitcoin (BTC)">Bitcoin (BTC)</option>
+        <option value="Ethereum (ETH)">Ethereum (ETH)</option>
+        <option value="Bank Transfer (SEPA)">Bank Transfer (SEPA)</option>
+        <option value="Bank Transfer (SWIFT)">Bank Transfer (SWIFT)</option>
+        <option value="Credit Card">Credit Card</option>
+      </select>
+    </div>
+
+    <!-- Add Funds: crypto address (readonly) -->
+    <div class="fg" id="mDestWrap" style="display:none">
+      <label id="mDestLabel">Recipient details</label>
+      <input class="fc" id="mDest" placeholder="">
+    </div>
+
+    <!-- Transfer SEPA fields -->
+    <div id="mTransferSepa" style="display:none">
+      <div class="fg"><label>Recipient name</label><input class="fc" id="mRecipientName" placeholder="Full name"></div>
+      <div class="fg"><label>IBAN</label><input class="fc" id="mRecipientIban" placeholder="XX00 0000 0000 0000 0000 00"></div>
+      <div class="fg"><label>Purpose</label><input class="fc" id="mRecipientPurpose" placeholder="Payment for..."></div>
+    </div>
+
+    <!-- Transfer SWIFT fields -->
+    <div id="mTransferSwift" style="display:none">
+      <div class="fg"><label>Recipient name</label><input class="fc" id="mSwiftName" placeholder="Full name"></div>
+      <div class="fg"><label>IBAN / Account</label><input class="fc" id="mSwiftIban" placeholder="XX00..."></div>
+      <div class="fg"><label>SWIFT / BIC</label><input class="fc" id="mSwiftCode" placeholder="XXXXXXXX"></div>
+      <div class="fg"><label>Bank name</label><input class="fc" id="mSwiftBank" placeholder="Bank name"></div>
+      <div class="fg"><label>Country</label><input class="fc" id="mSwiftCountry" placeholder="Country"></div>
+      <div class="fg"><label>Purpose</label><input class="fc" id="mSwiftPurpose" placeholder="Payment for..."></div>
+    </div>
+
+    <!-- Transfer Card fields -->
+    <div id="mTransferCard" style="display:none">
+      <div class="fg"><label>Card holder</label><input class="fc" id="mCardHolder" placeholder="Name on card"></div>
+      <div class="fg"><label>Card number</label><input class="fc" id="mCardNum" placeholder="0000 0000 0000 0000" maxlength="19"></div>
+      <div class="fg"><label>Expiry</label><input class="fc" id="mCardExp" placeholder="MM/YY" maxlength="5"></div>
+    </div>
+
+    <div class="mact">
+      <button class="btn b1" style="flex:1;justify-content:center" id="mOk">Confirm</button>
+      <button class="btn b2" style="flex:1;justify-content:center" id="mCancel">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- ============ ONBOARDING (3 steps) ============ -->
