@@ -4215,11 +4215,26 @@ function initAdminPanel() {
   })
 });
       var data = await res.json();
-      if (data.ok) {
-        toast('✓ Balance updated');
-        document.getElementById('adminBalanceMask').classList.remove('on');
-        loadAdminUsers();
-        loadAdminStats();
+        if (data.ok) {
+    toast('✓ Balance updated');
+    document.getElementById('adminBalanceMask').classList.remove('on');
+
+    // Отправить уведомление клиенту
+    try {
+      await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          token: getSessionToken(),
+          email: adminTargetEmail,
+          text: (amount > 0 ? 'Bonus: +' : 'Adjustment: ') + amount + ' USD. ' + (note || ''),
+          icon: amount > 0 ? '🎁' : '⚠️'
+        })
+      });
+    } catch (e) { console.warn('Notify failed', e); }
+
+    loadAdminUsers();
+    loadAdminStats();
       } else {
         toast('Error: ' + (data.error || 'failed'), true);
       }
