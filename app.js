@@ -1318,40 +1318,30 @@ function renderBalanceChart(){
   // Считаем баланс на каждый день за 7 дней
 // Баланс = сумма депозитов до этого дня + (стоимость ETH на этот день)
 
-var daysBack = 7;
-var nowMs = Date.now();
-var msPerDay = 24 * 60 * 60 * 1000;
-
-// Начальная точка — 7 дней назад
-points.push({ t: nowMs - daysBack * msPerDay, v: 0 });
-
-// Проходим по дням
-for (var d = 0; d < daysBack; d++) {
-  var dayStart = nowMs - (daysBack - d) * msPerDay;
-  var dayEnd = nowMs - (daysBack - d - 1) * msPerDay;
-  
-  // Сумма депозитов до этого дня (из txs)
-  var depositsSoFar = 0;
-  for (var j = 0; j < sorted.length; j++) {
-    var txTs = sorted[j].ts || created;
-    if (txTs <= dayEnd) depositsSoFar += (sorted[j].amt || 0);
+  // Проходим по 7 дням — считаем баланс на конец каждого дня
+  for (var d = 0; d <= days; d++) {
+    var dayT = now - (days - d) * dayMs;
+    
+    // Сумма всех транзакций до этого дня
+    var totalAtDay = 0;
+    for (var j = 0; j < sorted.length; j++) {
+      var txT = sorted[j].ts || created;
+      if (txT <= dayT) {
+        var tx = sorted[j];
+        if (tx.crypto && tx.symbol) {
+          var price = tx.symbol === 'ETH' ? (st.ethP || 0) : (st.btcP || 0);
+          totalAtDay += tx.crypto * price;
+        } else {
+          totalAtDay += (tx.amt || 0);
+        }
+      }
+    }
+    
+    points.push({ t: dayT, v: totalAtDay });
   }
   
-  // Плюс движение ETH (только последний день — реальная цена)
-  // Для предыдущих дней — берём сохранённые исторические цены (если есть)
-  var ethValue = 0;
-  if (d === daysBack - 1) {
-    // Последний день — текущая цена
-    ethValue = (st.eth || 0) * (st.ethP || 0);
-  } else {
-    // Предыдущие дни — используем статическую цену (примерно)
-    ethValue = (st.eth || 0) * (st.ethP || 0);  // временно та же цена
-  }
-  
-  points.push({ t: dayEnd, v: depositsSoFar + ethValue });
-}
-
-  points.push({ t: now - dayMs * 0.5, v: st.usd });      // ← используем текущий баланс
+  // Финальная точка — ровно сейчас, текущий баланс
+  points.push({ t: now, v: st.usd });
 
   var w = 500;
   var h = 180;
