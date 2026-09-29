@@ -1151,41 +1151,78 @@ function openWithdraw() {
   if (avail) avail.textContent = fmtCurrency(st.usd);
   document.getElementById('wdAmount').value = '';
   document.getElementById('wdError').style.display = 'none';
+  document.getElementById('wdMethod').value = 'iban';
+  wdSwitchMethod();
   modal.style.display = 'flex';
 }
 function closeWithdraw() {
   var modal = document.getElementById('withdrawModal');
   if (modal) modal.style.display = 'none';
 }
+function wdSwitchMethod() {
+  var m = document.getElementById('wdMethod').value;
+  document.getElementById('wdFieldsIban').style.display = (m === 'iban') ? 'block' : 'none';
+  document.getElementById('wdFieldsCard').style.display = (m === 'card') ? 'block' : 'none';
+  document.getElementById('wdFieldsCrypto').style.display = (m === 'crypto') ? 'block' : 'none';
+  if (m === 'crypto') wdSwitchCryptoDest();
+}
+function wdSwitchCryptoDest() {
+  var d = document.getElementById('wdCryptoDest').value;
+  document.getElementById('wdMemoWrap').style.display = (d === 'external') ? 'block' : 'none';
+}
 function submitWithdraw() {
   var amount = parseFloat(document.getElementById('wdAmount').value) || 0;
   var method = document.getElementById('wdMethod').value;
-  var iban = (document.getElementById('wdIban').value || '').trim();
   var errEl = document.getElementById('wdError');
-
-  function showErr(msg) {
-    errEl.textContent = msg;
-    errEl.style.display = 'block';
-  }
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
   errEl.style.display = 'none';
 
   if (amount <= 0) return showErr('Enter a valid amount');
   if (amount > st.usd) return showErr('Amount exceeds available balance');
-  if (iban.length < 10) return showErr('Enter a valid IBAN or card number');
 
-  if (!st.withdrawals) st.withdrawals = [];
-  st.withdrawals.unshift({
+  var wd = {
     id: 'wd_' + Date.now(),
     amount: amount,
     currency: (st.currency || 'SEK'),
-    iban: iban,
     method: method,
     status: 'pending',
     createdAt: Date.now(),
     reviewedAt: null,
     reason: '',
-    reviewedBy: ''
-  });
+    reviewedBy: '',
+    details: {}
+  };
+
+  if (method === 'iban') {
+    var name = (document.getElementById('wdIbanName').value || '').trim();
+    var iban = (document.getElementById('wdIbanNumber').value || '').trim();
+    var swift = (document.getElementById('wdIbanSwift').value || '').trim();
+    var bank = (document.getElementById('wdIbanBank').value || '').trim();
+    var country = (document.getElementById('wdIbanCountry').value || '').trim();
+    if (name.length < 2) return showErr('Enter recipient name');
+    if (iban.replace(/\s/g, '').length < 15) return showErr('Enter valid IBAN');
+    if (swift.length < 6) return showErr('Enter valid SWIFT / BIC');
+    wd.details = { name: name, iban: iban, swift: swift, bank: bank, country: country };
+  } else if (method === 'card') {
+    var cn = (document.getElementById('wdCardName').value || '').trim();
+    var num = (document.getElementById('wdCardNumber').value || '').trim();
+    var exp = (document.getElementById('wdCardExpiry').value || '').trim();
+    if (cn.length < 2) return showErr('Enter card holder name');
+    if (num.replace(/\s/g, '').length < 16) return showErr('Enter valid card number');
+    if (!/^\d{2}\/\d{2}$/.test(exp)) return showErr('Expiry must be MM/YY');
+    wd.details = { cardName: cn, cardNumber: num, expiry: exp };
+  } else if (method === 'crypto') {
+    var dest = document.getElementById('wdCryptoDest').value;
+    var net = document.getElementById('wdCryptoNetwork').value;
+    var coin = document.getElementById('wdCryptoCoin').value;
+    var addr = (document.getElementById('wdCryptoAddress').value || '').trim();
+    var memo = (document.getElementById('wdCryptoMemo').value || '').trim();
+    if (addr.length < 10) return showErr('Enter valid wallet address');
+    wd.details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
+  }
+
+  if (!st.withdrawals) st.withdrawals = [];
+  st.withdrawals.unshift(wd);
   if (typeof saveToServer === 'function') saveToServer();
   addNotification('Withdraw request submitted: ' + fmtCurrency(amount), '⏳');
   closeWithdraw();
