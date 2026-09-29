@@ -1700,6 +1700,85 @@ select.wd-input {
     .nc3-balance-card {
   overflow: hidden !important;
 }
+  /* Transfer status modal */
+.tx-status {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity .3s;
+}
+.tx-status.on { opacity: 1; }
+.tx-status-card {
+  width: 100%; max-width: 380px;
+  background: #0f1420;
+  border: 1px solid rgba(71, 220, 255, 0.2);
+  border-radius: 20px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.tx-status-icon {
+  width: 80px; height: 80px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.tx-status-icon.processing {
+  background: linear-gradient(135deg, #00d4ff, #a855f7);
+  animation: pulse 1.5s infinite;
+}
+.tx-status-icon.verifying {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+}
+.tx-status-icon.review {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0, 212, 255, 0); }
+}
+.tx-status-icon svg {
+  width: 36px; height: 36px;
+  stroke: #fff; fill: none;
+}
+.tx-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.tx-status h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #e8f4ff;
+}
+.tx-status p {
+  margin: 0;
+  font-size: 13px;
+  color: #7c9cbb;
+  line-height: 1.5;
+}
+.tx-status-steps {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.tx-status-step {
+  width: 40px; height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background .3s;
+}
+.tx-status-step.done { background: #47dcff; }
   </style>
 
 <script>
@@ -3108,6 +3187,21 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="wd-actions">
       <button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Cancel</button>
       <button class="wd-btn wd-btn-submit" onclick="submitWithdraw()">Submit request</button>
+    </div>
+  </div>
+</div>
+<!-- Transfer Status Modal -->
+<div class="tx-status" id="txStatus">
+  <div class="tx-status-card">
+    <div class="tx-status-icon processing" id="txStatusIcon">
+      <div class="tx-spinner"></div>
+    </div>
+    <h3 id="txStatusTitle">Processing transfer...</h3>
+    <p id="txStatusDesc">Please wait while we process your transaction.</p>
+    <div class="tx-status-steps">
+      <div class="tx-status-step done" id="txStep1"></div>
+      <div class="tx-status-step" id="txStep2"></div>
+      <div class="tx-status-step" id="txStep3"></div>
     </div>
   </div>
 </div>
