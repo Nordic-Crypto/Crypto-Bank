@@ -393,6 +393,8 @@ function showApp() {
     })
     .catch(function(){});
   }
+      });
+}
 
 // Обновление при возврате на вкладку
 document.addEventListener('visibilitychange', function(){
