@@ -4,7 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NordicCrypto</title>
-<style>
+/* Тултип для графика */
+.chart-tooltip {
+  position: absolute;
+  background: rgba(15, 20, 35, 0.95);
+  border: 1px solid rgba(71, 220, 255, 0.4);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #e8f4ff;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  transform: translate(-50%, -120%);
+}
+.chart-tooltip .tt-date {
+  color: #7c9cbb;
+  font-size: 10px;
+  display: block;
+  margin-bottom: 2px;
+}
+.chart-tooltip .tt-value {
+  color: #47dcff;
+  font-weight: 600;
+  font-size: 13px;
+}
+.chart-tooltip-line {
+  position: absolute;
+  width: 1px;
+  background: rgba(71, 220, 255, 0.4);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 5;
+  top: 0;
+}
+.chart-tooltip-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #47dcff;
+  box-shadow: 0 0 10px #47dcff;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+}
+  <style>
 :root{
   --pri:#00E5FF;--pri2:#8B5CF6;--acc:#10B981;
   --bg:#0B1220;--pan:#111827;--pan2:#1A1F2E;
