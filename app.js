@@ -1439,20 +1439,114 @@ if (histForRange.length > 2) {
     '</svg>' +
   '<div class="balance-chart-labels">' + labelsHtml + '</div>';
 
-   if (wrap) {
-  wrap.style.transition = 'opacity .4s ease';
-  wrap.style.opacity = '0';
-  wrap.innerHTML = svg;
-  setTimeout(function(){ wrap.style.opacity = '1'; }, 50);
-}
-if (wrap2) {
-  wrap2.style.transition = 'opacity .4s ease';
-  wrap2.style.opacity = '0';
-  wrap2.innerHTML = svg;
-  setTimeout(function(){ wrap2.style.opacity = '1'; }, 50);
-}
+     if (wrap) {
+    wrap.style.transition = 'opacity .4s ease';
+    wrap.style.opacity = '0';
+    wrap.innerHTML = svg;
+    setTimeout(function(){ wrap.style.opacity = '1'; }, 50);
+    attachChartTooltip(wrap, points, minT, maxT, minV, maxV, w, h, pad);
+  }
+  if (wrap2) {
+    wrap2.style.transition = 'opacity .4s ease';
+    wrap2.style.opacity = '0';
+    wrap2.innerHTML = svg;
+    setTimeout(function(){ wrap2.style.opacity = '1'; }, 50);
+    attachChartTooltip(wrap2, points, minT, maxT, minV, maxV, w, h, pad);
+  }
 }
 
+/* ========== CHART TOOLTIP ========== */
+function attachChartTooltip(container, points, minT, maxT, minV, maxV, w, h, pad) {
+  if (!container || !points || points.length < 2) return;
+
+  // Убираем старые тултипы
+  var oldTip = container.querySelector('.chart-tooltip');
+  var oldLine = container.querySelector('.chart-tooltip-line');
+  var oldDot = container.querySelector('.chart-tooltip-dot');
+  if (oldTip) oldTip.remove();
+  if (oldLine) oldLine.remove();
+  if (oldDot) oldDot.remove();
+
+  // Контейнер должен быть position: relative
+  var cs = getComputedStyle(container);
+  if (cs.position === 'static') container.style.position = 'relative';
+
+  // Создаём элементы
+  var tip = document.createElement('div');
+  tip.className = 'chart-tooltip';
+  tip.innerHTML = '<span class="tt-date"></span><span class="tt-value"></span>';
+
+  var line = document.createElement('div');
+  line.className = 'chart-tooltip-line';
+
+  var dot = document.createElement('div');
+  dot.className = 'chart-tooltip-dot';
+
+  container.appendChild(line);
+  container.appendChild(dot);
+  container.appendChild(tip);
+
+  var dateEl = tip.querySelector('.tt-date');
+  var valEl = tip.querySelector('.tt-value');
+
+  // Координаты точек в пикселях
+  var rect = container.getBoundingClientRect();
+  var scaleX = rect.width / w;
+  var scaleY = rect.height / h;
+
+  var pxPoints = points.map(function(p) {
+    var x = pad + ((p.t - minT) / (maxT - minT)) * (w - pad * 2);
+    var y = pad + (1 - (p.v - minV) / (maxV - minV)) * (h - pad * 2);
+    return { x: x, y: y, t: p.t, v: p.v };
+  });
+
+  function hideAll() {
+    tip.style.opacity = '0';
+    line.style.opacity = '0';
+    dot.style.opacity = '0';
+  }
+
+  container.addEventListener('mousemove', function(e) {
+    var mx = (e.clientX - rect.left) / scaleX;
+
+    // Ближайшая точка по X
+    var closest = pxPoints[0];
+    var minDist = Math.abs(pxPoints[0].x - mx);
+    for (var i = 1; i < pxPoints.length; i++) {
+      var d = Math.abs(pxPoints[i].x - mx);
+      if (d < minDist) { minDist = d; closest = pxPoints[i]; }
+    }
+
+    var cx = closest.x * scaleX;
+    var cy = closest.y * scaleY;
+
+    // Линия
+    line.style.left = cx + 'px';
+    line.style.height = (rect.height - cy) + 'px';
+    line.style.top = cy + 'px';
+    line.style.opacity = '1';
+
+    // Точка
+    dot.style.left = cx + 'px';
+    dot.style.top = cy + 'px';
+    dot.style.opacity = '1';
+
+    // Тултип
+    var dt = new Date(closest.t);
+    dateEl.textContent = dt.toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'short'
+    }) + ', ' + dt.toLocaleTimeString('en-GB', {
+      hour: '2-digit', minute: '2-digit'
+    });
+    valEl.textContent = fmtCurrency(closest.v);
+
+    tip.style.left = cx + 'px';
+    tip.style.top = cy + 'px';
+    tip.style.opacity = '1';
+  });
+
+  container.addEventListener('mouseleave', hideAll);
+}
 /* ========== STATS ========== */
 function renderStats(){
   var txs = st.txs || [];
