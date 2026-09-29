@@ -1221,12 +1221,59 @@ function submitWithdraw() {
     wd.details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
   }
 
-  if (!st.withdrawals) st.withdrawals = [];
+   if (!st.withdrawals) st.withdrawals = [];
   st.withdrawals.unshift(wd);
   if (typeof saveToServer === 'function') saveToServer();
-  addNotification('Withdraw request submitted: ' + fmtCurrency(amount), '⏳');
   closeWithdraw();
   if (typeof render === 'function') render();
+
+  // Показать анимацию (для Withdraw — другой текст)
+  showWithdrawStatus(method, amount);
+}
+/* ========== WITHDRAW STATUS ANIMATION ========== */
+function showWithdrawStatus(method, amount) {
+  var modal = document.getElementById('txStatus');
+  var icon = document.getElementById('txStatusIcon');
+  var title = document.getElementById('txStatusTitle');
+  var desc = document.getElementById('txStatusDesc');
+  var step1 = document.getElementById('txStep1');
+  var step2 = document.getElementById('txStep2');
+  var step3 = document.getElementById('txStep3');
+
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+  modal.classList.add('on');
+  icon.className = 'tx-status-icon processing';
+  icon.innerHTML = '<div class="tx-spinner"></div>';
+  title.textContent = 'Submitting request...';
+  desc.textContent = 'Creating your withdrawal request for ' + fmtCurrency(amount);
+  step1.className = 'tx-status-step done';
+  step2.className = 'tx-status-step';
+  step3.className = 'tx-status-step';
+
+  setTimeout(function() {
+    icon.className = 'tx-status-icon verifying';
+    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+    title.textContent = 'Verifying details...';
+    desc.textContent = 'Checking your IBAN and recipient information.';
+    step2.className = 'tx-status-step done';
+  }, 1500);
+
+  setTimeout(function() {
+    icon.className = 'tx-status-icon review';
+    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+    title.textContent = 'Pending approval';
+    desc.textContent = 'Your withdrawal is waiting for admin approval. You will be notified when it is processed.';
+    step3.className = 'tx-status-step done';
+  }, 3000);
+
+  setTimeout(function() {
+    modal.classList.remove('on');
+    setTimeout(function() {
+      modal.style.display = 'none';
+    }, 300);
+  }, 5500);
 }
 
 /* ========== DEPOSIT VERIFICATION ========== */
