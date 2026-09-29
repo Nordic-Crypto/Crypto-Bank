@@ -1528,6 +1528,126 @@ select.wd-input option {
 select.wd-input {
   background-color: #0f1420 !important;
   color: #e8f4ff;
+}.nc3-card-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+.nc3-card-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(13, 19, 30, 0.72);
+  border: 1px solid var(--nc3-line);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, transform .15s;
+  font-family: inherit;
+  color: #e7edf6;
+}
+.nc3-card-action:hover {
+  background: rgba(71, 220, 255, 0.06);
+  border-color: rgba(71, 220, 255, 0.3);
+  transform: translateY(-1px);
+}
+.nc3-card-action-icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  transition: transform .2s, box-shadow .25s;
+}
+.nc3-card-action:hover .nc3-card-action-icon {
+  transform: scale(1.08);
+  box-shadow: 0 5px 16px rgba(71, 220, 255, 0.35);
+}
+.nc3-card-action-icon.cyan   { background: linear-gradient(135deg, #06b6d4, #22d3ee); }
+.nc3-card-action-icon.violet { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+.nc3-card-action-icon.orange { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+.nc3-card-action-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 500px) {
+  .nc3-card-actions { grid-template-columns: 1fr; }
+  .nc3-card-action { justify-content: flex-start; }
+}
+    .nc3-iban {
+  padding: 22px;
+  border-radius: 16px;
+  background: 
+    radial-gradient(400px 200px at 100% 0%, rgba(71, 220, 255, 0.08), transparent 60%),
+    linear-gradient(145deg, rgba(16, 23, 36, 0.9), rgba(9, 14, 23, 0.9));
+  border: 1px solid rgba(71, 220, 255, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+.nc3-iban-details {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nc3-iban-details > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(71, 220, 255, 0.04);
+  border: 1px solid rgba(71, 220, 255, 0.1);
+  border-radius: 10px;
+  transition: background .2s, border-color .2s;
+}
+.nc3-iban-details > div:hover {
+  background: rgba(71, 220, 255, 0.08);
+  border-color: rgba(71, 220, 255, 0.25);
+}
+.nc3-iban-details span {
+  color: #7c9cbb;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.nc3-iban-details b {
+  color: #e8f4ff;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-weight: 600;
+}
+#myIban { color: #47dcff; }
+#mySwift { color: #a855f7; }
+#myBank { color: #e8f4ff; }
+#myCountry { color: #f59e0b; }
+.nc3-copy-iban {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(71, 220, 255, 0.08);
+  border: 1px solid rgba(71, 220, 255, 0.25);
+  border-radius: 10px;
+  color: #47dcff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .2s, border-color .2s;
+}
+.nc3-copy-iban:hover {
+  background: rgba(71, 220, 255, 0.15);
+  border-color: rgba(71, 220, 255, 0.4);
 }
   </style>
 
@@ -1764,18 +1884,24 @@ document.addEventListener('DOMContentLoaded', function(){
             <div class="card-network" id="cardNetwork1"></div>
           </div>
         </div>
-        <div class="nc3-card-actions">
-  <button id="btnFreezeCard">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m4.93 5.93 14.14 14.14"/><path d="m19.07 5.93-14.14 14.14"/><circle cx="12" cy="12" r="3"/></svg>
-    <b>Freeze</b>
+       <div class="nc3-card-actions">
+  <button class="nc3-card-action" id="btnFreezeCard">
+    <span class="nc3-card-action-icon cyan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2 12h20"/></svg>
+    </span>
+    <span class="nc3-card-action-label">Freeze</span>
   </button>
-  <button id="btnLimitsCard">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14h4"/><path d="M13 10h4"/><path d="M9 6h8"/></svg>
-    <b>Limits</b>
+  <button class="nc3-card-action" id="btnLimitsCard">
+    <span class="nc3-card-action-icon violet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8"/></svg>
+    </span>
+    <span class="nc3-card-action-label">Limits</span>
   </button>
-  <button id="btnSettingsCard">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    <b>Settings</b>
+  <button class="nc3-card-action" id="btnSettingsCard">
+    <span class="nc3-card-action-icon orange">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </span>
+    <span class="nc3-card-action-label">Settings</span>
   </button>
 </div>
       </div>
