@@ -4065,6 +4065,15 @@ function adminSendMessage() {
 }
 
 function adminViewClient(email) {
+  // Сохраняем оригинальные данные админа
+  window.adminOriginalEmail = localStorage.getItem('user_email');
+  window.adminOriginalRole = localStorage.getItem('user_role');
+  window.adminViewingEmail = email;
+
+  // Временно меняем на клиента — чтобы saveToServer работал
+  localStorage.setItem('user_email', email);
+  localStorage.setItem('user_role', 'user');
+
   hideAdminPanel();
   var side = document.getElementById('sideBar');
   var main = document.getElementById('mainApp');
@@ -4131,10 +4140,19 @@ function backToAdmin() {
   var backBar = document.getElementById('adminBackBar');
   if (backBar) backBar.style.display = 'none';
 
-    // Сбросить state клиента
+  // Восстанавливаем роль админа
+  if (window.adminOriginalEmail) {
+    localStorage.setItem('user_email', window.adminOriginalEmail);
+    localStorage.setItem('user_role', window.adminOriginalRole || 'admin');
+    window.adminOriginalEmail = null;
+    window.adminOriginalRole = null;
+    window.adminViewingEmail = null;
+  }
+
+  // Сброс клиентского state
   st = JSON.parse(JSON.stringify(def));
   stateLoaded = false;
-  
+
   showAdminPanel();
 }
 
