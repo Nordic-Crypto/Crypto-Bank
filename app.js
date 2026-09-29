@@ -1314,7 +1314,6 @@ function renderBalanceChart(){
   var points = [];
   var running = 0;
 
-  points.push({ t: now - days * dayMs, v: 0 });
 
   // Считаем баланс на каждый день за 7 дней
 // Баланс = сумма депозитов до этого дня + (стоимость ETH на этот день)
