@@ -2453,7 +2453,8 @@ for (var i=0; i<mis.length; i++){
     var ms = document.querySelectorAll('.mi');
     for (var k=0; k<ms.length; k++) ms[k].classList.remove('on');
     this.classList.add('on');
-    $('ttl').textContent = titles[p];
+        var ttlEl = document.getElementById('ttl');
+    if (ttlEl) ttlEl.textContent = titles[p];
   };
 }
 
