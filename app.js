@@ -906,10 +906,9 @@ function drawChart(elId, prices, color){
 
   var linePath = 'M' + points.join(' L');
   // Закрываем область заливки до конца
-var lastX = parseFloat(svgPoints[svgPoints.length - 1].split(',')[0]);
-var lastPoint = svgPoints[svgPoints.length - 1];
+var lastPoint = points[points.length - 1];
 var lastX = lastPoint.split(',')[0];
-var firstPoint = svgPoints[0];
+var firstPoint = points[0];
 var firstX = firstPoint.split(',')[0];
 var fillPath = linePath + 
   ' L' + lastX + ',' + (h - pad) + 
