@@ -352,15 +352,15 @@ function showApp() {
       return;
     }
 
-    // 2. Нет верификации → верификация
-    if (!st.user || !st.user.verified){
-      showVerifyScreen();
+   // 2. Нет карты → онбординг
+    if (!st.card){
+      $('onboard').classList.add('on');
       return;
     }
 
-    // 3. Нет карты → онбординг
-    if (!st.card){
-      $('onboard').classList.add('on');
+    // 3. Нет верификации → верификация
+    if (!st.user || !st.user.verified){
+      showVerifyScreen();
       return;
     }
 
