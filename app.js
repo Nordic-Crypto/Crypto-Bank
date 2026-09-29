@@ -4225,49 +4225,84 @@ function initAdminPanel() {
 if (balanceSave) balanceSave.onclick = async function(){
   var amount = Number(document.getElementById('adminBalanceAmount').value);
   var note = document.getElementById('adminBalanceNote').value.trim();
+  var typeEl = document.getElementById('adminBalanceType');
+  var type = typeEl ? typeEl.value : 'bonus';
+
   if (!amount || amount === 0) { toast('Enter a valid amount', true); return; }
+
+  var meta = {
+    'bonus':      { icon: '🎁', label: 'Bonus' },
+    'bank':       { icon: '🏦', label: 'Bank deposit' },
+    'crypto':     { icon: '₿',  label: 'Crypto deposit' },
+    'card':       { icon: '💳', label: 'Card deposit' },
+    'correction': { icon: '🔧', label: 'Correction' }
+  };
+  var m = meta[type] || meta['bonus'];
 
   try {
     var token = getSessionToken();
 
-    var r = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
+    // 1. Получить текущий баланс через listUsers
+    var r1 = await fetch(WORKER_LOGIN_URL + '?action=listUsers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var d1 = await r1.json();
+    if (!d1.ok || !d1.users) { toast('Cannot load users', true); return; }
+
+    var client = null;
+    for (var i = 0; i < d1.users.length; i++) {
+      if (d1.users[i].email === adminTargetEmail) { client = d1.users[i]; break; }
+    }
+    if (!client) { toast('Client not found', true); return; }
+
+    var currentBalance = Number(client.balance) || 0;
+    var newBalance = currentBalance + amount;
+
+    // 2. Обновить баланс
+    var r2 = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-  token: token,
-  email: adminTargetEmail,
-  newBalance: (currentBalance + amount),
-  note: note || 'Bonus'
-})
+        token: token,
+        email: adminTargetEmail,
+        newBalance: newBalance,
+        note: note || m.label
+      })
     });
-    var data = await r.json();
-    console.log('updateUserBalance:', data);
+    var d2 = await r2.json();
+    console.log('updateUserBalance:', d2);
 
-    if (data.ok) {
-      try {
-        await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token: token,
-            email: adminTargetEmail,
-            text: '🎁 Bonus: +' + amount + ' USD' + (note ? ' — ' + note : ''),
-            icon: amount > 0 ? '🎁' : '⚠️'
-          })
-        });
-      } catch(e) { console.warn('Notify failed', e); }
-
-      toast('✓ Balance updated: ' + (amount > 0 ? '+' : '') + amount);
-      document.getElementById('adminBalanceMask').classList.remove('on');
-      loadAdminUsers();
-      loadAdminStats();
-    } else {
-      toast('Error: ' + (data.error || 'Failed'), true);
+    if (!d2.ok) {
+      toast('Error: ' + (d2.error || 'Failed'), true);
+      return;
     }
+
+    // 3. Уведомление клиенту
+    try {
+      await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: token,
+          email: adminTargetEmail,
+          text: m.icon + ' ' + m.label + ': +' + amount + ' USD' + (note ? ' — ' + note : ''),
+          icon: m.icon
+        })
+      });
+    } catch(e) { console.warn('Notify failed', e); }
+
+    toast('✓ Balance updated: +' + amount + ' (' + m.label + ')');
+    document.getElementById('adminBalanceMask').classList.remove('on');
+    loadAdminUsers();
+    loadAdminStats();
+
   } catch (e) {
     console.error('Balance update failed', e);
     toast('Connection error: ' + e.message, true);
   }
+};
 };
   // Message modal
   if (msgCancel) msgCancel.onclick = function(){
