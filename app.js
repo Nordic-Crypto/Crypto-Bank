@@ -4242,7 +4242,7 @@ if (balanceSave) balanceSave.onclick = async function(){
   try {
     var token = getSessionToken();
 
-    // 1. Получить текущий баланс через listUsers
+    // 1. Получить клиента через listUsers
     var r1 = await fetch(WORKER_LOGIN_URL + '?action=listUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4260,7 +4260,7 @@ if (balanceSave) balanceSave.onclick = async function(){
     var currentBalance = Number(client.balance) || 0;
     var newBalance = currentBalance + amount;
 
-    // 2. Обновить баланс
+    // 2. Обновить баланс (индекс)
     var r2 = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4274,12 +4274,61 @@ if (balanceSave) balanceSave.onclick = async function(){
     var d2 = await r2.json();
     console.log('updateUserBalance:', d2);
 
-    if (!d2.ok) {
-      toast('Error: ' + (d2.error || 'Failed'), true);
-      return;
-    }
+    if (!d2.ok) { toast('Error: ' + (d2.error || 'Failed'), true); return; }
 
-    // 3. Уведомление клиенту
+    // 3. Сформировать полный стейт клиента (st) — с балансом и транзакцией
+    var fullState = {
+      usd: newBalance,
+      btc: client.btc || 0,
+      eth: client.eth || 0,
+      btcP: 68000,
+      ethP: 3200,
+      eurR: 0.92,
+      sekR: 10.45,
+      currency: client.currency || 'USD',
+      txs: [],
+      order: null,
+      card: client.card || null,
+      notifications: [],
+      balanceHistory: [],
+      withdrawals: []
+    };
+
+    // Пытаемся загрузить старые txs (если getUserState вернёт)
+    try {
+      var r3 = await fetch(WORKER_LOGIN_URL + '?action=getuserstate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: adminTargetEmail })
+      });
+      var d3 = await r3.json();
+      if (d3 && d3.txs) fullState.txs = d3.txs;
+      if (d3 && d3.balanceHistory) fullState.balanceHistory = d3.balanceHistory;
+      if (d3 && d3.withdrawals) fullState.withdrawals = d3.withdrawals;
+    } catch(e) {}
+
+    // Добавляем новую транзакцию
+    fullState.txs.unshift({
+      ts: Date.now(),
+      desc: m.label + (note ? ' — ' + note : ''),
+      amt: amount,
+      status: 'Completed'
+    });
+
+    // 4. Сохранить полный стейт
+    var r4 = await fetch(WORKER_LOGIN_URL + '?action=saveuserstate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: token,
+        email: adminTargetEmail,
+        state: fullState
+      })
+    });
+    var d4 = await r4.json();
+    console.log('saveuserstate:', d4);
+
+    // 5. Уведомление
     try {
       await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
         method: 'POST',
@@ -4291,7 +4340,7 @@ if (balanceSave) balanceSave.onclick = async function(){
           icon: m.icon
         })
       });
-    } catch(e) { console.warn('Notify failed', e); }
+    } catch(e) {}
 
     toast('✓ Balance updated: +' + amount + ' (' + m.label + ')');
     document.getElementById('adminBalanceMask').classList.remove('on');
