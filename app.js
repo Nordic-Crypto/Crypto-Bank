@@ -1363,16 +1363,22 @@ function renderBalanceChart(){
 
   var minT = now - days * dayMs;
   var maxT = now;
-  var minV = 0;
-  var maxV = 0;
+    // Авто-zoom: считаем реальный min/max по точкам + padding
+  var minV = Infinity;
+  var maxV = -Infinity;
 
   for (var k = 0; k < points.length; k++){
     if (points[k].v < minV) minV = points[k].v;
     if (points[k].v > maxV) maxV = points[k].v;
   }
 
-  if (maxV === minV) maxV = minV + 1;
-  maxV = maxV * 1.15;
+  if (!isFinite(minV) || !isFinite(maxV)) { minV = 0; maxV = 1; }
+  if (maxV === minV) { maxV = minV + 1; }
+
+  // Padding 15% от диапазона (минимум 1 USD)
+  var padV = (maxV - minV) * 0.15 || 1;
+  minV = minV - padV;
+  maxV = maxV + padV;
 
   var svgPoints = [];
   for (var m = 0; m < points.length; m++){
