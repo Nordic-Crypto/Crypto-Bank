@@ -1306,39 +1306,10 @@ body::before{
 .nc3-iban-details div{background:rgba(255,255,255,.025);padding:8px 10px;border-radius:9px}
 .nc3-iban-details span{display:block;font-size:.57rem;color:#617087;text-transform:uppercase}
 .nc3-iban-details b{display:block;font-size:.65rem;margin-top:4px;overflow:hidden;text-overflow:ellipsis}
-.nc3-copy-iban{
-  position:absolute;
-  right:18px;
-  top:18px;
-  border:1px solid rgba(71,220,255,.25);
-  background:linear-gradient(135deg,rgba(71,220,255,.1),rgba(140,108,255,.1));
-  color:#74e4ff;
-  border-radius:10px;
-  padding:9px 13px;
-  font-size:.68rem;
-  font-weight:650;
-  cursor:pointer;
-  font-family:inherit;
-  transition:.2s;
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  box-shadow:0 4px 14px rgba(71,220,255,.12);
-}
-.nc3-copy-iban svg{
-  width:13px;
-  height:13px;
-  flex-shrink:0;
-}
-.nc3-copy-iban:hover{
-  background:linear-gradient(135deg,rgba(71,220,255,.18),rgba(140,108,255,.18));
-  border-color:rgba(71,220,255,.5);
-  transform:translateY(-1px);
-  box-shadow:0 8px 22px rgba(71,220,255,.25);
-}
-.nc3-copy-iban:active{
-  transform:translateY(0);
-}
+.nc3-copy-iban{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;background:linear-gradient(135deg,rgba(71,220,255,.1),rgba(140,108,255,.1));border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#7de4ff;font-size:.68rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:14px;box-shadow:0 4px 14px rgba(71,220,255,.12)}
+.nc3-copy-iban svg{width:13px;height:13px;flex-shrink:0}
+.nc3-copy-iban:hover{background:linear-gradient(135deg,rgba(71,220,255,.18),rgba(140,108,255,.18));border-color:rgba(71,220,255,.5);transform:translateY(-1px);box-shadow:0 8px 22px rgba(71,220,255,.25)}
+.nc3-copy-iban:active{transform:translateY(0)}
 .nc3-stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--nc3-line);border-radius:16px;overflow:hidden;background:var(--nc3-line)}
 .nc3-stat{
   padding:17px;
@@ -1351,18 +1322,26 @@ body::before{
   gap:6px;
 }
 .nc3-stat-icon{
-  width:32px;
-  height:32px;
-  border-radius:9px;
-  display:flex;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  border-radius:12px;
+  display:inline-flex;
   align-items:center;
   justify-content:center;
+  color:#fff;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+  transition:transform .2s,box-shadow .25s;
 }
-.nc3-stat-icon svg{width:16px;height:16px}
-.nc3-stat-icon.green{background:rgba(54,226,163,.12);color:#5ae7b5}
-.nc3-stat-icon.red{background:rgba(239,68,68,.12);color:#ff7676}
-.nc3-stat-icon.cyan{background:rgba(71,220,255,.12);color:#69e3ff}
-.nc3-stat-icon.violet{background:rgba(140,108,255,.14);color:#ad9aff}
+.nc3-stat:hover .nc3-stat-icon{
+  transform:scale(1.08) translateY(-2px);
+  box-shadow:0 8px 22px rgba(71,220,255,.3);
+}
+.nc3-stat-icon svg{width:20px;height:20px;stroke:#fff}
+.nc3-stat-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
+.nc3-stat-icon.red{background:linear-gradient(135deg,#ef4444,#f87171)}
+.nc3-stat-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
+.nc3-stat-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .nc3-stat-body{flex:1}
 .nc3-stat span{display:block;color:#64738a;font-size:.62rem}
 .nc3-stat strong{display:block;font-size:1rem;margin-top:3px}
@@ -1648,6 +1627,21 @@ select.wd-input {
 .nc3-copy-iban:hover {
   background: rgba(71, 220, 255, 0.15);
   border-color: rgba(71, 220, 255, 0.4);
+}
+ .nc3-iban-copy {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.nc3-iban-copy .nc3-icon-circle {
+  flex-shrink: 0;
+}
+.nc3-copy-iban {
+  align-self: flex-start;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
   </style>
 
