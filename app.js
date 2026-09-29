@@ -1364,7 +1364,7 @@ function renderBalanceChart(){
 
   var w = 500;
   var h = 180;
-  var pad = 12;
+  var pad = 32;
 
   // Если есть история — используем её реальный диапазон времени
 var minT, maxT;
@@ -1451,6 +1451,24 @@ if (histForRange.length > 2) {
     '<animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>' +
     '<animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>' +
   '</circle>';
+    // Подписи по Y (3 уровня)
+  var yGridHtml = '';
+  var yGridCount = 3;
+  for (var g = 0; g < yGridCount; g++) {
+    var frac = (g + 1) / (yGridCount + 1);
+    var yPos = pad + frac * (h - pad * 2);
+    var yVal = maxV - frac * (maxV - minV);
+    yGridHtml +=
+      '<line x1="' + pad + '" y1="' + yPos.toFixed(1) + '" ' +
+            'x2="' + (w - pad) + '" y2="' + yPos.toFixed(1) + '" ' +
+            'stroke="rgba(71, 220, 255, 0.1)" stroke-width="1" ' +
+            'stroke-dasharray="3 4"/>' +
+      '<text x="' + (pad - 2) + '" y="' + (yPos + 3).toFixed(1) + '" ' +
+            'fill="rgba(124, 156, 187, 0.7)" font-size="9" ' +
+            'text-anchor="end" font-family="system-ui, sans-serif">' +
+        Math.round(yVal).toLocaleString('sv-SE').replace(/\u00A0/g, ' ') +
+      '</text>';
+  }
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
     '<defs>' +
       '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
@@ -1471,6 +1489,7 @@ if (histForRange.length > 2) {
       '</feMerge>' +
     '</filter>' +
     '</defs>' +
+        yGridHtml +
     '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
     '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>' +
     pulseCircle +
