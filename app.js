@@ -342,14 +342,17 @@ function showApp() {
     initSettings();
     initAdminPanel();
     loadCharts();
+
+    // ГЛАВНОЕ: проверка верификации ВНУТРИ callback
+    // (когда st уже загружен с сервера)
+    render();
+    if (!checkOnboarding()){
+      checkVerificationNeeded();
+    }
+
     setInterval(loadPrices, 5 * 60 * 1000);
     setInterval(loadExchangeRates, 10 * 60 * 1000);
     setInterval(loadCharts, 15 * 60 * 1000);
-    setTimeout(function(){
-      if (!checkOnboarding()){
-        checkVerificationNeeded();
-      }
-    }, 1000);
   });
 }
 
