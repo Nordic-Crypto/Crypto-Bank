@@ -1707,9 +1707,15 @@ select.wd-input {
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
   opacity: 0;
-  transition: opacity .3s;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s, visibility .3s;
 }
-.tx-status.on { opacity: 1; }
+.tx-status.on {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
 .tx-status-card {
   width: 100%; max-width: 380px;
   background: #0f1420;
