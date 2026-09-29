@@ -1364,7 +1364,7 @@ function renderBalanceChart(){
 
   var w = 500;
   var h = 180;
-  var pad = 32;
+  var pad = 50;
 
   // Если есть история — используем её реальный диапазон времени
 var minT, maxT;
