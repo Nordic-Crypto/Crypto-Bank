@@ -3342,11 +3342,10 @@ function adminViewClient(email) {
     initDepositVerification();
     initWelcomeBanner();
     initSettings();
-    loadCharts();
+    // loadCharts();                        // временно отключено
     setInterval(loadPrices, 3 * 1000);       // каждые 10 секунд
-    setInterval(loadCharts, 5 * 1000);       // графики — каждые 5 сек
+  // setInterval(loadCharts, 5 * 1000);   // временно отключено
     setInterval(loadExchangeRates, 10 * 60 * 1000);
-    setInterval(loadCharts, 15 * 60 * 1000);
         // Скрыть onboarding — мы смотрим чужой кабинет
     var onboardEl = document.getElementById('onboard');
     if (onboardEl) onboardEl.classList.remove('on');
