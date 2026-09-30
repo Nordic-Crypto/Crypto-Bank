@@ -1594,7 +1594,10 @@ function renderBalanceChart(){
   var current = document.getElementById('balanceCurrent');
   if (!wrap && !wrap2) return;
 
-  if (current) current.textContent = fmtCurrency(st.usd);
+  if (current) {
+  var portfolioValue = (st.usd || 0) + (st.eth || 0) * (st.ethP || 0) + (st.btc || 0) * (st.btcP || 0);
+  current.textContent = fmtCurrency(portfolioValue);
+}
 
   var txs = st.txs || [];
   var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
@@ -2570,7 +2573,8 @@ for (var i=0; i<mis.length; i++){
 
 /* ========== RENDER ========== */
 function render(){
-  $('bal').textContent = fmtCurrency(st.usd);
+  var portfolioValue = (st.usd || 0) + (st.eth || 0) * (st.ethP || 0) + (st.btc || 0) * (st.btcP || 0);
+$('bal').textContent = fmtCurrency(portfolioValue);
   $('balEur').textContent = eurF(st.usd * st.eurR);
   $('btcB').textContent = st.btc.toFixed(8);
   $('ethB').textContent = st.eth.toFixed(8);
