@@ -5242,8 +5242,9 @@ async function loadAdminChats() {
     chats.forEach(function(c){
       html += '<div onclick="openAdminChat(\'' + c.email + '\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
         '<div style="display:flex;gap:12px;align-items:center;">' +
-          '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">' +
-            (c.name || '?').charAt(0).toUpperCase() + '</div>' +
+          '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
+  '<img src="assets/astrid.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Astrid">' +
+'</div>' +
           '<div>' +
             '<div style="color:#e7edf5;font-weight:600;font-size:14px;">' + escapeHtml(c.name) +
               (c.unread ? ' <span style="background:#ff3b3b;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">' + c.unread + ' new</span>' : '') +
