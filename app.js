@@ -4926,11 +4926,20 @@ document.addEventListener('touchstart', function(){
   setInterval(function(){
     var el = document.getElementById('adminWithdrawalsList');
     if (!el) return;
-    if (el.innerHTML.indexOf('Loading withdrawals') === -1) return;
+    // Если секция пустая / загрузка / ошибка — попробуем загрузить
+    var txt = el.innerHTML || '';
+    var needLoad = txt.indexOf('Loading withdrawals') > -1
+                || txt.indexOf('No token') > -1
+                || txt.indexOf('admin-empty') > -1;
+    if (!needLoad) return;
+    // И не чаще, чем раз в 3 секунды
     var now = Date.now();
-    if (now - lastCall < 2000) return;
+    if (now - lastCall < 3000) return;
+    // НО: пробуем только если токен есть
+    if (typeof getSessionToken !== 'function') return;
+    if (!getSessionToken()) return;
     lastCall = now;
     if (typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
   }, 500);
-  console.log('[auto-withdrawals] polling запущен');
+  console.log('[auto-withdrawals] polling запущен (v2)');
 })();
