@@ -431,28 +431,20 @@ document.addEventListener('visibilitychange', function(){
   }
 });
 
-async function doLogout() {
- var token = getSessionToken();
-var targetEmail = window.adminViewingEmail || email;
-
-if (token && targetEmail) {
-  try {
-    var r = await fetch(WORKER_URL + '?action=setUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        token: token, 
-        email: targetEmail, 
-        state: st, 
-        force: true 
-      })
-    });
-    var res = await r.json();
-    console.log('[startTicket] сохранено для:', targetEmail, res);
-  } catch(e) { console.warn('ticket save failed', e); }
-}
+async function dologout() {
+  var token = getSessionToken();
+  if (token) {
+    try {
+      await fetch(WORKER_LOGIN_URL + '?action=logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+    } catch (e) {}
   }
+
   clearSessionToken();
+  localStorage.removeItem('user_email');
   localStorage.removeItem('user_email');
   localStorage.removeItem('user_role');
   localStorage.removeItem('user_name');
