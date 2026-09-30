@@ -5441,3 +5441,54 @@ async function startTicket() {
     topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
   renderChatMessages();
 }
+async function startTicket() {
+  var email = (document.getElementById('tkEmail').value || '').trim();
+  var topic = document.getElementById('tkTopic').value;
+  var priority = document.getElementById('tkPriority').value;
+  var desc = (document.getElementById('tkDesc').value || '').trim();
+
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Please enter a valid email'); return; }
+  if (desc.length < 5) { alert('Please describe your issue'); return; }
+
+  st.ticket = {
+    id: 'tk_' + Date.now(),
+    email: email,
+    topic: topic,
+    priority: priority,
+    createdAt: Date.now(),
+    status: 'open'
+  };
+
+  if (!st.chat) st.chat = [];
+  st.chat.push({
+    id: 'msg_' + Date.now(),
+    from: 'client',
+    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n' + desc,
+    ts: Date.now(),
+    read: false
+  });
+
+  console.log('[startTicket] создан тикет:', st.ticket);
+  console.log('[startTicket] сообщение:', st.chat[0]);
+
+  var token = getSessionToken();
+  var targetEmail = window.adminViewingEmail || email;
+
+  if (token) {
+    try {
+      var r = await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: targetEmail, state: st, force: true })
+      });
+      var res = await r.json();
+      console.log('[startTicket] сохранено:', res);
+    } catch(e) { console.error('[startTicket] ошибка:', e); }
+  }
+
+  document.getElementById('chatTicketForm').style.display = 'none';
+  document.getElementById('chatConversation').style.display = 'flex';
+  document.getElementById('chatTicketTopic').textContent =
+    topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
+  renderChatMessages();
+}
