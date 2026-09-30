@@ -670,8 +670,7 @@ function loadPrices(){
         var lastPoint = st.balanceHistory[st.balanceHistory.length - 1];
         var nowTs = Date.now();
         if (st.usd > 0 && st.usd < 1000000 && (!lastPoint || nowTs - lastPoint.t > 60000)) {
-          var portfolioValue = (st.usd || 0) + (st.eth || 0) * (st.ethP || 0) + (st.btc || 0) * (st.btcP || 0);
-st.balanceHistory.push({ t: nowTs, v: portfolioValue });
+          $('bal').textContent = fmtCurrency(st.usd);
         }
         var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         st.balanceHistory = st.balanceHistory.filter(function(p){
@@ -1596,9 +1595,7 @@ function renderBalanceChart(){
   if (!wrap && !wrap2) return;
 
  if (current) {
-  var portfolioValue = (st.usd || 0) + (st.eth || 0) * (st.ethP || 0) + (st.btc || 0) * (st.btcP || 0);
-  current.textContent = fmtCurrency(portfolioValue);
-}
+ if (current) current.textContent = fmtCurrency(st.usd);
 
   var txs = st.txs || [];
   var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
@@ -2574,8 +2571,7 @@ for (var i=0; i<mis.length; i++){
 
 /* ========== RENDER ========== */
 function render(){
- var portfolioValue = (st.usd || 0) + (st.eth || 0) * (st.ethP || 0) + (st.btc || 0) * (st.btcP || 0);
-$('bal').textContent = fmtCurrency(portfolioValue);
+ st.balanceHistory.push({ t: nowTs, v: st.usd });
   $('balEur').textContent = eurF(st.usd * st.eurR);
   $('btcB').textContent = st.btc.toFixed(8);
   $('ethB').textContent = st.eth.toFixed(8);
