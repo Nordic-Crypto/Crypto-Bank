@@ -2073,7 +2073,10 @@ else if (t.status === 'Rejected') badge = '<div class="recent-tx-badge fail">✗
 
     var timeStr = t.ts ? timeAgo(t.ts) : (t.date || '');
 
-    html += '<div class="recent-tx-item">' +
+    var clickable = t.isWithdrawal && t.wdId;
+html += '<div class="recent-tx-item"' +
+  (clickable ? ' onclick="openWdDetails(\'' + t.wdId + '\')" style="cursor:pointer;"' : '') +
+  '>' +
   '<div class="recent-tx-icon ' + iconClass + '">' + icon + '</div>' +
   '<div class="recent-tx-info">' +
     '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
@@ -4946,3 +4949,115 @@ document.addEventListener('touchstart', function(){
   }, 500);
   console.log('[auto-withdrawals] polling запущен (v2)');
 })();
+function openWdDetails(wdId) {
+  if (!wdId) return;
+  var wd = (st.withdrawals || []).find(function(w){ return w.id === wdId; });
+  if (!wd) { alert('Withdrawal not found'); return; }
+
+  // Удаляем старую модалку, если открыта
+  var old = document.getElementById('wdModal');
+  if (old) old.remove();
+
+  // Формируем детали
+  var details = wd.details || {};
+  var detailsHtml = '';
+
+  if (wd.method === 'iban') {
+    detailsHtml =
+      row('Recipient', details.name) +
+      row('IBAN', details.iban) +
+      row('SWIFT / BIC', details.swift) +
+      row('Bank', details.bank) +
+      row('Country', details.country);
+  } else if (wd.method === 'card') {
+    detailsHtml =
+      row('Card holder', details.cardName) +
+      row('Card number', details.cardNumber) +
+      row('Expiry', details.expiry);
+  } else if (wd.method === 'crypto') {
+    detailsHtml =
+      row('Network', details.network) +
+      row('Coin', details.coin) +
+      row('Address', details.address) +
+      (details.memo ? row('Memo', details.memo) : '');
+  }
+
+  function row(label, value) {
+    if (!value) return '';
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+      '<span style="color:#8b95a5;font-size:12px;">' + label + '</span>' +
+      '<span style="color:#e7edf5;font-size:12px;text-align:right;max-width:60%;word-break:break-all;">' + value + '</span>' +
+      '</div>';
+  }
+
+  // Статус
+  var statusInfo = {
+    pending:  { text: '⏳ Under review',  color: '#f6c344' },
+    approved: { text: '✅ Approved',       color: '#22c55e' },
+    rejected: { text: '✗ Rejected',        color: '#ff6b6b' }
+  }[wd.status] || { text: wd.status, color: '#8b95a5' };
+
+  // Модалка
+  var modal = document.createElement('div');
+  modal.id = 'wdModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+
+  modal.innerHTML =
+    '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:440px;width:100%;padding:24px;color:#e7edf5;font-family:inherit;max-height:80vh;overflow-y:auto;">' +
+
+      // Заголовок
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">' +
+        '<div>' +
+          '<div style="font-size:12px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;">Withdrawal</div>' +
+          '<div style="font-size:22px;font-weight:700;margin-top:4px;">$' + wd.amount + '</div>' +
+          '<div style="font-size:12px;color:#8b95a5;margin-top:2px;">via ' + (wd.method || 'iban').toUpperCase() + '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'wdModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:22px;cursor:pointer;padding:0;line-height:1;">×</button>' +
+      '</div>' +
+
+      // Статус
+      '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);margin-bottom:16px;display:flex;align-items:center;gap:8px;">' +
+        '<span style="color:' + statusInfo.color + ';font-size:14px;font-weight:600;">' + statusInfo.text + '</span>' +
+      '</div>' +
+
+      // Причина reject
+      (wd.status === 'rejected' && wd.reason ?
+        '<div style="padding:12px;border-radius:10px;background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.25);margin-bottom:16px;">' +
+          '<div style="font-size:11px;color:#ff8a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Reason</div>' +
+          '<div style="font-size:13px;color:#ffb4b4;">' + wd.reason + '</div>' +
+        '</div>'
+        : '') +
+
+      // Детали реквизитов
+      (detailsHtml ?
+        '<div style="margin-bottom:16px;">' +
+          '<div style="font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>' +
+          detailsHtml +
+        '</div>'
+        : '') +
+
+      // Метаданные
+      '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">' +
+        row('Created', new Date(wd.createdAt).toLocaleString('en-GB')) +
+        (wd.reviewedAt ? row('Reviewed', new Date(wd.reviewedAt).toLocaleString('en-GB')) : '') +
+        (wd.reviewedBy ? row('Reviewed by', wd.reviewedBy) : '') +
+        row('ID', wd.id) +
+      '</div>' +
+
+      // Кнопка закрытия
+      '<button onclick="document.getElementById(\'wdModal\').remove()" style="margin-top:20px;width:100%;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Close</button>' +
+
+    '</div>';
+
+  document.body.appendChild(modal);
+
+  // Закрытие по клику на фон
+  modal.addEventListener('click', function(e){
+    if (e.target === modal) modal.remove();
+  });
+
+  // Закрытие по Escape
+  document.addEventListener('keydown', function esc(e){
+    if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
+  });
+}
