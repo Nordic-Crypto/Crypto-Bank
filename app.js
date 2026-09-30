@@ -5274,7 +5274,7 @@ setInterval(async function(){
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token: token, email: window.adminViewingEmail || localStorage.getItem('user_email') })
     });
     var fresh = await r.json();
     if (!fresh || !fresh.chat) return;
