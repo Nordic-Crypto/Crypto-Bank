@@ -5230,7 +5230,7 @@ function updateChatBadge() {
   var unread = (st.chat || []).filter(function(m){ return m.from === 'admin' && !m.read; }).length;
   if (unread > 0) {
     badge.textContent = unread > 9 ? '9+' : unread;
-    badge.style.display = 'inline-block';
+    badge.style.display = 'flex';
   } else {
     badge.style.display = 'none';
   }
@@ -5250,14 +5250,26 @@ setInterval(async function(){
     if (!fresh || !fresh.chat) return;
     var freshLen = fresh.chat.length;
     var localLen = (st.chat || []).length;
-    if (freshLen !== localLen) {
-      st.chat = fresh.chat;
-      var panel = document.getElementById('chatPanel');
-      if (panel && panel.style.display === 'flex') {
-        renderChatMessages();
-        markChatRead();
-      } else {
-        updateChatBadge();
+        // ВСЕГДА обновляем st.chat и badge
+    st.chat = fresh.chat;
+    var panel = document.getElementById('chatPanel');
+    var isOpen = panel && panel.style.display === 'flex';
+    
+    if (isOpen) {
+      renderChatMessages();
+      markChatRead();
+    }
+    
+    // Всегда обновляем бейдж (даже если длина не изменилась)
+    updateChatBadge();
+    
+    // Если было новое от админа — звук + title
+    if (freshLen > localLen) {
+      var newMsgs = fresh.chat.slice(localLen);
+      var hadNewFromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
+      if (hadNewFromAdmin && !isOpen) {
+        if (typeof playChatSound === 'function') playChatSound();
+        if (typeof flashTitle === 'function') flashTitle('💬 New message from Elena');
       }
     }
   } catch(e) {}
