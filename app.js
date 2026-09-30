@@ -687,6 +687,62 @@ function loadPrices(){
     .catch(function(e){ console.error('Prices load failed:', e); });
 }
 
+/* ========== REFRESH BALANCE ========== */
+function refreshBalanceFromServer(){
+  if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) {
+    console.log('[refreshBalance] Skip — admin');
+    return;
+  }
+  var token = getSessionToken();
+  if (!token) return;
+  var email = window.adminViewingEmail || localStorage.getItem('user_email');
+  if (!email) return;
+
+  fetch(WORKER_LOGIN_URL + '?action=getUserState', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token, email: window.adminViewingEmail || undefined })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d || d.ok === false) return;
+    var newUsd = Number(d.usd) || 0;
+    console.log('[refreshBalance] server usd:', newUsd, 'local:', st.usd);
+    if (Math.abs(newUsd - (st.usd || 0)) > 0.01) {
+      st.usd = newUsd;
+      if (d.currency) st.currency = d.currency;
+      if (d.card) st.card = d.card;
+      if (d.txs) st.txs = d.txs;
+      if (d.notifications) st.notifications = d.notifications;
+      if (d.user) st.user = d.user;
+      if (d.balanceHistory) st.balanceHistory = d.balanceHistory;
+      if (d.withdrawals) st.withdrawals = d.withdrawals;
+      console.log('[refreshBalance] UPDATED to', st.usd);
+      render();
+    }
+  })
+  .catch(function(e){ console.warn('refreshBalance failed:', e); });
+}
+
+(function initRefreshBtn(){
+  var btn = document.getElementById('btnRefreshBalance');
+  if (btn) {
+    btn.onclick = function(){
+      btn.style.transform = 'rotate(360deg)';
+      btn.style.transition = 'transform 0.5s';
+      setTimeout(function(){ btn.style.transform = ''; }, 500);
+      refreshBalanceFromServer();
+    };
+  }
+})();
+
+setInterval(function(){
+  if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+  if (!localStorage.getItem('user_email') && !window.adminViewingEmail) return;
+  refreshBalanceFromServer();
+}, 30000);
+
+
   
 // Движение % (BTC/ETH)
 function updateCryptoTrends(prevBtc, prevEth) {
