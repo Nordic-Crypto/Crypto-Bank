@@ -2111,14 +2111,17 @@ select.wd-input {
 }
 .chat-msg.client { justify-content: flex-end; }
 .chat-msg.admin  { justify-content: flex-start; }
+.chat-msg > div { min-width: 0;}
 
 .chat-bubble {
   max-width: 76%;
+  min-width: fit-content;
   padding: 10px 14px;
   border-radius: 16px;
   font-size: 13.5px;
   line-height: 1.45;
-  word-wrap: break-word;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .chat-msg.client .chat-bubble {
   background: linear-gradient(135deg, #5f2ee5, #8b5cf6);
