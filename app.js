@@ -616,6 +616,15 @@ function saveToServer(){
     return;
   }
 
+  // 1.5. Не сохраняем в режиме View (админ смотрит клиента)
+  if (window.adminViewingEmail && !window.adminViewingReadonly) {
+    // В View сохраняем ТОЛЬКО когда явно разрешено
+    // По умолчанию — блокируем автоматическое сохранение
+    if (!st.__allowSave) {
+      console.log('[saveToServer] Skip — viewing as admin (readonly)');
+      return;
+    }
+  }
   // 2. Admin не сохраняет
   if (localStorage.getItem('user_role') === 'admin') {
     console.log('[saveToServer] Skip — admin');
