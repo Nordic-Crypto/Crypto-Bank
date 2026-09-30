@@ -4855,3 +4855,18 @@ document.addEventListener('touchstart', function(){
     ctx.resume();
   }
 }, { passive: true });
+// Автозагрузка withdrawals при появлении секции в DOM
+(function(){
+  var t = null;
+  var obs = new MutationObserver(function(){
+    var el = document.getElementById('adminWithdrawalsList');
+    if (el && el.innerHTML.indexOf('Loading withdrawals') > -1) {
+      clearTimeout(t);
+      t = setTimeout(function(){
+        if (typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
+      }, 200);
+    }
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
+  console.log('[auto-withdrawals] observer включён');
+})();
