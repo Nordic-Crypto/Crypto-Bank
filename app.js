@@ -5551,3 +5551,92 @@ async function startTicket() {
     topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
   renderChatMessages();
 }
+// ========== CHAT NOTIFICATIONS — badge + sound + title ==========
+function updateChatBadge() {
+  var badge = document.getElementById('chatBadge');
+  if (!badge) return;
+  var unread = (st.chat || []).filter(function(m){ return m.from === 'admin' && !m.read; }).length;
+  if (unread > 0) {
+    badge.textContent = unread > 9 ? '9+' : unread;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Звук уведомления
+function playChatSound() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  } catch(e) {}
+}
+
+// Мерцание title вкладки
+var _origTitle = document.title;
+var _titleInterval = null;
+function flashTitle(text) {
+  if (_titleInterval) return;
+  var toggle = false;
+  _titleInterval = setInterval(function(){
+    document.title = toggle ? text : _origTitle;
+    toggle = !toggle;
+  }, 800);
+
+  function stop() {
+    clearInterval(_titleInterval);
+    _titleInterval = null;
+    document.title = _origTitle;
+    window.removeEventListener('focus', stop);
+  }
+  setTimeout(stop, 10000);
+  window.addEventListener('focus', stop);
+}
+
+// Автопроверка новых сообщений от админа
+setInterval(async function(){
+  var token = getSessionToken();
+  if (!token) return;
+  try {
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var fresh = await r.json();
+    if (!fresh || !fresh.chat) return;
+    var freshLen = fresh.chat.length;
+    var localLen = (st.chat || []).length;
+    if (freshLen !== localLen) {
+      var hadNewFromAdmin = false;
+      if (freshLen > localLen) {
+        var newMsgs = fresh.chat.slice(localLen);
+        hadNewFromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
+      }
+      
+      st.chat = fresh.chat;
+      var panel = document.getElementById('chatPanel');
+      var isOpen = panel && panel.style.display === 'flex';
+      
+      if (isOpen) {
+        renderChatMessages();
+        markChatRead();
+      } else {
+        updateChatBadge();
+        if (hadNewFromAdmin) {
+          playChatSound();
+          flashTitle('💬 New message from Elena');
+        }
+      }
+    }
+  } catch(e) {}
+}, 5000);
