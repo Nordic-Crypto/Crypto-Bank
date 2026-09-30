@@ -2038,7 +2038,6 @@ function renderRecentTx(){
     wdId: w.id
   });
 });
-  }
   txs.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
   txs = txs.slice(0, 5);
   if (txs.length === 0){
