@@ -683,33 +683,28 @@ renderBalanceChart();
       }
     })
     .catch(function(e){ console.error('Prices load failed:', e); });
-}
-  // Автообновление баланса клиента (для клиентов)
+
+  
+  // Автообновление баланса клиента
   if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
-    fetch(WORKER_URL + '?action=listUsers', {
+    fetch(WORKER_LOGIN_URL + '?action=getUserState', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: getSessionToken() })
     })
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (!d.ok || !d.users) return;
-      var myEmail = localStorage.getItem('user_email');
-      for (var i = 0; i < d.users.length; i++) {
-        if (d.users[i].email === myEmail) {
-          var newBal = Number(d.users[i].balance) || 0;
-          if (Math.abs(newBal - (st.usd || 0)) > 0.01) {
-            st.usd = newBal;
-            if (d.users[i].card) st.card = d.users[i].card;
-            render();
-          }
-          break;
-        }
+      if (d && d.usd !== undefined && Math.abs(d.usd - (st.usd || 0)) > 0.01) {
+        st.usd = d.usd;
+        if (d.card) st.card = d.card;
+        if (d.txs) st.txs = d.txs;
+        render();
       }
     })
     .catch(function(){});
   }
-
+}
+  
 // Движение % (BTC/ETH)
 function updateCryptoTrends(prevBtc, prevEth) {
   var btcTrend = document.getElementById('btcChange');
