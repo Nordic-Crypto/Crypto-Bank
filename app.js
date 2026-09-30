@@ -1594,7 +1594,6 @@ function renderBalanceChart(){
   var current = document.getElementById('balanceCurrent');
   if (!wrap && !wrap2) return;
 
- if (current) {
  if (current) current.textContent = fmtCurrency(st.usd);
 
   var txs = st.txs || [];
