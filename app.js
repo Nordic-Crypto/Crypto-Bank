@@ -5397,3 +5397,47 @@ document.addEventListener('DOMContentLoaded', updateUserUI);
 
 // Обновление каждые 2 секунды на случай если login позже заполнит localStorage
 setInterval(updateUserUI, 2000);
+async function startTicket() {
+  var email = (document.getElementById('tkEmail').value || '').trim();
+  var topic = document.getElementById('tkTopic').value;
+  var priority = document.getElementById('tkPriority').value;
+  var desc = (document.getElementById('tkDesc').value || '').trim();
+
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Please enter a valid email'); return; }
+  if (desc.length < 5) { alert('Please describe your issue (at least 5 characters)'); return; }
+
+  st.ticket = {
+    id: 'tk_' + Date.now(),
+    email: email,
+    topic: topic,
+    priority: priority,
+    createdAt: Date.now(),
+    status: 'open'
+  };
+
+  if (!st.chat) st.chat = [];
+  st.chat.push({
+    id: 'msg_' + Date.now(),
+    from: 'client',
+    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n' + desc,
+    ts: Date.now(),
+    read: false
+  });
+
+  var token = getSessionToken();
+  if (token) {
+    try {
+      await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, state: st, force: true })
+      });
+    } catch(e) { console.warn('ticket save failed', e); }
+  }
+
+  document.getElementById('chatTicketForm').style.display = 'none';
+  document.getElementById('chatConversation').style.display = 'flex';
+  document.getElementById('chatTicketTopic').textContent =
+    topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
+  renderChatMessages();
+}
