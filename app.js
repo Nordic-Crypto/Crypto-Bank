@@ -5348,3 +5348,34 @@ setInterval(function(){
     loadAdminChats();
   }
 }, 3000);
+// Обновление имени, email, инициалов во всех местах UI
+function updateUserUI() {
+  var name = localStorage.getItem('user_name') || 'User';
+  var email = localStorage.getItem('user_email') || '—';
+  var role = localStorage.getItem('user_role') || 'User';
+  
+  var parts = name.trim().split(' ');
+  var initials = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
+  
+  // Сайдбар
+  var nameEl = document.getElementById('userName');
+  var avEl = document.getElementById('userAvatar');
+  if (nameEl) nameEl.textContent = name;
+  if (avEl) avEl.textContent = initials;
+  
+  // Settings
+  var sName = document.getElementById('settingsName');
+  var sEmail = document.getElementById('settingsEmail');
+  var sRole = document.getElementById('settingsRole');
+  if (sName) sName.textContent = name;
+  if (sEmail) sEmail.textContent = email;
+  if (sRole) sRole.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+  
+  console.log('[userUI] name:', name, '| email:', email, '| role:', role, '| initials:', initials);
+}
+
+// Автозапуск при загрузке
+document.addEventListener('DOMContentLoaded', updateUserUI);
+
+// Обновление каждые 2 секунды на случай если login позже заполнит localStorage
+setInterval(updateUserUI, 2000);
