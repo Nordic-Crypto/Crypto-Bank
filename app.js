@@ -3467,8 +3467,27 @@ if (btnNO) btnNO.onclick = newOrder;
 setInterval(function(){
   updateTxStatuses();
   renderOrder();
-  // Подтягиваем свежие уведомления от админа
   refreshNotificationsFromServer();
+
+  // Auto-refresh баланса клиента каждые 5 сек
+  if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
+    fetch(WORKER_LOGIN_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken() })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.usd !== undefined && Math.abs(d.usd - (st.usd || 0)) > 0.01) {
+        st.usd = d.usd;
+        if (d.card) st.card = d.card;
+        if (d.txs) st.txs = d.txs;
+        render();
+        console.log('[auto-refresh] UPDATED to', st.usd);
+      }
+    })
+    .catch(function(){});
+  }
 }, 5000);
 
 /* ========== ONBOARDING STEP NAVIGATION ========== */
