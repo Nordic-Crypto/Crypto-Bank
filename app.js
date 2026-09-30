@@ -2023,19 +2023,21 @@ function renderRecentTx(){
 
     // Объединяем st.txs + st.withdrawals
   var txs = (st.txs || []).slice();
-  if (st.withdrawals && st.withdrawals.length){
-    st.withdrawals.forEach(function(w){
-      txs.push({
-        ts: w.createdAt,
-        desc: 'Withdrawal via ' + (w.method || 'iban').toUpperCase(),
-        amt: -w.amount,
-        status: w.status === 'pending' ? 'Under Review' :
-                w.status === 'approved' ? 'Completed' :
-                w.status === 'rejected' ? 'Rejected' :
-                w.status,
-        isWithdrawal: true
-      });
-    });
+  st.withdrawals.forEach(function(w){
+  txs.push({
+    ts: w.createdAt,
+    desc: (w.type === 'transfer' ? 'Transfer via ' : 'Withdrawal via ') + (w.method || 'iban').toUpperCase(),
+    amt: -w.amount,
+    status: w.status === 'pending' ? 'Under Review' :
+            w.status === 'approved' ? 'Completed' :
+            w.status === 'rejected' ? 'Rejected' :
+            w.status,
+    reason: w.reason || '',                       // ← ДОБАВИЛИ — причина reject
+    isWithdrawal: true,
+    isTransfer: w.type === 'transfer',
+    wdId: w.id
+  });
+});
   }
   txs.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
   txs = txs.slice(0, 5);
@@ -2065,21 +2067,23 @@ function renderRecentTx(){
     else if (t.amt < 0){ amtClass = 'minus'; amtText = fmtCurrency(t.amt); }
 
     var badge = '';
-    if (t.status === 'Completed') badge = '<div class="recent-tx-badge ok">✓ Completed</div>';
-    else if (t.status === 'Processing') badge = '<div class="recent-tx-badge proc">⏳ Processing</div>';
-    else if (t.status === 'Under Review') badge = '<div class="recent-tx-badge pend">⏱ Under review</div>';
+if (t.status === 'Completed') badge = '<div class="recent-tx-badge ok">✓ Completed</div>';
+else if (t.status === 'Processing') badge = '<div class="recent-tx-badge proc">⏳ Processing</div>';
+else if (t.status === 'Under Review') badge = '<div class="recent-tx-badge pend">⏳ Under review</div>';
+else if (t.status === 'Rejected') badge = '<div class="recent-tx-badge fail">✗ Rejected</div>';
 
     var timeStr = t.ts ? timeAgo(t.ts) : (t.date || '');
 
     html += '<div class="recent-tx-item">' +
-      '<div class="recent-tx-icon ' + iconClass + '">' + icon + '</div>' +
-      '<div class="recent-tx-info">' +
-        '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
-        '<div class="recent-tx-time">' + timeStr + '</div>' +
-        badge +
-      '</div>' +
-      '<div class="recent-tx-amount ' + amtClass + '">' + amtText + '</div>' +
-    '</div>';
+  '<div class="recent-tx-icon ' + iconClass + '">' + icon + '</div>' +
+  '<div class="recent-tx-info">' +
+    '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
+    '<div class="recent-tx-time">' + timeStr + '</div>' +
+    badge +
+    (t.reason ? '<div class="recent-tx-reason" style="font-size:11px;color:#ff8a8a;margin-top:4px;">Reason: ' + t.reason + '</div>' : '') +
+  '</div>' +
+  '<div class="recent-tx-amount ' + amtClass + '">' + amtText + '</div>' +
+'</div>';
   }
   listEl.innerHTML = html;
 }
