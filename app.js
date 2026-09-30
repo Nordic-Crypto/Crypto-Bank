@@ -3840,24 +3840,28 @@ async function loadAdminUsers() {
 async function loadAdminWithdrawals() {
   var listEl = document.getElementById('adminWithdrawalsList');
   var countEl = document.getElementById('adminWithdrawalsCount');
-  if (!listEl) return;
+  if (!listEl) { console.warn('no #adminWithdrawalsList'); return; }
 
   listEl.innerHTML = '<div class="admin-empty">Loading withdrawals...</div>';
   if (countEl) countEl.textContent = 'Loading...';
 
   try {
     var token = getSessionToken();
+    if (!token) { listEl.innerHTML = '<div class="admin-empty">No token</div>'; return; }
 
-    // 1. Получаем список клиентов
+    // 1. Все клиенты
     var res = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token })
     });
     var data = await res.json();
-    if (!data.ok || !data.users) throw new Error('Failed to load users');
+    if (!data.ok || !data.users) {
+      listEl.innerHTML = '<div class="admin-empty">Failed to load users</div>';
+      return;
+    }
 
-    // 2. Для каждого клиента тянем его state
+    // 2. Тянем withdrawals каждого
     var allWd = [];
     for (var i = 0; i < data.users.length; i++) {
       var u = data.users[i];
@@ -3868,17 +3872,15 @@ async function loadAdminWithdrawals() {
           body: JSON.stringify({ token: token, email: u.email })
         });
         var d2 = await r2.json();
-
-        // Worker возвращает state НАПРЯМУЮ, а не в d2.state
+        // ВАЖНО: Worker отдаёт state напрямую, не в d2.state
         var wds = (d2 && d2.withdrawals) ? d2.withdrawals : [];
-        wds.forEach(function(w) {
+        for (var j = 0; j < wds.length; j++) {
+          var w = wds[j];
           w.userEmail = u.email;
           w.userName = u.name || u.email;
           allWd.push(w);
-        });
-      } catch (e) {
-        console.warn('Failed for', u.email, e);
-      }
+        }
+      } catch (e) { console.warn('skip', u.email, e); }
     }
 
     allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
@@ -3890,6 +3892,21 @@ async function loadAdminWithdrawals() {
       listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>';
       return;
     }
+
+    var html = '';
+    for (var k = 0; k < allWd.length; k++) {
+      if (typeof renderAdminWithdrawalCard === 'function') {
+        html += renderAdminWithdrawalCard(allWd[k]);
+      } else {
+        html += '<div class="admin-empty">wd: ' + allWd[k].amount + ' — ' + allWd[k].userEmail + '</div>';
+      }
+    }
+    listEl.innerHTML = html;
+  } catch (e) {
+    console.error('loadAdminWithdrawals failed:', e);
+    listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+  }
+}
 
     var html = '';
     allWd.forEach(function(w) { html += renderAdminWithdrawalCard(w); });
