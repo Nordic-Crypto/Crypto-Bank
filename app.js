@@ -5220,19 +5220,38 @@ async function sendChatMsg() {
 }
 
 async function markChatRead() {
-  var chat = st.chat || [];
-  var changed = false;
-  chat.forEach(function(m){ if (m.from === 'admin' && !m.read) { m.read = true; changed = true; } });
-  if (!changed) return;
   var token = getSessionToken();
-  if (token) {
-    fetch(WORKER_URL + '?action=setUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, state: st, force: true })
-    }).catch(function(){});
-  }
-  updateChatBadge();
+  var email = window.adminViewingEmail || localStorage.getItem('user_email');
+  if (!token || !email) return;
+  try {
+    // Сначала тянем свежий state с сервера — чтобы не затереть чужие сообщения
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var fresh = await r.json();
+    if (!fresh || !fresh.chat) return;
+    st.chat = fresh.chat;
+
+    // Помечаем admin-сообщения прочитанными
+    var changed = false;
+    st.chat.forEach(function(m){ 
+      if (m.from === 'admin' && !m.read) { m.read = true; changed = true; } 
+    });
+    if (!changed) return;
+
+    // Сохраняем — с email, чтобы ушло в правильный state
+    await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        token: token, 
+        email: email, 
+        state: st, 
+        force: true 
+      })
+    });
+    updateChatBadge();
+  } catch(e) { console.warn('[markChatRead] failed', e); }
 }
 
 function updateChatBadge() {
