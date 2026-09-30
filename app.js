@@ -3958,7 +3958,9 @@ function renderAdminWithdrawalCard(w) {
   '</div>';
 }
 
-async function approveWithdrawal(email, wdId) {
+async function adminApproveWithdrawal(email, wdId) {
+  return approveWithdrawal(email, wdId);
+}
   var ok = confirm('Approve this withdrawal?\nFunds will be deducted from client balance.');
   if (!ok) return;
 
