@@ -399,36 +399,40 @@ function showApp() {
         setTimeout(autoRefreshBalance, 3000);
       });
     }
-    autoRefreshBalance();
+        autoRefreshBalance();
   }
+  });
 
-// Обновление при возврате на вкладку
-document.addEventListener('visibilitychange', function(){
-  if (document.visibilityState === 'visible') {
-    if (localStorage.getItem('user_role') === 'admin') return;
-    if (!localStorage.getItem('user_email')) return;
-    
-    fetch(WORKER_LOGIN_URL + '?action=listUsers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (!d.ok || !d.users) return;
-      var myEmail = localStorage.getItem('user_email');
-      for (var i = 0; i < d.users.length; i++) {
-        if (d.users[i].email === myEmail) {
-          st.usd = Number(d.users[i].balance) || 0;
-          st.card = d.users[i].card || st.card;
-          render();
-          break;
+   // Обновление при возврате на вкладку
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') {
+      if (localStorage.getItem('user_role') === 'admin') return;
+      if (!localStorage.getItem('user_email')) return;
+
+      fetch(WORKER_LOGIN_URL + '?action=listUsers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: getSessionToken() })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d.ok || !d.users) return;
+        var myEmail = localStorage.getItem('user_email');
+        for (var i = 0; i < d.users.length; i++) {
+          if (d.users[i].email === myEmail) {
+            st.usd = Number(d.users[i].balance) || 0;
+            st.card = d.users[i].card || st.card;
+            render();
+            break;
+          }
         }
-      }
-    })
-    .catch(function(){});
-  }
-});
+      })
+      .catch(function(){});
+    }
+  });
+
+  });   // ← закрывает loadFromServer
+}       // ← закрывает showApp
 
 async function doLogout() {
   var token = getSessionToken();
