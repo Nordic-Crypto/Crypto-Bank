@@ -5299,7 +5299,7 @@ async function openAdminChat(email) {
       '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
         ''<div style="display:flex;gap:12px;align-items:center;">' +
   '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
-    '<img src="assets/astrid.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Elena">' +
+    "<img src='assets/astrid.jpg' style='width:100%;height:100%;object-fit:cover;' alt='Elena'>" +
   '</div>' +
   '<div>' +
     '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
