@@ -3847,7 +3847,9 @@ async function loadAdminWithdrawals() {
 
   try {
     var token = getSessionToken();
-    var res = await fetch(WORKER_URL + '?action=listusers', {
+
+    // 1. Получаем список клиентов
+    var res = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token })
@@ -3855,24 +3857,27 @@ async function loadAdminWithdrawals() {
     var data = await res.json();
     if (!data.ok || !data.users) throw new Error('Failed to load users');
 
+    // 2. Для каждого клиента тянем его state
     var allWd = [];
     for (var i = 0; i < data.users.length; i++) {
       var u = data.users[i];
       try {
-        var r2 = await fetch(WORKER_URL + '?action=getuserstate', {
+        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: token, email: u.email })
         });
         var d2 = await r2.json();
-        var wds = (d2.state && d2.state.withdrawals) || [];
+
+        // Worker возвращает state НАПРЯМУЮ, а не в d2.state
+        var wds = (d2 && d2.withdrawals) ? d2.withdrawals : [];
         wds.forEach(function(w) {
           w.userEmail = u.email;
           w.userName = u.name || u.email;
           allWd.push(w);
         });
       } catch (e) {
-        console.warn('Failed withdrawals for', u.email, e);
+        console.warn('Failed for', u.email, e);
       }
     }
 
