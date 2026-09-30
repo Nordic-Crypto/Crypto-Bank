@@ -3908,15 +3908,6 @@ async function loadAdminWithdrawals() {
   }
 }
 
-    var html = '';
-    allWd.forEach(function(w) { html += renderAdminWithdrawalCard(w); });
-    listEl.innerHTML = html;
-  } catch (e) {
-    console.error('loadAdminWithdrawals failed', e);
-    listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
-  }
-}
-
 function renderAdminWithdrawalCard(w) {
   var statusMap = {
     'pending':  { cls: 'pend', txt: '⏳ Pending' },
