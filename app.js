@@ -4180,7 +4180,7 @@ function adminViewClient(email) {
   // Загружаем state клиента
    loadFromServer(function(){
     // ФИКС: если st пустой — берём из listUsers
-    if (!st.usd && (!st.card || !st.card.num)) {
+    if (!st.usd) {
       fetch(WORKER_LOGIN_URL + '?action=listUsers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
