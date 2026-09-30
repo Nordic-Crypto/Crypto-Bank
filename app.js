@@ -605,6 +605,21 @@ function loadFromServer(cb, targetEmail){
       if (!st.withdrawals) st.withdrawals = [];
       if (!st.card || typeof st.card !== 'object') st.card = null;
       stateLoaded = true;
+      // СБРОС ЧАТ-UI при загрузке клиента
+(function resetChatUI(){
+  var form = document.getElementById('chatTicketForm');
+  var conv = document.getElementById('chatConversation');
+  if (form) form.style.display = 'flex';     // показать форму
+  if (conv) conv.style.display = 'none';     // скрыть чат
+  
+  var emailEl = document.getElementById('tkEmail');
+  if (emailEl) emailEl.value = targetEmail || localStorage.getItem('user_email') || '';
+  
+  var topicEl = document.getElementById('chatTicketTopic');
+  if (topicEl) topicEl.textContent = 'Support';
+  
+  console.log('[resetChatUI] для', targetEmail, '| ticket:', st.ticket);
+})();
       render();
       setTimeout(function(){ checkOnboarding(); }, 50);
       if (cb) cb();
