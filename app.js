@@ -5437,8 +5437,11 @@ async function startTicket() {
 
   document.getElementById('chatTicketForm').style.display = 'none';
   document.getElementById('chatConversation').style.display = 'flex';
-  document.getElementById('chatTicketTopic').textContent =
-    topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
+  var topicNice = topic.charAt(0).toUpperCase() + topic.slice(1);
+var priorityNice = priority.charAt(0).toUpperCase() + priority.slice(1);
+var priorityIcon = priority === 'high' ? '🔥 ' : priority === 'low' ? '⚪ ' : '⭐ ';
+document.getElementById('chatTicketTopic').textContent =
+  topicNice + ' • ' + priorityIcon + priorityNice;
   renderChatMessages();
 }
 async function startTicket() {
@@ -5463,7 +5466,7 @@ async function startTicket() {
   st.chat.push({
     id: 'msg_' + Date.now(),
     from: 'client',
-    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n' + desc,
+    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n\n' + desc,
     ts: Date.now(),
     read: false
   });
