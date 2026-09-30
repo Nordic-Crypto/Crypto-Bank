@@ -3849,7 +3849,6 @@ async function loadAdminWithdrawals() {
     var token = getSessionToken();
     if (!token) { listEl.innerHTML = '<div class="admin-empty">No token</div>'; return; }
 
-    // 1. Все клиенты
     var res = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3861,7 +3860,6 @@ async function loadAdminWithdrawals() {
       return;
     }
 
-    // 2. Тянем withdrawals каждого
     var allWd = [];
     for (var i = 0; i < data.users.length; i++) {
       var u = data.users[i];
@@ -3871,16 +3869,19 @@ async function loadAdminWithdrawals() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: token, email: u.email })
         });
+        if (!r2.ok) { console.warn('HTTP', r2.status, u.email); continue; }
         var d2 = await r2.json();
-        // ВАЖНО: Worker отдаёт state напрямую, не в d2.state
-        var wds = (d2 && d2.withdrawals) ? d2.withdrawals : [];
-        for (var j = 0; j < wds.length; j++) {
-          var w = wds[j];
+        if (!d2 || !Array.isArray(d2.withdrawals)) continue;
+        for (var j = 0; j < d2.withdrawals.length; j++) {
+          var w = d2.withdrawals[j];
+          if (!w) continue;
           w.userEmail = u.email;
           w.userName = u.name || u.email;
           allWd.push(w);
         }
-      } catch (e) { console.warn('skip', u.email, e); }
+      } catch (e) {
+        console.warn('skip', u.email, e.message);
+      }
     }
 
     allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
@@ -3902,8 +3903,9 @@ async function loadAdminWithdrawals() {
       }
     }
     listEl.innerHTML = html;
+    console.log('[loadAdminWithdrawals] DONE, всего заявок:', allWd.length);
   } catch (e) {
-    console.error('loadAdminWithdrawals failed:', e);
+    console.error('[loadAdminWithdrawals] FAILED:', e);
     listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
   }
 }
