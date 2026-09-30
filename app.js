@@ -5098,7 +5098,7 @@ function renderChatMessages() {
       '<div>' +
         '<div class="chat-bubble">' + escapeHtml(m.text) + '</div>' +
         '<div class="chat-msg-meta">' +
-          (isClient ? 'You' : 'Astrid') + ' • ' +
+          (isClient ? 'You' : 'Elena') + ' • ' +
           new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
           (isClient && m.read ? ' ✓✓' : '') +
         '</div>' +
