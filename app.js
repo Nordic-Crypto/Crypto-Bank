@@ -4855,18 +4855,17 @@ document.addEventListener('touchstart', function(){
     ctx.resume();
   }
 }, { passive: true });
-// Автозагрузка withdrawals при появлении секции в DOM
+// Автозагрузка withdrawals — polling без цикла
 (function(){
-  var t = null;
-  var obs = new MutationObserver(function(){
+  var lastCall = 0;
+  setInterval(function(){
     var el = document.getElementById('adminWithdrawalsList');
-    if (el && el.innerHTML.indexOf('Loading withdrawals') > -1) {
-      clearTimeout(t);
-      t = setTimeout(function(){
-        if (typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
-      }, 200);
-    }
-  });
-  obs.observe(document.body, { childList: true, subtree: true });
-  console.log('[auto-withdrawals] observer включён');
+    if (!el) return;
+    if (el.innerHTML.indexOf('Loading withdrawals') === -1) return;
+    var now = Date.now();
+    if (now - lastCall < 2000) return;
+    lastCall = now;
+    if (typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
+  }, 500);
+  console.log('[auto-withdrawals] polling запущен');
 })();
