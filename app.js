@@ -1376,15 +1376,33 @@ function submitWithdraw() {
     wd.details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
   }
 
-   if (!st.withdrawals) st.withdrawals = [];
-  st.withdrawals.unshift(wd);
-  if (typeof saveToServer === 'function') saveToServer();
-  closeWithdraw();
-  if (typeof render === 'function') render();
+    if (!st.withdrawals) st.withdrawals = [];
+    st.withdrawals.unshift(wd);
 
-  // Показать анимацию (для Withdraw — другой текст)
-  showWithdrawStatus(method, amount);
-}
+    closeWithdraw();
+    if (typeof render === 'function') render();
+
+    showWithdrawStatus(method, amount);
+
+    // ЯВНО СОХРАНЯЕМ НА СЕРВЕР
+    var token = getSessionToken();
+    if (token) {
+      var email = window.adminViewingEmail || localStorage.getItem('user_email');
+      console.log('[submitWithdraw] saving. email:', email, 'wd:', st.withdrawals.length);
+      fetch(WORKER_LOGIN_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        console.log('[submitWithdraw] SAVED:', d);
+      })
+      .catch(function(e){ console.error('[submitWithdraw] save failed:', e); });
+    } else {
+      console.warn('[submitWithdraw] NO TOKEN');
+    }
+  }
 /* ========== WITHDRAW STATUS ANIMATION ========== */
 function showWithdrawStatus(method, amount) {
   var modal = document.getElementById('txStatus');
