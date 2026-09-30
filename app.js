@@ -5061,3 +5061,149 @@ function openWdDetails(wdId) {
     if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
   });
 }
+// ========== LIVE CHAT — CLIENT ==========
+function toggleChat() {
+  var p = document.getElementById('chatPanel');
+  if (!p) return;
+  var open = p.style.display === 'flex';
+  p.style.display = open ? 'none' : 'flex';
+  if (!open) {
+    renderChatMessages();
+    markChatRead();
+    setTimeout(function(){ 
+      var i = document.getElementById('chatInput'); if (i) i.focus();
+    }, 100);
+  }
+}
+
+function renderChatMessages() {
+  var box = document.getElementById('chatMessages');
+  if (!box) return;
+  var chat = (st.chat || []).slice().sort(function(a,b){ return a.ts - b.ts; });
+  
+  if (!chat.length) {
+    box.innerHTML = 
+      '<div class="chat-welcome">' +
+        '<div class="chat-welcome-avatar"><img src="https://i.pravatar.cc/100?img=47" alt="Astrid"></div>' +
+        '<div class="chat-welcome-name">Astrid Lindqvist</div>' +
+        '<div class="chat-welcome-text">Hi! I\'m Astrid from Nordic Crypto Support.<br>How can I help you today?</div>' +
+      '</div>';
+    return;
+  }
+
+  var html = '';
+  chat.forEach(function(m){
+    var isClient = m.from === 'client';
+    html += '<div class="chat-msg ' + (isClient ? 'client' : 'admin') + '">' +
+      '<div>' +
+        '<div class="chat-bubble">' + escapeHtml(m.text) + '</div>' +
+        '<div class="chat-msg-meta">' +
+          (isClient ? 'You' : 'Astrid') + ' • ' +
+          new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
+          (isClient && m.read ? ' ✓✓' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+async function sendChatMsg() {
+  var input = document.getElementById('chatInput');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+
+  if (!st.chat) st.chat = [];
+  st.chat.push({
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    from: 'client',
+    text: text,
+    ts: Date.now(),
+    read: false
+  });
+
+  renderChatMessages();
+
+  var token = getSessionToken();
+  if (token) {
+    try {
+      await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, state: st, force: true })
+      });
+    } catch(e) { console.warn('[chat] save failed', e); }
+  }
+}
+
+async function markChatRead() {
+  var chat = st.chat || [];
+  var changed = false;
+  chat.forEach(function(m){ if (m.from === 'admin' && !m.read) { m.read = true; changed = true; } });
+  if (!changed) return;
+  var token = getSessionToken();
+  if (token) {
+    fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, state: st, force: true })
+    }).catch(function(){});
+  }
+  updateChatBadge();
+}
+
+function updateChatBadge() {
+  var badge = document.getElementById('chatBadge');
+  if (!badge) return;
+  var unread = (st.chat || []).filter(function(m){ return m.from === 'admin' && !m.read; }).length;
+  if (unread > 0) {
+    badge.textContent = unread > 9 ? '9+' : unread;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Опрос новых сообщений
+setInterval(async function(){
+  var token = getSessionToken();
+  if (!token) return;
+  try {
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var fresh = await r.json();
+    if (!fresh || !fresh.chat) return;
+    var freshLen = fresh.chat.length;
+    var localLen = (st.chat || []).length;
+    if (freshLen !== localLen) {
+      st.chat = fresh.chat;
+      var panel = document.getElementById('chatPanel');
+      if (panel && panel.style.display === 'flex') {
+        renderChatMessages();
+        markChatRead();
+      } else {
+        updateChatBadge();
+      }
+    }
+  } catch(e) {}
+}, 5000);
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('chatToggle');
+  if (btn) btn.onclick = toggleChat;
+  updateChatBadge();
+});
+
