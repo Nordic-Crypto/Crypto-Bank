@@ -5084,7 +5084,7 @@ function renderChatMessages() {
   if (!chat.length) {
     box.innerHTML = 
       '<div class="chat-welcome">' +
-        '<div class="chat-welcome-avatar"><img src="https://i.pravatar.cc/100?img=47" alt="Astrid"></div>' +
+        '<div class="chat-welcome-avatar"><img src="https://i.pravatar.cc/100?img=47" alt="Elena"></div>' +
         '<div class="chat-welcome-name">Astrid Lindqvist</div>' +
         '<div class="chat-welcome-text">Hi! I\'m Astrid from Nordic Crypto Support.<br>How can I help you today?</div>' +
       '</div>';
@@ -5243,7 +5243,7 @@ async function loadAdminChats() {
       html += '<div onclick="openAdminChat(\'' + c.email + '\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
         '<div style="display:flex;gap:12px;align-items:center;">' +
           '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
-  '<img src="assets/astrid.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Astrid">' +
+  '<img src="assets/astrid.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Elena">' +
 '</div>' +
           '<div>' +
             '<div style="color:#e7edf5;font-weight:600;font-size:14px;">' + escapeHtml(c.name) +
@@ -5297,8 +5297,15 @@ async function openAdminChat(email) {
   modal.innerHTML =
     '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:520px;height:600px;display:flex;flex-direction:column;overflow:hidden;">' +
       '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
-        '<div><div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
-        '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div></div>' +
+        ''<div style="display:flex;gap:12px;align-items:center;">' +
+  '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
+    '<img src="assets/astrid.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Elena">' +
+  '</div>' +
+  '<div>' +
+    '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
+    '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div>' +
+  '</div>' +
+'</div>' ++
         '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
       '</div>' +
       '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
