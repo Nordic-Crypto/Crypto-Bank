@@ -5084,9 +5084,9 @@ function renderChatMessages() {
   if (!chat.length) {
     box.innerHTML = 
       '<div class="chat-welcome">' +
-        '<div class="chat-welcome-avatar"><img src="https://i.pravatar.cc/100?img=47" alt="Elena"></div>' +
-        '<div class="chat-welcome-name">Astrid Lindqvist</div>' +
-        '<div class="chat-welcome-text">Hi! I\'m Astrid from Nordic Crypto Support.<br>How can I help you today?</div>' +
+        '<div class="chat-welcome-avatar"><img src="assets/astrid.jpg" alt="Elena"></div>' +
+        '<div class="chat-welcome-name">Elena Bergström</div>' +
+        '<div class="chat-welcome-text">Hi! I\'m Elena from Nordic Crypto Support.<br>How can I help you today?</div>' +
       '</div>';
     return;
   }
