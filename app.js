@@ -2570,8 +2570,7 @@ for (var i=0; i<mis.length; i++){
 
 /* ========== RENDER ========== */
 function render(){
- if (!st.balanceHistory) st.balanceHistory = [];
-st.balanceHistory.push({ t: Date.now(), v: st.usd });
+  $('bal').textContent = fmtCurrency(st.usd);
   $('balEur').textContent = eurF(st.usd * st.eurR);
   $('btcB').textContent = st.btc.toFixed(8);
   $('ethB').textContent = st.eth.toFixed(8);
