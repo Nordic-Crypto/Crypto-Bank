@@ -667,7 +667,7 @@ function loadPrices(){
         updateCryptoTrends(prevBtc, prevEth);
         
         // Пересчитываем баланс
-        refreshBalanceFromCrypto();
+        // refreshBalanceFromCrypto();  ← ЗАКОММЕНТИРОВАНО
         // Сохраняем точку в историю (в st, чтобы синхронизировалось на сервер)
         if (!st.balanceHistory) st.balanceHistory = [];
         var lastPoint = st.balanceHistory[st.balanceHistory.length - 1];
@@ -4180,7 +4180,7 @@ function adminViewClient(email) {
   // Загружаем state клиента
    loadFromServer(function(){
     // ФИКС: если st пустой — берём из listUsers
-    if (!st.usd) {
+    if (!st.usd || st.usd < 100) {
       fetch(WORKER_LOGIN_URL + '?action=listUsers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4220,7 +4220,7 @@ function adminViewClient(email) {
     initWelcomeBanner();
     initSettings();
     // loadCharts();                        // временно отключено
-    setInterval(loadPrices, 3 * 1000);       // каждые 10 секунд
+   // setInterval(loadPrices, 3 * 1000);  ← ОТКЛЮЧЕНО
   // setInterval(loadCharts, 5 * 1000);   // временно отключено
     setInterval(loadExchangeRates, 10 * 60 * 1000);
         // Скрыть onboarding — мы смотрим чужой кабинет
