@@ -5206,4 +5206,137 @@ document.addEventListener('DOMContentLoaded', function(){
   if (btn) btn.onclick = toggleChat;
   updateChatBadge();
 });
+// ========== LIVE CHAT — ADMIN ==========
+async function loadAdminChats() {
+  var box = document.getElementById('adminChatsList');
+  if (!box) return;
+  box.innerHTML = '<div class="admin-empty">Loading chats...</div>';
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=listUsers', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token })
+    });
+    var d = await r.json();
+    if (!d.ok || !d.users) { box.innerHTML = '<div class="admin-empty">Failed to load users</div>'; return; }
+    var chats = [];
+    for (var i = 0; i < d.users.length; i++) {
+      var u = d.users[i];
+      try {
+        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email })
+        });
+        var s = await r2.json();
+        var msgs = s.chat || [];
+        if (msgs.length) {
+          var last = msgs[msgs.length - 1];
+          var unread = msgs.filter(function(m){ return m.from === 'client' && !m.read; }).length;
+          chats.push({ email: u.email, name: u.name || u.email, lastTs: last.ts, lastText: last.text, lastFrom: last.from, unread: unread });
+        }
+      } catch(e) {}
+    }
+    chats.sort(function(a, b){ return b.lastTs - a.lastTs; });
+    if (!chats.length) { box.innerHTML = '<div class="admin-empty">No chats yet</div>'; return; }
+    var html = '';
+    chats.forEach(function(c){
+      html += '<div onclick="openAdminChat(\'' + c.email + '\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
+        '<div style="display:flex;gap:12px;align-items:center;">' +
+          '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">' +
+            (c.name || '?').charAt(0).toUpperCase() + '</div>' +
+          '<div>' +
+            '<div style="color:#e7edf5;font-weight:600;font-size:14px;">' + escapeHtml(c.name) +
+              (c.unread ? ' <span style="background:#ff3b3b;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">' + c.unread + ' new</span>' : '') +
+            '</div>' +
+            '<div style="color:#8b95a5;font-size:12px;margin-top:2px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+              (c.lastFrom === 'admin' ? 'You: ' : '') + escapeHtml(c.lastText) +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="color:#8b95a5;font-size:11px;">' + new Date(c.lastTs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
+      '</div>';
+    });
+    box.innerHTML = html;
+  } catch(e) { box.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>'; }
+}
 
+async function openAdminChat(email) {
+  var old = document.getElementById('adminChatModal'); if (old) old.remove();
+  var token = getSessionToken();
+  var r = await fetch(WORKER_URL + '?action=getUserState', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ token: token, email: email })
+  });
+  var state = await r.json();
+  var msgs = state.chat || [];
+  var changed = false;
+  msgs.forEach(function(m){ if (m.from === 'client' && !m.read) { m.read = true; changed = true; } });
+  if (changed) {
+    state.chat = msgs;
+    await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    });
+  }
+  var messagesHtml = msgs.map(function(m){
+    var isAdmin = m.from === 'admin';
+    return '<div style="display:flex;margin-bottom:10px;' + (isAdmin ? 'justify-content:flex-end;' : '') + '">' +
+      '<div style="max-width:70%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.45;' +
+        (isAdmin ? 'background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;'
+                 : 'background:rgba(255,255,255,0.06);color:#e7edf5;') + '">' +
+        escapeHtml(m.text) +
+        '<div style="font-size:10px;opacity:0.6;margin-top:4px;">' + new Date(m.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  if (!messagesHtml) messagesHtml = '<div style="text-align:center;color:#8b95a5;padding:30px;">No messages yet</div>';
+  var modal = document.createElement('div');
+  modal.id = 'adminChatModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:520px;height:600px;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
+        '<div><div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
+        '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div></div>' +
+        '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
+      '</div>' +
+      '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
+      '<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">' +
+        '<input id="adminChatInput" placeholder="Reply..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;" onkeydown="if(event.key===\'Enter\')sendAdminChatMsg(\'' + email + '\')">' +
+        '<button onclick="sendAdminChatMsg(\'' + email + '\')" style="width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;">→</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  var mb = document.getElementById('adminChatMsgs'); if (mb) mb.scrollTop = mb.scrollHeight;
+}
+
+async function sendAdminChatMsg(email) {
+  var input = document.getElementById('adminChatInput');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  var token = getSessionToken();
+  var r = await fetch(WORKER_URL + '?action=getUserState', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ token: token, email: email })
+  });
+  var state = await r.json();
+  if (!state.chat) state.chat = [];
+  state.chat.push({ id: 'msg_' + Date.now(), from: 'admin', text: text, ts: Date.now(), read: false });
+  await fetch(WORKER_URL + '?action=setUserState', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ token: token, email: email, state: state, force: true })
+  });
+  document.getElementById('adminChatModal').remove();
+  openAdminChat(email);
+}
+
+// Автоподгрузка чатов
+setInterval(function(){
+  var el = document.getElementById('adminChatsList');
+  if (!el) return;
+  if (el.innerHTML.indexOf('Loading chats') > -1 || el.innerHTML.indexOf('No chats yet') > -1) {
+    loadAdminChats();
+  }
+}, 3000);
