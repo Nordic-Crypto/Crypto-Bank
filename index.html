@@ -3684,52 +3684,87 @@ document.addEventListener('DOMContentLoaded', function(){
 </button>
 
 <div id="chatPanel">
-  <!-- Заголовок с агентом -->
-  <div class="chat-header">
-    <div class="chat-agent">
-      <div class="chat-avatar">
-        <img src="assets/astrid.jpg" alt="Elena Bergström">
-        <span class="chat-online"></span>
-      </div>
-      <div class="chat-agent-info">
-        <div class="chat-agent-name">Elena Bergström</div>
-        <div class="chat-agent-role">Senior Client Advisor</div>
-        <div class="chat-agent-status">
-          <span class="chat-dot"></span> Online • replies in ~2 min
+  <!-- ФОРМА ТИКЕТА -->
+  <div id="chatTicketForm" style="display:flex;flex-direction:column;height:100%;">
+    <div class="chat-header">
+      <div class="chat-agent">
+        <div class="chat-avatar">
+          <img src="assets/astrid.jpg" alt="Elena">
+          <span class="chat-online"></span>
+        </div>
+        <div class="chat-agent-info">
+          <div class="chat-agent-name">Elena Bergström</div>
+          <div class="chat-agent-role">Senior Client Advisor</div>
+          <div class="chat-agent-status">
+            <span class="chat-dot"></span> Online • replies in ~2 min
+          </div>
         </div>
       </div>
+      <button class="chat-close" onclick="toggleChat()">×</button>
     </div>
-    <button class="chat-close" onclick="toggleChat()">×</button>
+
+    <div style="flex:1;overflow-y:auto;padding:20px 18px;">
+      <div style="font-size:15px;font-weight:600;color:#e7edf5;margin-bottom:6px;">Start a support ticket</div>
+      <div style="font-size:12px;color:#8b95a5;margin-bottom:18px;">Tell us what's happening — we usually reply within 2 minutes.</div>
+
+      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Your email</label>
+      <input id="tkEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
+
+      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Topic</label>
+      <select id="tkTopic" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
+        <option value="withdrawal">💸 Withdrawal issue</option>
+        <option value="deposit">💰 Deposit issue</option>
+        <option value="kyc">🆔 KYC / Verification</option>
+        <option value="card">💳 Card issue</option>
+        <option value="account">🔐 Account & security</option>
+        <option value="other">❓ Other</option>
+      </select>
+
+      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Priority</label>
+      <select id="tkPriority" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
+        <option value="normal">🟡 Normal</option>
+        <option value="high">🔴 High — urgent</option>
+        <option value="low">🟢 Low</option>
+      </select>
+
+      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Describe your issue</label>
+      <textarea id="tkDesc" placeholder="Tell us more about your problem..." rows="4" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;resize:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"></textarea>
+
+      <button onclick="startTicket()" style="width:100%;padding:13px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);border:none;color:#fff;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;">
+        Start chat →
+      </button>
+    </div>
+
+    <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 
-  <!-- Сообщения -->
-  <div id="chatMessages" class="chat-messages">
-    <div class="chat-welcome">
-      <div class="chat-welcome-avatar">
-  <img src="assets/astrid.jpg" alt="Elena">
-</div>
-      <div class="chat-welcome-name">Elena Bergström</div>
-      <div class="chat-welcome-text">
-        Hi! I'm Elena from Nordic Crypto Support.<br>
-        How can I help you today?
+  <!-- ЧАТ ПОСЛЕ СОЗДАНИЯ ТИКЕТА -->
+  <div id="chatConversation" style="display:none;flex-direction:column;height:100%;">
+    <div class="chat-header">
+      <div class="chat-agent">
+        <div class="chat-avatar">
+          <img src="assets/astrid.jpg" alt="Elena">
+          <span class="chat-online"></span>
+        </div>
+        <div class="chat-agent-info">
+          <div class="chat-agent-name">Elena Bergström</div>
+          <div class="chat-agent-role" id="chatTicketTopic">Support</div>
+          <div class="chat-agent-status">
+            <span class="chat-dot"></span> Online
+          </div>
+        </div>
       </div>
+      <button class="chat-close" onclick="toggleChat()">×</button>
     </div>
-  </div>
 
-  <!-- Ввод -->
-  <div class="chat-input-wrap">
-    <input id="chatInput" class="chat-input" placeholder="Type your message..." 
-           onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChatMsg();}">
-    <button class="chat-send" onclick="sendChatMsg()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-      </svg>
-    </button>
-  </div>
+    <div id="chatMessages" class="chat-messages"></div>
 
-  <!-- Футер -->
-  <div class="chat-footer">
-    🔒 Encrypted • Powered by Nordic Crypto Support
+    <div class="chat-input-wrap">
+      <input id="chatInput" class="chat-input" placeholder="Type your message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChatMsg();}">
+      <button class="chat-send" onclick="sendChatMsg()">→</button>
+    </div>
+
+    <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 </div>
 </body>
