@@ -3964,7 +3964,6 @@ async function adminApproveWithdrawal(email, wdId) {
 
   try {
 
-  try {
     var token = getSessionToken();
     if (!token) { alert('No session'); return; }
 
