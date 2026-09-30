@@ -370,10 +370,9 @@ function showApp() {
     setInterval(loadPrices, 5 * 60 * 1000);
     setInterval(loadExchangeRates, 10 * 60 * 1000);
     setInterval(loadCharts, 15 * 60 * 1000);
-    
-      // Автообновление баланса клиента (каждые 3 сек)
+    // Автообновление баланса клиента (каждые 3 сек)
   if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
-    function autoRefreshBalance(){
+    (function autoRefreshBalance(){
       fetch(WORKER_LOGIN_URL + '?action=getUserState', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -381,56 +380,52 @@ function showApp() {
       })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d && !d.error) {
-          var newUsd = Number(d.usd) || 0;
-          console.log('[auto-refresh] server:', newUsd, 'local:', st.usd);
-          if (Math.abs(newUsd - (st.usd || 0)) > 0.01) {
-            st.usd = newUsd;
-            if (d.card) st.card = d.card;
-            if (d.txs) st.txs = d.txs;
-            if (d.notifications) st.notifications = d.notifications;
-            console.log('[auto-refresh] UPDATED to', st.usd);
-            render();
-          }
+        if (!d || d.error) return;
+        var newUsd = Number(d.usd) || 0;
+        console.log('[auto-refresh] server:', newUsd, 'local:', st.usd);
+        if (Math.abs(newUsd - (st.usd || 0)) > 0.01) {
+          st.usd = newUsd;
+          if (d.card) st.card = d.card;
+          if (d.txs) st.txs = d.txs;
+          if (d.notifications) st.notifications = d.notifications;
+          console.log('[auto-refresh] UPDATED to', st.usd);
+          render();
         }
-        setTimeout(autoRefreshBalance, 3000);
       })
-      .catch(function(){
+      .catch(function(){})
+      .finally(function(){
         setTimeout(autoRefreshBalance, 3000);
       });
-    }
-        autoRefreshBalance();
+    })();
   }
-  });
 
-   // Обновление при возврате на вкладку
-  document.addEventListener('visibilitychange', function(){
-    if (document.visibilityState === 'visible') {
-      if (localStorage.getItem('user_role') === 'admin') return;
-      if (!localStorage.getItem('user_email')) return;
-
-      fetch(WORKER_LOGIN_URL + '?action=listUsers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: getSessionToken() })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (!d.ok || !d.users) return;
-        var myEmail = localStorage.getItem('user_email');
-        for (var i = 0; i < d.users.length; i++) {
-          if (d.users[i].email === myEmail) {
-            st.usd = Number(d.users[i].balance) || 0;
-            st.card = d.users[i].card || st.card;
-            render();
-            break;
-          }
+// Обновление при возврате на вкладку
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible') {
+    if (localStorage.getItem('user_role') === 'admin') return;
+    if (!localStorage.getItem('user_email')) return;
+    
+    fetch(WORKER_LOGIN_URL + '?action=listUsers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken() })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok || !d.users) return;
+      var myEmail = localStorage.getItem('user_email');
+      for (var i = 0; i < d.users.length; i++) {
+        if (d.users[i].email === myEmail) {
+          st.usd = Number(d.users[i].balance) || 0;
+          st.card = d.users[i].card || st.card;
+          render();
+          break;
         }
-      })
-      .catch(function(){});
-    }
-  });
-
+      }
+    })
+    .catch(function(){});
+  }
+});
 
 async function doLogout() {
   var token = getSessionToken();
