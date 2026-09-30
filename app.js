@@ -5357,19 +5357,32 @@ setInterval(function(){
 }, 3000);
 // Обновление имени, email, инициалов во всех местах UI
 function updateUserUI() {
+  // Если админ смотрит клиента — показываем ИМЯ КЛИЕНТА, не своё
+  if (window.adminViewingEmail) {
+    var clientName = (st && st.name) ? st.name : window.adminViewingEmail.split('@')[0];
+    var nameEl = document.getElementById('userName');
+    var avEl = document.getElementById('userAvatar');
+    if (nameEl) nameEl.textContent = clientName;
+    if (avEl) {
+      var parts = clientName.trim().split(' ');
+      avEl.textContent = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
+    }
+    return;
+  }
+
   var name = localStorage.getItem('user_name') || 'User';
   var email = localStorage.getItem('user_email') || '—';
   var role = localStorage.getItem('user_role') || 'User';
-  
+
   var parts = name.trim().split(' ');
   var initials = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
-  
+
   // Сайдбар
   var nameEl = document.getElementById('userName');
   var avEl = document.getElementById('userAvatar');
   if (nameEl) nameEl.textContent = name;
   if (avEl) avEl.textContent = initials;
-  
+
   // Settings
   var sName = document.getElementById('settingsName');
   var sEmail = document.getElementById('settingsEmail');
@@ -5377,8 +5390,6 @@ function updateUserUI() {
   if (sName) sName.textContent = name;
   if (sEmail) sEmail.textContent = email;
   if (sRole) sRole.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-  
-  console.log('[userUI] name:', name, '| email:', email, '| role:', role, '| initials:', initials);
 }
 
 // Автозапуск при загрузке
