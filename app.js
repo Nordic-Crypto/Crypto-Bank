@@ -650,69 +650,43 @@ function loadPrices(){
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d && d.btc && d.eth){
-        // Сохраняем предыдущие цены для расчёта движения
         var prevBtc = st.btcP || d.btc;
         var prevEth = st.ethP || d.eth;
-        
+
         st.btcP = d.btc;
         st.ethP = d.eth;
-        
-        // Обновляем отображение цены
+
         var btcPriceEl = document.getElementById('btcPrice');
         if (btcPriceEl) btcPriceEl.textContent = fmt(d.btc);
         var ethPriceEl = document.getElementById('ethPrice');
         if (ethPriceEl) ethPriceEl.textContent = fmt(d.eth);
-        
-        // Обновляем % изменения за последние 24ч (или с последнего обновления)
+
         updateCryptoTrends(prevBtc, prevEth);
-        
-        // Пересчитываем баланс
-        // refreshBalanceFromCrypto();  ← ЗАКОММЕНТИРОВАНО
-        // Сохраняем точку в историю (в st, чтобы синхронизировалось на сервер)
+
+        // НЕ трогаем баланс в режиме View
+        if (window.adminViewingEmail) return;
+
         if (!st.balanceHistory) st.balanceHistory = [];
         var lastPoint = st.balanceHistory[st.balanceHistory.length - 1];
-var nowTs = Date.now();
-if (st.usd > 0 && st.usd < 1000000 && (!lastPoint || nowTs - lastPoint.t > 60000)) {
-  st.balanceHistory.push({ t: nowTs, v: st.usd });
-}
+        var nowTs = Date.now();
+        if (st.usd > 0 && st.usd < 1000000 && (!lastPoint || nowTs - lastPoint.t > 60000)) {
+          st.balanceHistory.push({ t: nowTs, v: st.usd });
+        }
         var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         st.balanceHistory = st.balanceHistory.filter(function(p){
           return p.t > weekAgo && p.v > 0 && p.v < 1000000;
         });
-        // Ограничиваем 3000 точками (защита от переполнения)
         if (st.balanceHistory.length > 3000) {
           st.balanceHistory = st.balanceHistory.slice(-3000);
         }
-        // Сохраняем в облако
         if (typeof saveToServer === 'function') saveToServer();
-renderBalanceChart();
-        
-        // Перерисовываем всё
+        renderBalanceChart();
         render();
       }
     })
     .catch(function(e){ console.error('Prices load failed:', e); });
-
-  
-  // Автообновление баланса клиента
-  if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
-    fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d && d.usd !== undefined && Math.abs(d.usd - (st.usd || 0)) > 0.01) {
-        st.usd = d.usd;
-        if (d.card) st.card = d.card;
-        if (d.txs) st.txs = d.txs;
-        render();
-      }
-    })
-    .catch(function(){});
-  }
 }
+
   
 // Движение % (BTC/ETH)
 function updateCryptoTrends(prevBtc, prevEth) {
