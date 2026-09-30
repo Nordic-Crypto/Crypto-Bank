@@ -4144,6 +4144,9 @@ function adminViewClient(email) {
   // Временно меняем на клиента — чтобы saveToServer работал
   localStorage.setItem('user_email', email);
   localStorage.setItem('user_role', 'user');
+    // СБРОС st перед загрузкой — иначе View покажет старые данные
+  st = JSON.parse(JSON.stringify(def));
+  stateLoaded = false;
 
   hideAdminPanel();
   var side = document.getElementById('sideBar');
