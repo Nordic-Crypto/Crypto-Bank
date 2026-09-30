@@ -5196,15 +5196,26 @@ async function sendChatMsg() {
 
   renderChatMessages();
 
-  var token = getSessionToken();
-  if (token) {
+    var token = getSessionToken();
+  var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
+
+  if (token && targetEmail) {
     try {
-      await fetch(WORKER_URL + '?action=setUserState', {
+      var r = await fetch(WORKER_URL + '?action=setUserState', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, state: st, force: true })
+        body: JSON.stringify({ 
+          token: token, 
+          email: targetEmail, 
+          state: st, 
+          force: true 
+        })
       });
+      var res = await r.json();
+      console.log('[sendChatMsg] сохранено для:', targetEmail, res);
     } catch(e) { console.warn('[chat] save failed', e); }
+  } else {
+    console.warn('[sendChatMsg] нет token или email');
   }
 }
 
