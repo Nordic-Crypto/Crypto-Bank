@@ -431,8 +431,6 @@ function showApp() {
     }
   });
 
-  });   // ← закрывает loadFromServer
-}       // ← закрывает showApp
 
 async function doLogout() {
   var token = getSessionToken();
