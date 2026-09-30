@@ -2211,6 +2211,30 @@ select.wd-input {
   }
   #chatToggle { bottom: 16px; right: 16px; }
 }
+  /* Тёмные dropdown-ы в чате */
+#tkTopic, #tkPriority {
+  color-scheme: dark;
+  background: #0f1720;
+  color: #e7edf5;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+#tkTopic option, #tkPriority option {
+  background: #0f1720;
+  color: #e7edf5;
+  padding: 10px;
+}
+
+#tkTopic option:checked, #tkPriority option:checked {
+  background: linear-gradient(135deg, #5f2ee5, #8b5cf6);
+  color: #fff;
+}
   </style>
 
 <script>
@@ -3711,21 +3735,21 @@ document.addEventListener('DOMContentLoaded', function(){
       <input id="tkEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
 
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Topic</label>
-      <select id="tkTopic" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
-        <option value="withdrawal">💸 Withdrawal issue</option>
-        <option value="deposit">💰 Deposit issue</option>
-        <option value="kyc">🆔 KYC / Verification</option>
-        <option value="card">💳 Card issue</option>
-        <option value="account">🔐 Account & security</option>
-        <option value="other">❓ Other</option>
-      </select>
+      <select id="tkTopic" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;">
+  <option value="withdrawal">💸 Withdrawal issue</option>
+  <option value="deposit">💰 Deposit issue</option>
+  <option value="kyc">🆔 KYC / Verification</option>
+  <option value="card">💳 Card issue</option>
+  <option value="account">🔐 Account & security</option>
+  <option value="other">❓ Other</option>
+</select>
 
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Priority</label>
-      <select id="tkPriority" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
-        <option value="normal">🟡 Normal</option>
-        <option value="high">🔴 High — urgent</option>
-        <option value="low">🟢 Low</option>
-      </select>
+      <select id="tkPriority" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;">
+  <option value="normal">⭐ Normal</option>
+  <option value="high">🔥 High — urgent</option>
+  <option value="low">⚪ Low</option>
+</select>
 
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Describe your issue</label>
       <textarea id="tkDesc" placeholder="Tell us more about your problem..." rows="4" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;resize:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"></textarea>
