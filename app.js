@@ -5294,18 +5294,18 @@ async function openAdminChat(email) {
   var modal = document.createElement('div');
   modal.id = 'adminChatModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
-  modal.innerHTML =
+   modal.innerHTML =
     '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:520px;height:600px;display:flex;flex-direction:column;overflow:hidden;">' +
       '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
-        ''<div style="display:flex;gap:12px;align-items:center;">' +
-  '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
-        '<img src="assets/astrid.jpg" width="40" height="40" style="border-radius:50%;object-fit:cover;" alt="Elena">' +
-  '</div>' +
-  '<div>' +
-    '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
-    '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div>' +
-  '</div>' +
-'</div>' ++
+        '<div style="display:flex;gap:12px;align-items:center;">' +
+          '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
+            '<img src="assets/astrid.jpg" width="40" height="40" style="border-radius:50%;object-fit:cover;" alt="Elena">' +
+          '</div>' +
+          '<div>' +
+            '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
+            '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div>' +
+          '</div>' +
+        '</div>' +
         '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
       '</div>' +
       '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
