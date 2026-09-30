@@ -3295,9 +3295,9 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="settings-label">Profile</div>
       <div class="settings-row">
         <div>
-          <div class="settings-name" id="settingsName">Eva A. Lundgren</div>
-          <div class="settings-email" id="settingsEmail">lundgrenhem@gmail.com</div>
-        </div>
+          <div class="settings-name" id="settingsName">—</div>
+<div class="settings-email" id="settingsEmail">—</div>
+<div class="settings-role" id="settingsRole">—</div>
         <div class="settings-role" id="settingsRole">User</div>
       </div>
     </div>
@@ -3446,7 +3446,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="admin-system-row">
           <div>
             <div class="admin-system-label">Send notification to all</div>
-            <div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem">Send a message to Eva's notification bell</div>
+            <div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem;">Send a message to <b id="notifTargetName">all clients</b>'s notification bell</div>
           </div>
           <button class="btn b2" id="adminSendNotif">📩 Send message</button>
         </div>
@@ -3469,7 +3469,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <div class="mask" id="adminBalanceMask">
   <div class="box">
     <h2>Adjust Balance</h2>
-    <p class="d" id="adminBalanceDesc">Eva A. Lundgren</p>
+    <p class="d" id="adminBalanceDesc">—</p>
     <div class="fg">
       <label>Amount (positive to add, negative to subtract)</label>
       <input type="number" class="fc" id="adminBalanceAmount" placeholder="e.g. 100 or -50">
