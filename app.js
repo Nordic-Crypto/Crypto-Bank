@@ -3958,86 +3958,150 @@ function renderAdminWithdrawalCard(w) {
   '</div>';
 }
 
-async function adminApproveWithdrawal(email, wdId) {
-  if (!confirm('Approve this withdrawal?\nFunds will be deducted from client balance.')) return;
+async function approveWithdrawal(email, wdId) {
+  var ok = confirm('Approve this withdrawal?\nFunds will be deducted from client balance.');
+  if (!ok) return;
 
   try {
     var token = getSessionToken();
-    var r = await fetch(WORKER_URL + '?action=getuserstate', {
+    if (!token) { alert('No session'); return; }
+
+    // 1. Тянем state клиента
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token, email: email })
     });
-    var d = await r.json();
-    var state = d.state;
-    if (!state || !state.withdrawals) throw new Error('State not found');
+    var state = await r.json();
+    if (!state || state.error) throw new Error(state && state.error ? state.error : 'State not found');
 
-    var wd = null;
-    for (var i = 0; i < state.withdrawals.length; i++) {
-      if (state.withdrawals[i].id === wdId) { wd = state.withdrawals[i]; break; }
-    }
+    // 2. Находим заявку
+    if (!state.withdrawals) state.withdrawals = [];
+    var wd = state.withdrawals.find(function(w){ return w.id === wdId; });
     if (!wd) throw new Error('Withdrawal not found');
+    if (wd.status !== 'pending') throw new Error('Already ' + wd.status);
 
-    wd.status = 'approved';
-    wd.reviewedAt = Date.now();
-    wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
+    // 3. Проверка баланса
+    if ((state.usd || 0) < wd.amount) {
+      alert('Insufficient balance. Client has $' + (state.usd || 0));
+      return;
+    }
 
+    // 4. Списываем
     state.usd = (state.usd || 0) - wd.amount;
     if (!state.txs) state.txs = [];
     state.txs.unshift({
+      date: new Date().toISOString().slice(0, 10),
       ts: Date.now(),
       desc: 'Withdrawal — ' + (wd.method || 'iban').toUpperCase(),
       amt: -wd.amount,
       status: 'Completed'
     });
 
-    await fetch(WORKER_URL + '?action=saveuserstate', {
+    // 5. Обновляем заявку
+    wd.status = 'approved';
+    wd.reviewedAt = Date.now();
+    wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
+
+    // 6. Уведомление клиенту
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: 'n_' + Date.now(),
+      ts: Date.now(),
+      text: '✅ Withdrawal approved — $' + wd.amount + ' sent to your ' + (wd.method || 'IBAN') + '. Ref: ' + wd.id,
+      read: false
+    });
+
+    // 7. Сохраняем
+    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state })
+      body: JSON.stringify({ token: token, email: email, state: state, force: true })
     });
+    var saveRes = await saveResp.json();
+    if (!saveRes || !saveRes.ok) throw new Error(saveRes && saveRes.error ? saveRes.error : 'Save failed');
 
     alert('✅ Withdrawal approved');
     loadAdminWithdrawals();
   } catch (e) {
+    console.error('[approve] failed:', e);
     alert('Error: ' + e.message);
   }
 }
 
 async function adminRejectWithdrawal(email, wdId) {
-  var reason = prompt('Reason for rejection:');
-  if (reason === null) return;
+  // Причина отклонения — по стандартам AML / KYC
+  var reasons = [
+    '1. Недостаточно данных KYC',
+    '2. Подозрительная активность (AML)',
+    '3. Несоответствие реквизитов',
+    '4. Превышен лимит вывода',
+    '5. Техническая ошибка — попробуйте снова',
+    '6. Другое (ввести вручную)'
+  ];
+  var pick = prompt('Причина отклонения:\n\n' + reasons.join('\n') + '\n\nВведите номер 1–6:');
+  if (pick === null) return;
+
+  var reasonMap = {
+    '1': 'Insufficient KYC data. Please complete verification and try again.',
+    '2': 'Suspicious activity detected (AML). Contact support.',
+    '3': 'Bank details do not match account holder. Please check and retry.',
+    '4': 'Withdrawal limit exceeded. Try a smaller amount.',
+    '5': 'Temporary technical issue. Please try again later.',
+    '6': null
+  };
+
+  var reason = reasonMap[pick];
+  if (reason === null || !reason) {
+    reason = prompt('Введите причину вручную:');
+    if (!reason) return;
+  }
 
   try {
     var token = getSessionToken();
-    var r = await fetch(WORKER_URL + '?action=getuserstate', {
+    if (!token) { alert('No session'); return; }
+
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token, email: email })
     });
-    var d = await r.json();
-    var state = d.state;
+    var state = await r.json();
+    if (!state || state.error) throw new Error(state && state.error ? state.error : 'State not found');
 
-    var wd = null;
-    for (var i = 0; i < state.withdrawals.length; i++) {
-      if (state.withdrawals[i].id === wdId) { wd = state.withdrawals[i]; break; }
-    }
+    if (!state.withdrawals) state.withdrawals = [];
+    var wd = state.withdrawals.find(function(w){ return w.id === wdId; });
     if (!wd) throw new Error('Withdrawal not found');
+    if (wd.status !== 'pending') throw new Error('Already ' + wd.status);
 
+    // Помечаем заявку
     wd.status = 'rejected';
     wd.reason = reason;
     wd.reviewedAt = Date.now();
     wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
 
-    await fetch(WORKER_URL + '?action=saveuserstate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state })
+    // Уведомление клиенту
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: 'n_' + Date.now(),
+      ts: Date.now(),
+      text: '❌ Withdrawal rejected — $' + wd.amount + '. Reason: ' + reason,
+      read: false
     });
 
-    alert('❌ Withdrawal rejected');
+    // Баланс НЕ трогаем — деньги не списывались
+    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    });
+    var saveRes = await saveResp.json();
+    if (!saveRes || !saveRes.ok) throw new Error(saveRes && saveRes.error ? saveRes.error : 'Save failed');
+
+    alert('✅ Withdrawal rejected. Client notified.');
     loadAdminWithdrawals();
   } catch (e) {
+    console.error('[reject] failed:', e);
     alert('Error: ' + e.message);
   }
 }
