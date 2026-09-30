@@ -368,33 +368,31 @@ function showApp() {
     $('onboard').classList.remove('on');
 
     setInterval(loadPrices, 5 * 60 * 1000);
+    
+    // Auto-refresh баланса каждые 3 сек
+    if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
+      setInterval(function(){
+        fetch(WORKER_LOGIN_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: getSessionToken() })
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if (d && d.usd !== undefined && Math.abs(d.usd - (st.usd || 0)) > 0.01) {
+            st.usd = d.usd;
+            if (d.card) st.card = d.card;
+            if (d.txs) st.txs = d.txs;
+            render();
+            console.log('[auto-refresh] UPDATED to', st.usd);
+          }
+        })
+        .catch(function(){});
+      }, 3000);
+    }
     setInterval(loadExchangeRates, 10 * 60 * 1000);
     setInterval(loadCharts, 15 * 60 * 1000);
-  // Автообновление баланса клиента (из getUserState)
-  if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
-    fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (!d || d.error) return;
-      var newUsd = Number(d.usd) || 0;
-      console.log('[auto-refresh] server usd:', newUsd, 'local:', st.usd);
-      if (Math.abs(newUsd - (st.usd || 0)) > 0.01) {
-        st.usd = newUsd;
-        if (d.card) st.card = d.card;
-        if (d.txs) st.txs = d.txs;
-        if (d.notifications) st.notifications = d.notifications;
-        console.log('[auto-refresh] UPDATED to', st.usd);
-        if (typeof render === 'function') render();
-      }
-    })
-    .catch(function(){});
-  }
-      });
-}
+ 
 
 // Обновление при возврате на вкладку
 document.addEventListener('visibilitychange', function(){
@@ -683,26 +681,6 @@ renderBalanceChart();
       }
     })
     .catch(function(e){ console.error('Prices load failed:', e); });
-
-  
-  // Автообновление баланса клиента
-  if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
-    fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d && d.usd !== undefined && Math.abs(d.usd - (st.usd || 0)) > 0.01) {
-        st.usd = d.usd;
-        if (d.card) st.card = d.card;
-        if (d.txs) st.txs = d.txs;
-        render();
-      }
-    })
-    .catch(function(){});
-  }
 }
   
 // Движение % (BTC/ETH)
