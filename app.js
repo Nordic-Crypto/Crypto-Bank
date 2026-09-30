@@ -212,6 +212,13 @@ async function doLogin() {
       localStorage.setItem('user_email', data.user.email);
       localStorage.setItem('user_role', data.user.role);
       localStorage.setItem('user_name', data.user.name || 'User');
+      // Если сервер не вернул имя — берём из email
+if (!data.user.name) {
+  var fromEmail = (data.user.email || '').split('@')[0];
+  var niceName = fromEmail.charAt(0).toUpperCase() + fromEmail.slice(1);
+  localStorage.setItem('user_name', niceName);
+  console.log('[login] name from email:', niceName);
+}
 
       // Скрыть логин, показать приложение
       hideLoginScreen();
