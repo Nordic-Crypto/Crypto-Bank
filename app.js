@@ -4008,7 +4008,7 @@ async function adminApproveWithdrawal(email, wdId) {
     // 5. Обновляем заявку
     wd.status = 'approved';
     wd.reviewedAt = Date.now();
-    wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
+    wd.reviewedBy = 'Compliance Department';
 
     // 6. Уведомление клиенту
     if (!state.notifications) state.notifications = [];
@@ -4085,7 +4085,7 @@ async function adminRejectWithdrawal(email, wdId) {
     wd.status = 'rejected';
     wd.reason = reason;
     wd.reviewedAt = Date.now();
-    wd.reviewedBy = localStorage.getItem('user_email') || 'admin';
+    wd.reviewedBy = 'Compliance Department';
 
     // Уведомление клиенту
     if (!state.notifications) state.notifications = [];
@@ -5040,8 +5040,8 @@ function openWdDetails(wdId) {
       '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">' +
         row('Created', new Date(wd.createdAt).toLocaleString('en-GB')) +
         (wd.reviewedAt ? row('Reviewed', new Date(wd.reviewedAt).toLocaleString('en-GB')) : '') +
-        (wd.reviewedBy ? row('Reviewed by', wd.reviewedBy) : '') +
-        row('ID', wd.id) +
+        row('Reviewed by', 'Compliance Department — Nordic Crypto Bank') +
+        row('Reference', 'NCB-' + String(wd.id).slice(-8).toUpperCase()) +
       '</div>' +
 
       // Кнопка закрытия
