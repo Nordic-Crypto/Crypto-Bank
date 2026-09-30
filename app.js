@@ -5086,16 +5086,55 @@ function openWdDetails(wdId) {
   });
 }
 // ========== LIVE CHAT — CLIENT ==========
-function toggleChat() {
+async function toggleChat() {
   var p = document.getElementById('chatPanel');
   if (!p) return;
   var open = p.style.display === 'flex';
   p.style.display = open ? 'none' : 'flex';
-  if (!open) {
+  if (open) return;
+
+  // Подгружаем тикет с сервера, если нет в памяти
+  if (!st.ticket || !st.ticket.id) {
+    try {
+      var token = getSessionToken();
+      var email = window.adminViewingEmail || localStorage.getItem('user_email');
+      if (token && email) {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({token: token, email: email})
+        });
+        var d = await r.json();
+        if (d && d.ticket && d.ticket.id) {
+          st.ticket = d.ticket;
+          st.chat = d.chat || [];
+        }
+      }
+    } catch(e) {}
+  }
+
+  var hasTicket = !!(st.ticket && st.ticket.id);
+
+  if (hasTicket) {
+    // ЕСТЬ тикет — показываем чат
+    document.getElementById('chatTicketForm').style.display = 'none';
+    document.getElementById('chatConversation').style.display = 'flex';
+    var topic = st.ticket.topic || 'support';
+    var priority = st.ticket.priority || 'normal';
+    document.getElementById('chatTicketTopic').textContent =
+      topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
     renderChatMessages();
     markChatRead();
-    setTimeout(function(){ 
+    setTimeout(function(){
       var i = document.getElementById('chatInput'); if (i) i.focus();
+    }, 100);
+  } else {
+    // НЕТ тикета — показываем ФОРМУ
+    document.getElementById('chatTicketForm').style.display = 'flex';
+    document.getElementById('chatConversation').style.display = 'none';
+    var e = document.getElementById('tkEmail');
+    if (e) e.value = window.adminViewingEmail || localStorage.getItem('user_email') || '';
+    setTimeout(function(){
+      var i = document.getElementById('tkEmail'); if (i) i.focus();
     }, 100);
   }
 }
