@@ -2259,6 +2259,78 @@ select.wd-input {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
 }
+  /* ADMIN LAYOUT — sidebar + content */
+.admin-panel {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.admin-sidebar {
+  background: rgba(10,15,25,0.95);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 20px 12px;
+  overflow-y: auto;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #8b95a5;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  transition: all 0.15s;
+  position: relative;
+}
+.admin-nav-item:hover {
+  background: rgba(255,255,255,0.04);
+  color: #e7edf5;
+}
+.admin-nav-item.active {
+  background: linear-gradient(135deg, rgba(95,46,229,0.2), rgba(139,92,246,0.15));
+  color: #e7edf5;
+  font-weight: 600;
+}
+.admin-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: linear-gradient(180deg, #5f2ee5, #8b5cf6);
+  border-radius: 0 3px 3px 0;
+}
+
+.admin-nav-badge {
+  margin-left: auto;
+  background: #ff3b3b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+.admin-nav-badge.warn { background: #f6c344; color: #1a1a1a; }
+
+.admin-content {
+  overflow-y: auto;
+  padding: 28px 32px;
+}
+.admin-content .admin-section {
+  display: none;
+}
+.admin-content .admin-section.active {
+  display: block;
+}
   </style>
 
 <script>
@@ -3424,96 +3496,129 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
 
-  <div class="admin-body">
-    <div class="admin-stats">
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">👥</div>
-        <div class="admin-stat-value" id="admStatClients">0</div>
-        <div class="admin-stat-label">Total Clients</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">💰</div>
-        <div class="admin-stat-value" id="admStatBalance">$0.00</div>
-        <div class="admin-stat-label">Total Balance</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">📊</div>
-        <div class="admin-stat-value" id="admStatTx">0</div>
-        <div class="admin-stat-label">Transactions</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">₿</div>
-        <div class="admin-stat-value" id="admStatCrypto">0</div>
-        <div class="admin-stat-label">Crypto Holdings</div>
-      </div>
-    </div>
+          <div class="admin-body">
+          <!-- SIDEBAR -->
+          <aside class="admin-sidebar">
+            <div class="admin-nav-item active" onclick="showAdminTab('stats')" data-tab="stats">
+              <span>📊</span> Dashboard
+            </div>
+            <div class="admin-nav-item" onclick="showAdminTab('clients')" data-tab="clients">
+              <span>👥</span> Clients
+              <span class="admin-nav-badge" id="navClientsCount" style="background:rgba(255,255,255,0.1);color:#8b95a5;">0</span>
+            </div>
+            <div class="admin-nav-item" onclick="showAdminTab('chats')" data-tab="chats">
+              <span>💬</span> Live chats
+              <span class="admin-nav-badge" id="navChatsCount" style="display:none;">0</span>
+            </div>
+            <div class="admin-nav-item" onclick="showAdminTab('withdrawals')" data-tab="withdrawals">
+              <span>💸</span> Withdrawals
+              <span class="admin-nav-badge warn" id="navWdsCount" style="display:none;">0</span>
+            </div>
+            <div class="admin-nav-item" onclick="showAdminTab('deleted')" data-tab="deleted">
+              <span>🗑️</span> Deleted
+            </div>
+            <div class="admin-nav-item" onclick="showAdminTab('system')" data-tab="system">
+              <span>⚙️</span> System
+            </div>
+          </aside>
 
-    <div class="admin-section">
-      <div class="admin-section-head">
-        <div class="admin-section-title">👥 Clients</div>
-        <button class="btn b2" id="adminRefreshBtn">🔄 Refresh</button>
-      </div>
-      <div class="admin-clients-list" id="adminClientsList">
-        <div class="admin-empty">
-          <div style="font-size:2.5rem;opacity:.4;margin-bottom:12px">📭</div>
-          <div>Loading clients...</div>
-        </div>
-      </div>
-          <div class="admin-section">
-        <div class="admin-section-head">
-          <div class="admin-section-title">💬 Live support</div>
-          <button class="btn b2" id="adminRefreshChatsBtn" onclick="loadAdminChats()">🔄 Refresh</button>
-<button class="btn b2" onclick="clearAllChats()" style="background:rgba(255,80,80,0.15);color:#ff6b6b;margin-left:6px;">🗑️ Clear all</button>
-        </div>
-        <div id="adminChatsList" style="min-height:80px;">
-          <div class="admin-empty">Loading chats...</div>
-        </div>
-      </div>
-    </div>
-      <div class="admin-section">
-        <div class="admin-section-head">
-          <div class="admin-section-title">💸 Withdrawals</div>
-          <button class="btn b2" id="adminRefreshWithdrawals">🔄 Refresh</button>
-        </div>
-        <div class="admin-section-sub" id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
-        <div class="admin-withdrawals-list" id="adminWithdrawalsList">
-          <div class="admin-empty">Loading withdrawals...</div>
-        </div>
-      </div>
-    <div class="admin-section">
-      <div class="admin-section-head">
-        <div class="admin-section-title">🔔 System & Updates</div>
-      </div>
-      <div class="admin-system">
-        <div class="admin-system-row">
-          <div>
-            <div class="admin-system-label">Current version</div>
-            <div class="admin-system-value" id="admVersion">1.0.0</div>
-          </div>
-          <button class="btn b1" id="adminPushUpdate">📢 Push new version</button>
-        </div>
-        <div class="admin-system-row">
-          <div>
-            <div class="admin-system-label">Send notification to all</div>
-            <div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem;">Send a message to <b id="notifTargetName">all clients</b>'s notification bell</div>
-          </div>
-          <button class="btn b2" id="adminSendNotif">📩 Send message</button>
-        </div>
-      </div>
-    </div>
+          <!-- CONTENT -->
+          <main class="admin-content">
 
-    <div class="admin-section">
-      <div class="admin-section-head">
-        <div class="admin-section-title">🗑 Deleted Accounts</div>
-        <button class="btn b2" id="adminRefreshDeleted">🔄 Refresh</button>
-      </div>
-      <div class="admin-clients-list" id="adminDeletedList">
-        <div class="admin-empty">Loading deleted...</div>
-      </div>
-    </div>
-  </div>
-</div>
+            <!-- TAB: Dashboard -->
+            <div class="admin-section active" data-section="stats">
+              <div class="admin-stats">
+                <div class="admin-stat-card">
+                  <div class="admin-stat-icon">👥</div>
+                  <div class="admin-stat-value" id="admnStatClients">0</div>
+                  <div class="admin-stat-label">Total Clients</div>
+                </div>
+                <div class="admin-stat-card">
+                  <div class="admin-stat-icon">💰</div>
+                  <div class="admin-stat-value" id="admStatBalance">$0.00</div>
+                  <div class="admin-stat-label">Total Balance</div>
+                </div>
+                <div class="admin-stat-card">
+                  <div class="admin-stat-icon">📊</div>
+                  <div class="admin-stat-value" id="admStatTx">0</div>
+                  <div class="admin-stat-label">Transactions</div>
+                </div>
+                <div class="admin-stat-card">
+                  <div class="admin-stat-icon">🪙</div>
+                  <div class="admin-stat-value" id="admStatCrypto">0</div>
+                  <div class="admin-stat-label">Crypto Holdings</div>
+                </div>
+              </div>
+            </div>
 
+            <!-- TAB: Clients -->
+            <div class="admin-section" data-section="clients">
+              <div style="display:flex;gap:12px;margin-bottom:16px;">
+                <input type="text" id="clientSearch" placeholder="🔍 Search by email or name..." oninput="filterClients(this.value)" style="flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:14px;outline:none;">
+                <button class="btn b2" id="adminRefreshBtn" onclick="loadAdminUsers()">🔄 Refresh</button>
+              </div>
+              <div class="admin-clients-list" id="adminClientsList">
+                <div class="admin-empty">
+                  <div style="font-size:2.5rem;opacity:.4;margin-bottom:12px;">👥</div>
+                  <div>Loading clients...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB: Chats -->
+            <div class="admin-section" data-section="chats">
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">
+                <button class="btn b2" id="adminRefreshChatsBtn" onclick="loadAdminChats()">🔄 Refresh</button>
+                <button class="btn b2" onclick="clearAllChats()" style="background:rgba(255,80,80,0.15);color:#ff6b6b;">🗑️ Clear all</button>
+              </div>
+              <div id="adminChatsList" style="min-height:80px;">
+                <div class="admin-empty">Loading chats...</div>
+              </div>
+            </div>
+
+            <!-- TAB: Withdrawals -->
+            <div class="admin-section" data-section="withdrawals">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+                <button class="btn b2" id="adminRefreshWithdrawals" onclick="loadAdminWithdrawals()">🔄 Refresh</button>
+              </div>
+              <div class="admin-section-sub" id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
+              <div class="admin-withdrawals-list" id="adminWithdrawalsList">
+                <div class="admin-empty">Loading withdrawals...</div>
+              </div>
+            </div>
+
+            <!-- TAB: Deleted -->
+            <div class="admin-section" data-section="deleted">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+                <button class="btn b2" id="adminRefreshDeleted" onclick="loadAdminDeleted()">🔄 Refresh</button>
+              </div>
+              <div class="admin-clients-list" id="adminDeletedList">
+                <div class="admin-empty">Loading deleted...</div>
+              </div>
+            </div>
+
+            <!-- TAB: System -->
+            <div class="admin-section" data-section="system">
+              <div class="admin-system">
+                <div class="admin-system-row">
+                  <div>
+                    <div class="admin-system-label">Current version</div>
+                    <div class="admin-system-value" id="adminVersion">1.0.0</div>
+                  </div>
+                  <button class="btn b1" id="adminPushUpdate">🚀 Push new version</button>
+                </div>
+                <div class="admin-system-row">
+                  <div>
+                    <div class="admin-system-label">Send notification to all</div>
+                    <div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem;">Send a message to <b id="notifTargetName">all clients</b>'s notification bell</div>
+                  </div>
+                  <button class="btn b2" id="adminSendNotif">📨 Send message</button>
+                </div>
+              </div>
+            </div>
+
+          </main>
+        </div>
 <!-- ============ ADMIN: MODAL — Balance ============ -->
 <div class="mask" id="adminBalanceMask">
   <div class="box">
