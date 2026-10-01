@@ -2133,26 +2133,39 @@ function initRecentTx(){
 }
 /* ========== CARD DESIGN ========== */
 function applyCardDesign(){
-  var design = (st.card && st.card.design) ? st.card.design : 'cosmic';
+  if (!st.card || !st.card.design) {
+    var allCards = document.querySelectorAll('.pay');
+    for (var x = 0; x < allCards.length; x++) {
+      allCards[x].style.background = '';
+    }
+    return;
+  }
+
+  var design = st.card.design || 'cosmic';
   var cards = document.querySelectorAll('.pay');
+
   for (var i = 0; i < cards.length; i++){
     var c = cards[i];
+    if (c.closest('.onb-preview') || c.closest('.onb-step')) continue;
     c.classList.remove('design-cosmic', 'design-purple', 'design-silver', 'design-black', 'design-gold', 'design-ocean', 'design-mountain', 'design-aurora', 'design-city');
     c.classList.add('design-' + design);
   }
-      // Применяем кастомный hue (если клиент выбрал)
-    var hue = st.card && st.card.hue;
-    if (hue !== null && hue !== undefined) {
-      for (var h = 0; h < cards.length; h++) {
-        cards[h].style.background = 
-          'radial-gradient(500px 200px at 100% 0%, hsla(' + hue + ',70%,50%,0.3), transparent 60%),' +
-          'linear-gradient(135deg, hsl(' + hue + ',40%,20%) 0%, hsl(' + (Number(hue) + 30) + ',40%,8%) 100%)';
-      }
-    } else {
-      for (var h2 = 0; h2 < cards.length; h2++) {
-        cards[h2].style.background = '';
-      }
+
+  var hue = st.card && st.card.hue;
+  if (hue !== null && hue !== undefined && hue !== '') {
+    for (var h = 0; h < cards.length; h++) {
+      var cardEl = cards[h];
+      if (cardEl.closest('.onb-preview') || cardEl.closest('.onb-step')) continue;
+      cardEl.style.background =
+        'radial-gradient(500px 200px at 100% 0%, hsla(' + hue + ',70%,50%,0.3), transparent 60%),' +
+        'linear-gradient(135deg, hsl(' + hue + ',40%,20%) 0%, hsl(' + (Number(hue) + 30) + ',40%,8%) 100%)';
     }
+  } else {
+    for (var h2 = 0; h2 < cards.length; h2++) {
+      if (cards[h2].closest('.onb-preview') || cards[h2].closest('.onb-step')) continue;
+      cards[h2].style.background = '';
+    }
+  }
 }
 
 function setSelectedDesign(design){
@@ -2188,32 +2201,22 @@ function initDesignPicker(){
     }
   }
 
-  var btnChange = document.getElementById('btnChangeDesign');
-  if (btnChange){
-    btnChange.onclick = function(){
-      if (!st.card) return;
-      var current = st.card.design || 'cosmic';
-      var all = document.querySelectorAll('#designPickerModal .design-opt');
-      for (var k = 0; k < all.length; k++){
-        all[k].classList.toggle('on', all[k].getAttribute('data-design') === current);
-      }
-      document.getElementById('designMask').classList.add('on');
-    };
-  }
-
   var btnSave = document.getElementById('designSave');
-  if (btnSave){
+if (btnSave){
   btnSave.onclick = function(){
     var active = document.querySelector('#designPickerModal .design-opt.on');
     if (!active){ toast('Please choose a design', true); return; }
     var d = active.getAttribute('data-design');
-    
-    // Закрыть модалку Change Design
+
     document.getElementById('designMask').classList.remove('on');
-    
-    // Запрос пароля
+
     openPasswordConfirm('Confirm changing card design to "' + d + '"', function(){
       if (!st.card) st.card = {};
+      st.card.hue = null;
+      var allCards = document.querySelectorAll('.pay');
+      for (var i = 0; i < allCards.length; i++) {
+        allCards[i].style.background = '';
+      }
       st.card.design = d;
       saveToServer();
       applyCardDesign();
@@ -2221,17 +2224,19 @@ function initDesignPicker(){
       toast('Card design updated');
     });
   };
+}
   
   // Hue slider — кастомный цвет карты
-  var hueSlider = document.getElementById('hueSlider');
+    var hueSlider = document.getElementById('hueSlider');
   var huePreview = document.getElementById('huePreview');
   if (hueSlider) {
     hueSlider.oninput = function(){
+      this.dataset.touched = '1';
       var hue = this.value;
       if (huePreview) huePreview.style.background = 'hsl(' + hue + ',70%,50%)';
       var previewCard = document.querySelector('.onb-preview .pay');
       if (previewCard) {
-        previewCard.style.background = 
+        previewCard.style.background =
           'radial-gradient(500px 200px at 100% 0%, hsla(' + hue + ',70%,50%,0.3), transparent 60%),' +
           'linear-gradient(135deg, hsl(' + hue + ',40%,20%) 0%, hsl(' + (Number(hue) + 30) + ',40%,8%) 100%)';
       }
@@ -2725,7 +2730,10 @@ function createVirtualCard(name, type, cur){
     cur: cur,
     status: 'Active',
     design: selectedDesign,
-      hue: (document.getElementById('hueSlider') ? Number(document.getElementById('hueSlider').value) : null),  // ← НОВОЕ
+      hue: (function(){
+  var hs = document.getElementById('hueSlider');
+  return (hs && hs.dataset.touched === '1') ? Number(hs.value) : null;
+})(),  // ← НОВОЕ
         country: (document.getElementById('onbCountry') ? document.getElementById('onbCountry').value : 'SE'),
     createdAt: Date.now()
   };
@@ -3478,6 +3486,15 @@ toast(st.card.status === 'Frozen' ? 'Card frozen' : 'Card unfrozen');
 document.getElementById('btnDeleteCard').onclick = function(){
   if (!st.card) return;
   openPasswordConfirm('Confirm deleting your card. Balance and transactions will stay.', function(){
+    var allCards = document.querySelectorAll('.pay');
+    for (var i = 0; i < allCards.length; i++) {
+      allCards[i].style.background = '';
+      allCards[i].classList.remove(
+        'design-cosmic','design-purple','design-silver','design-black',
+        'design-gold','design-ocean','design-mountain','design-aurora','design-city'
+      );
+      allCards[i].classList.add('design-cosmic');
+    }
     st.card = null;
     saveToServer();
     renderCard();
