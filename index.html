@@ -1894,7 +1894,40 @@ select.wd-input {
 .awd-row b{color:#e8f4ff;font-family:monospace}
 .awd-date{font-size:11px;color:#5967fb;margin-bottom:10px}
 .awd-actions{display:flex;gap:8px}
-.awd-btn{flex:1;padding:10px;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px}
+.awd-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.awd-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.awd-approve {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(16,185,129,0.3);
+}
+.awd-approve:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(16,185,129,0.45);
+}
+.awd-reject {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.awd-reject:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: translateY(-2px);
+}
 .awd-approve{background:linear-gradient(135deg,#10b981,#34d399);color:#fff}
 .awd-reject{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
  .pay.design-cosmic   { background: linear-gradient(135deg, #1a1a2e, #0f3460); }
@@ -2546,6 +2579,40 @@ html body #adminPanel .admin-section {
 
 html body #adminPanel .admin-section.active {
   display: block !important;
+}
+  /* FIX — скролл админки */
+html body #adminPanel {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+html body #adminPanel.on {
+  display: flex;
+}
+
+html body #adminPanel .admin-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: auto;
+}
+
+html body #adminPanel .admin-sidebar {
+  overflow-y: auto;
+  height: 100%;
+  min-height: 0;
+}
+
+html body #adminPanel .admin-content {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  height: 100%;
+  min-height: 0;
+  padding: 28px 32px;
+  box-sizing: border-box;
 }
   </style>
 
