@@ -6069,3 +6069,67 @@ document.addEventListener('DOMContentLoaded', function(){
     makeMagnetic(document.querySelector('.nc3-primary'));
   });
 })();
+/* ========== CARD DELETE / CREATE ANIMATIONS ========== */
+(function(){
+  // Ждём пока DOM загрузится
+  document.addEventListener('DOMContentLoaded', function(){
+
+    // 1. Анимация при УДАЛЕНИИ карты
+    var deleteBtn = document.getElementById('btnDeleteCard');
+    if (deleteBtn){
+      var origClick = deleteBtn.onclick;
+      deleteBtn.onclick = function(e){
+        var cardFull = document.getElementById('cardFull');
+        var cardDash = document.getElementById('cardDash');
+
+        // Анимация на обе карты
+        if (cardFull) cardFull.classList.add('card-deleting');
+        if (cardDash) cardDash.classList.add('card-deleting');
+
+        // Звук "растворения"
+        if (typeof playTone === 'function'){
+          playTone(220, 0.5, 'sine', 0.25);
+          setTimeout(function(){ playTone(110, 0.6, 'sine', 0.2); }, 150);
+        }
+
+        // Через 700мс — выполняем оригинальный onclick
+        setTimeout(function(){
+          if (origClick) origClick.call(deleteBtn, e);
+          if (cardFull) cardFull.classList.remove('card-deleting');
+          if (cardDash) cardDash.classList.remove('card-deleting');
+        }, 700);
+      };
+    }
+
+    // 2. Анимация при СОЗДАНИИ карты (после онбординга)
+    var createBtn = document.getElementById('btnCreateCard');
+    if (createBtn){
+      var origCreate = createBtn.onclick;
+      createBtn.onclick = function(e){
+        if (origCreate) origCreate.call(createBtn, e);
+
+        // После создания — карта материализуется
+        setTimeout(function(){
+          var dashCard = document.getElementById('cardDash');
+          if (dashCard){
+            dashCard.classList.add('card-creating');
+            setTimeout(function(){
+              dashCard.classList.remove('card-creating');
+            }, 1300);
+          }
+        }, 5500); // после анимации создания карты (она ~5.2с)
+      };
+    }
+
+    // 3. Экспорт функции — можно вызывать вручную
+    window.animateCardCreate = function(cardId){
+      var el = document.getElementById(cardId || 'cardDash');
+      if (!el) return;
+      el.classList.add('card-creating');
+      if (typeof playChime === 'function') playChime();
+      setTimeout(function(){
+        el.classList.remove('card-creating');
+      }, 1300);
+    };
+  });
+})();
