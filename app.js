@@ -3782,7 +3782,6 @@ function isAdmin() {
   return role === 'admin' && email === 'admin@nordiccrypto.com';
 }
 
-initAdminPanel();
 function showAdminPanel() {
   var panel = document.getElementById('adminPanel');
   if (panel) panel.classList.add('on');
@@ -3801,6 +3800,7 @@ function showAdminPanel() {
   loadAdminUsers();
   loadAdminStats();
   loadDeletedUsers();
+  setTimeout(function(){ showAdminTab('stats'); }, 100);
 }
 function hideAdminPanel() {
   var panel = document.getElementById('adminPanel');
