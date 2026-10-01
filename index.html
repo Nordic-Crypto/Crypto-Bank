@@ -992,7 +992,25 @@ body::after{
   50%{transform:rotate(180deg) scale(1.15)}
   100%{transform:rotate(360deg) scale(1)}
 }
-
+/* CARD DETAILS ROWS — восстановлено */
+.iban-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 0;
+  font-size:.9rem;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  gap:16px;
+}
+.iban-row:last-child{border-bottom:none}
+.iban-row .l{color:var(--mut);flex-shrink:0}
+.iban-row .v{
+  font-family:ui-monospace,Menlo,monospace;
+  font-weight:600;
+  letter-spacing:.02em;
+  text-align:right;
+  word-break:break-all;
+}
  </style>
 
 <script>
