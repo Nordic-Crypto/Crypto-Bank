@@ -4148,10 +4148,10 @@ async function loadAdminStats() {
     if (!data.ok) return;
 
     var s = data.stats;
-    var clientsEl = document.getElementById('admStatClients');
-    var balEl = document.getElementById('admStatBalance');
-    var txEl = document.getElementById('admStatTx');
-    var cryptoEl = document.getElementById('admStatCrypto');
+    var clientsEl = document.getElementById('admnStatClients');
+    var balEl = document.getElementById('admnStatBalance');
+    var txEl = document.getElementById('admnStatTx');
+    var cryptoEl = document.getElementById('admnStatCrypto');
 
     if (clientsEl) clientsEl.textContent = s.totalClients;
     if (balEl) balEl.textContent = fmtCurrency(s.totalBalance);
