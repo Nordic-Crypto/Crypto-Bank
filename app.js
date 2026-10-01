@@ -6032,3 +6032,23 @@ document.addEventListener('DOMContentLoaded', function(){
     }, 1500);
   });
 })();
+/* ========== MAGNETIC BUTTONS ========== */
+(function(){
+  function makeMagnetic(btn){
+    if (!btn) return;
+    btn.addEventListener('mousemove', function(e){
+      var rect = btn.getBoundingClientRect();
+      var x = e.clientX - rect.left - rect.width / 2;
+      var y = e.clientY - rect.top - rect.height / 2;
+      btn.style.transform = 'translate(' + (x * 0.15) + 'px,' + (y * 0.15) + 'px)';
+    });
+    btn.addEventListener('mouseleave', function(){
+      btn.style.transform = '';
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    makeMagnetic(document.getElementById('btnAdd'));
+    makeMagnetic(document.getElementById('btnReceiveHero'));
+    makeMagnetic(document.querySelector('.nc3-primary'));
+  });
+})();
