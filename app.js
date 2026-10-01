@@ -5411,7 +5411,10 @@ async function openAdminChat(email) {
             '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div>' +
           '</div>' +
         '</div>' +
-        '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+  '<button onclick="endAdminChat(\'' + email + '\')" style="background:rgba(255,80,80,0.15);border:none;color:#ff6b6b;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;">End chat</button>' +
+  '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
+'</div>' +
       '</div>' +
       '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
       '<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">' +
@@ -5682,3 +5685,112 @@ setInterval(async function(){
     }
   } catch(e) {}
 }, 5000);
+// ========== END CHAT (админ закрывает чат клиента) ==========
+async function endAdminChat(email) {
+  if (!email) return;
+  if (!confirm('End this chat?\nAll messages from this client will be deleted.')) return;
+
+  try {
+    var token = getSessionToken();
+    if (!token) { alert('No session'); return; }
+
+    // Загружаем state клиента
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var state = await r.json();
+    if (!state || state.error) { alert('Failed to load client'); return; }
+
+    // Очищаем чат и тикет
+    state.chat = [];
+    state.ticket = null;
+
+    // Сохраняем
+    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    });
+    var saveRes = await saveResp.json();
+    if (!saveRes || !saveRes.ok) { alert('Failed to save: ' + (saveRes.error || 'unknown')); return; }
+
+    console.log('[endAdminChat] чат очищен для:', email);
+    alert('✅ Chat closed. Client can start a new ticket.');
+
+    // Закрываем модалку и обновляем список
+    var modal = document.getElementById('adminChatModal');
+    if (modal) modal.remove();
+    loadAdminChats();
+  } catch(e) {
+    console.error('[endAdminChat] error:', e);
+    alert('Error: ' + e.message);
+  }
+}
+
+// ========== CLEAR ALL CHATS (глобальная очистка) ==========
+async function clearAllChats() {
+  if (!confirm('Clear ALL client chats?\nThis will delete every chat and ticket from every client.\nThis cannot be undone.')) return;
+  if (!confirm('Are you ABSOLUTELY sure? All chat history will be lost.')) return;
+
+  try {
+    var token = getSessionToken();
+    if (!token) { alert('No session'); return; }
+
+    // Список всех клиентов
+    var r = await fetch(WORKER_URL + '?action=listUsers', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token })
+    });
+    var d = await r.json();
+    if (!d.ok || !d.users) { alert('Failed to load users'); return; }
+
+    var cleared = 0;
+    var failed = 0;
+
+    for (var i = 0; i < d.users.length; i++) {
+      var u = d.users[i];
+      try {
+        // Читаем state
+        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email })
+        });
+        var s = await r2.json();
+        if (!s || s.error) { failed++; continue; }
+
+        // Пропускаем если нет чата
+        if (!s.chat || !s.chat.length) {
+          if (!s.ticket) continue;
+        }
+
+        // Очищаем
+        s.chat = [];
+        s.ticket = null;
+
+        // Сохраняем
+        var r3 = await fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email, state: s, force: true })
+        });
+        var res = await r3.json();
+        if (res && res.ok) {
+          cleared++;
+          console.log('✓ ' + u.email + ' — очищено');
+        } else {
+          failed++;
+          console.log('✗ ' + u.email + ' — ошибка');
+        }
+      } catch(e) {
+        failed++;
+        console.warn('✗ ' + u.email, e.message);
+      }
+    }
+
+    alert('✅ Готово!\nОчищено: ' + cleared + '\nОшибок: ' + failed);
+    console.log('[clearAllChats] DONE. cleared:', cleared, 'failed:', failed);
+    loadAdminChats();
+  } catch(e) {
+    console.error('[clearAllChats] error:', e);
+    alert('Error: ' + e.message);
+  }
+}
