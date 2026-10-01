@@ -2614,6 +2614,59 @@ html body #adminPanel .admin-content {
   padding: 28px 32px;
   box-sizing: border-box;
 }
+  /* ========== UNIVERSAL SCROLL FIX ========== */
+
+/* Клиентская часть — .body внутри .main */
+html body .main {
+  overflow: hidden !important;
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html body .main .body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Админка */
+html body #adminPanel {
+  position: fixed !important;
+  inset: 0 !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+html body #adminPanel.on {
+  display: flex !important;
+}
+
+html body #adminPanel .admin-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: grid !important;
+  grid-template-columns: 240px 1fr !important;
+  height: auto !important;
+}
+
+html body #adminPanel .admin-sidebar {
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+html body #adminPanel .admin-content {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 28px 32px !important;
+  box-sizing: border-box !important;
+}
   </style>
 
 <script>
