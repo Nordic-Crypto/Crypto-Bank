@@ -987,8 +987,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .back-btn { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid var(--bd); color: var(--txt); cursor: pointer; transition: .2s; margin-bottom: 8px; }
 .back-btn:hover { background: rgba(0,212,255,.08); border-color: rgba(0,212,255,.35); color: var(--pri); }
 .back-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-/* ADMIN PANEL */
-.admin-panel { position: fixed; inset: 0; background: radial-gradient(900px 500px at 20% 0%, rgba(124,58,237,.1), transparent 60%), radial-gradient(800px 500px at 100% 100%, rgba(0,212,255,.08), transparent 60%), var(--bg); z-index: 4500; display: none; flex-direction: column; overflow: hidden; }
+/* ADMIN PANEL — базовые стили (layout в конце файла) */
+.admin-panel { position: fixed; inset: 0; background: radial-gradient(900px 500px at 20% 0%, rgba(124,58,237,.1), transparent 60%), radial-gradient(800px 500px at 100% 100%, rgba(0,212,255,.08), transparent 60%), var(--bg); z-index: 4500; display: none; }
 .admin-panel.on { display: flex; }
 .admin-top { display: flex; justify-content: space-between; align-items: center; padding: 20px 32px; background: rgba(13,18,25,.85); border-bottom: 1px solid var(--bd); backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 10; }
 .admin-brand { display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 800; }
@@ -996,7 +996,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .admin-brand span { color: var(--pri); }
 .admin-top-actions { display: flex; align-items: center; gap: 12px; }
 .admin-user { font-size: .85rem; color: var(--mut); font-family: ui-monospace, monospace; }
-.admin-body { flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 240px 1fr; padding: 0; max-width: none; margin: 0; width: 100%; }
 .admin-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
 .admin-stat-card { background: rgba(255,255,255,.03); border: 1px solid var(--bd); border-radius: 16px; padding: 20px; transition: .25s; position: relative; overflow: hidden; }
 .admin-stat-card:hover { border-color: rgba(167,139,250,.35); background: rgba(167,139,250,.04); transform: translateY(-3px); }
