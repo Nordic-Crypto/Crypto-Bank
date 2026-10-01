@@ -5794,3 +5794,121 @@ async function clearAllChats() {
     alert('Error: ' + e.message);
   }
 }
+// ========== ADMIN TAB NAVIGATION ==========
+function showAdminTab(tab) {
+  // Убрать active у всех nav items
+  document.querySelectorAll('.admin-nav-item').forEach(function(el){
+    el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+  });
+  // Показать нужную секцию
+  document.querySelectorAll('.admin-section').forEach(function(el){
+    el.classList.toggle('active', el.getAttribute('data-section') === tab);
+  });
+  // Автозагрузка при переключении
+  if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
+  if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
+  if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
+  if (tab === 'deleted' && typeof loadAdminDeleted === 'function') loadAdminDeleted();
+  
+  // Сохраняем активный таб
+  localStorage.setItem('adminTab', tab);
+  console.log('[admin] tab switched:', tab);
+}
+
+// Восстановить активный таб при загрузке
+document.addEventListener('DOMContentLoaded', function(){
+  var saved = localStorage.getItem('adminTab') || 'stats';
+  if (document.querySelector('.admin-nav-item')) {
+    showAdminTab(saved);
+  }
+});
+
+// ========== CLIENT SEARCH ==========
+function filterClients(query) {
+  var q = (query || '').toLowerCase().trim();
+  var cards = document.querySelectorAll('#adminClientsList .admin-client-card');
+  var visible = 0;
+  cards.forEach(function(card){
+    var text = (card.textContent || '').toLowerCase();
+    var match = !q || text.indexOf(q) > -1;
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  console.log('[filterClients] query:', q, '| найдено:', visible);
+}
+
+// ========== BADGES — счётчики в sidebar ==========
+async function updateAdminBadges() {
+  try {
+    var token = getSessionToken();
+    if (!token) return;
+    
+    // Клиенты
+    var r = await fetch(WORKER_URL + '?action=listUsers', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token: token})
+    });
+    var d = await r.json();
+    if (d.ok && d.users) {
+      var cnt = document.getElementById('navClientsCount');
+      if (cnt) cnt.textContent = d.users.length;
+    }
+    
+    // Withdrawals pending
+    var wdsEl = document.getElementById('navWdsCount');
+    var wdsCount = document.getElementById('adminWithdrawalsCount');
+    if (wdsCount && wdsEl) {
+      var m = (wdsCount.textContent || '').match(/(\d+)\s*pending/);
+      if (m && m[1] > 0) {
+        wdsEl.textContent = m[1];
+        wdsEl.style.display = 'inline-block';
+      } else {
+        wdsEl.style.display = 'none';
+      }
+    }
+    
+    // Chats — считаем непрочитанные от клиентов
+    var chatsEl = document.getElementById('navChatsCount');
+    if (chatsEl && d.ok && d.users) {
+      var totalUnread = 0;
+      for (var i = 0; i < d.users.length; i++) {
+        try {
+          var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({token: token, email: d.users[i].email})
+          });
+          var s = await r2.json();
+          if (s.chat) {
+            totalUnread += s.chat.filter(function(m){ return m.from === 'client' && !m.read; }).length;
+          }
+        } catch(e) {}
+      }
+      if (totalUnread > 0) {
+        chatsEl.textContent = totalUnread;
+        chatsEl.style.display = 'inline-block';
+      } else {
+        chatsEl.style.display = 'none';
+      }
+    }
+  } catch(e) { console.warn('[badges]', e); }
+}
+
+// Обновляем счётчики каждые 10 сек
+setInterval(updateAdminBadges, 10000);
+
+// И сразу при загрузке
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(updateAdminBadges, 2000);
+});
+
+// ========== Горячие клавиши ==========
+document.addEventListener('keydown', function(e){
+  // Ctrl+1..6 — переключение табов
+  if (e.ctrlKey || e.metaKey) {
+    var map = { '1': 'stats', '2': 'clients', '3': 'chats', '4': 'withdrawals', '5': 'deleted', '6': 'system' };
+    if (map[e.key] && document.querySelector('.admin-nav-item')) {
+      e.preventDefault();
+      showAdminTab(map[e.key]);
+    }
+  }
+});
