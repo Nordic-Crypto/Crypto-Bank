@@ -2226,8 +2226,8 @@ if (btnSave){
   };
 }
   
-  // Hue slider — кастомный цвет карты
-    var hueSlider = document.getElementById('hueSlider');
+    // Hue slider — кастомный цвет карты
+  var hueSlider = document.getElementById('hueSlider');
   var huePreview = document.getElementById('huePreview');
   if (hueSlider) {
     hueSlider.oninput = function(){
@@ -2242,9 +2242,6 @@ if (btnSave){
       }
     };
   }
-    
-  }
-
   var btnCancel = document.getElementById('designCancel');
   if (btnCancel){
     btnCancel.onclick = function(){
