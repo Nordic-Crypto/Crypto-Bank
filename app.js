@@ -5912,39 +5912,3 @@ document.addEventListener('keydown', function(e){
     }
   }
 });
-// ========== THEME TOGGLE ==========
-function applyTheme(theme) {
-  if (theme === 'light') {
-    document.body.classList.add('light-theme');
-  } else {
-    document.body.classList.remove('light-theme');
-  }
-  var btn = document.getElementById('themeToggle');
-  if (btn) {
-    btn.textContent = theme === 'light' ? '☀️' : '🌙';
-  }
-  console.log('[theme] применено:', theme);
-}
-
-function toggleTheme() {
-  var current = localStorage.getItem('theme') || 'dark';
-  var next = current === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('theme', next);
-  applyTheme(next);
-}
-
-// Привязка кнопки + восстановление темы при загрузке
-document.addEventListener('DOMContentLoaded', function(){
-  // 1. Восстановить сохранённую тему
-  var saved = localStorage.getItem('theme') || 'dark';
-  applyTheme(saved);
-
-  // 2. Привязать кнопку
-  var btn = document.getElementById('themeToggle');
-  if (btn) {
-    btn.onclick = toggleTheme;
-    console.log('[theme] кнопка привязана');
-  } else {
-    console.warn('[theme] кнопка #themeToggle не найдена');
-  }
-});
