@@ -939,6 +939,24 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
     filter:blur(0) brightness(1);
   }
 }
+ /* AURORA BACKGROUND */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(1200px 800px at 20% 10%, rgba(71,220,255,.08), transparent 50%),
+    radial-gradient(1000px 700px at 80% 90%, rgba(139,92,246,.08), transparent 50%),
+    radial-gradient(900px 600px at 50% 50%, rgba(255,83,190,.05), transparent 55%);
+  animation:auroraMove 20s ease-in-out infinite alternate;
+}
+@keyframes auroraMove{
+  0%{background-position:0% 0%,100% 100%,50% 50%}
+  50%{background-position:30% 20%,70% 80%,40% 60%}
+  100%{background-position:10% 30%,90% 70%,60% 40%}
+} 
  </style>
 
 <script>
