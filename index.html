@@ -971,6 +971,57 @@ body::after{
   0%{background-position:200% 0}
   100%{background-position:-200% 0}
 } 
+  /* MENU GLOW */
+.mi.on svg{
+  filter:drop-shadow(0 0 6px rgba(71,220,255,.7));
+  animation:iconGlow 2.5s ease-in-out infinite;
+}
+@keyframes iconGlow{
+  0%,100%{filter:drop-shadow(0 0 6px rgba(71,220,255,.5))}
+  50%{filter:drop-shadow(0 0 14px rgba(71,220,255,1))}
+}
+  /* FLOATING ACTIONS — hover effect */
+.nc3-action:hover{
+  box-shadow:0 15px 40px -10px rgba(71,220,255,.4);
+}
+.nc3-action:hover .nc3-action-icon svg{
+  animation:iconSpin 0.6s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes iconSpin{
+  0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.15)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+/* CUSTOM CURSOR */
+body{cursor:none}
+body *{cursor:none !important}
+#cursorDot{
+  position:fixed;
+  width:6px;height:6px;
+  border-radius:50%;
+  background:#47dcff;
+  pointer-events:none;
+  z-index:99999;
+  box-shadow:0 0 12px #47dcff,0 0 24px rgba(71,220,255,.6);
+  transition:transform .15s ease;
+  transform:translate(-50%,-50%);
+}
+#cursorRing{
+  position:fixed;
+  width:36px;height:36px;
+  border-radius:50%;
+  border:1.5px solid rgba(71,220,255,.5);
+  pointer-events:none;
+  z-index:99998;
+  transition:width .3s ease,height .3s ease,border-color .3s ease,background .3s ease;
+  transform:translate(-50%,-50%);
+}
+#cursorRing.hover{
+  width:60px;height:60px;
+  border-color:rgba(255,83,190,.8);
+  background:rgba(255,83,190,.08);
+  box-shadow:0 0 30px rgba(255,83,190,.4);
+}
  </style>
 
 <script>
