@@ -2376,7 +2376,75 @@ select.wd-input {
 .admin-content .admin-section.active {
   display: block;
 }
-  </style>
+ 
+  /* FIX — форс admin layout */
+.admin-body {
+  display: grid !important;
+  grid-template-columns: 240px 1fr !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+.admin-sidebar {
+  background: rgba(10,15,25,0.95) !important;
+  border-right: 1px solid rgba(255,255,255,0.06) !important;
+  padding: 20px 12px !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  width: 240px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.admin-nav-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  color: #8b95a5 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  margin-bottom: 4px !important;
+  position: relative !important;
+}
+
+.admin-nav-item.active {
+  background: linear-gradient(135deg, rgba(95,46,229,0.2), rgba(139,92,246,0.15)) !important;
+  color: #e7edf5 !important;
+  font-weight: 600 !important;
+}
+
+.admin-nav-badge {
+  margin-left: auto !important;
+  background: #ff3b3b !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2px 7px !important;
+  border-radius: 10px !important;
+  min-width: 20px !important;
+  text-align: center !important;
+}
+
+.admin-nav-badge.warn {
+  background: #f6c344 !important;
+  color: #1a1a1a !important;
+}
+
+.admin-content {
+  overflow-y: auto !important;
+  padding: 28px 32px !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
