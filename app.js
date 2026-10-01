@@ -5912,3 +5912,59 @@ document.addEventListener('keydown', function(e){
     }
   }
 });
+// ========== ADMIN TAB NAVIGATION ==========
+function showAdminTab(tab) {
+  console.log('=== showAdminTab:', tab, '===');
+  
+  var items = document.querySelectorAll('.admin-nav-item');
+  var sections = document.querySelectorAll('.admin-section');
+  
+  console.log('items:', items.length, 'sections:', sections.length);
+  
+  // Скрыть ВСЕ секции принудительно
+  sections.forEach(function(s){
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  
+  // Убрать active у всех пунктов
+  items.forEach(function(i){
+    i.classList.remove('active');
+  });
+  
+  // Показать нужную
+  var found = false;
+  sections.forEach(function(s){
+    if (s.getAttribute('data-section') === tab) {
+      s.classList.add('active');
+      s.style.display = 'block';
+      found = true;
+      console.log('  ✓ показана:', tab);
+    }
+  });
+  
+  // Активировать пункт меню
+  items.forEach(function(i){
+    if (i.getAttribute('data-tab') === tab) {
+      i.classList.add('active');
+    }
+  });
+  
+  if (!found) console.warn('  ✗ не найдена:', tab);
+  
+  // Автозагрузка
+  if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
+  if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
+  if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
+  if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
+  
+  localStorage.setItem('adminTab', tab);
+}
+
+// Восстановить таб при загрузке
+document.addEventListener('DOMContentLoaded', function(){
+  var saved = localStorage.getItem('adminTab') || 'stats';
+  if (document.querySelector('.admin-nav-item')) {
+    setTimeout(function(){ showAdminTab(saved); }, 300);
+  }
+});
