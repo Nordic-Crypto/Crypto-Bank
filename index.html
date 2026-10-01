@@ -957,6 +957,20 @@ body::after{
   50%{background-position:30% 20%,70% 80%,40% 60%}
   100%{background-position:10% 30%,90% 70%,60% 40%}
 } 
+ /* SKELETON SHIMMER */
+.skeleton{
+  background:linear-gradient(90deg,
+    rgba(255,255,255,.03) 0%,
+    rgba(255,255,255,.08) 50%,
+    rgba(255,255,255,.03) 100%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s ease-in-out infinite;
+  border-radius:8px;
+}
+@keyframes shimmer{
+  0%{background-position:200% 0}
+  100%{background-position:-200% 0}
+} 
  </style>
 
 <script>
