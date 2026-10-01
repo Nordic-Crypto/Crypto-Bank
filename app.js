@@ -5968,3 +5968,67 @@ document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){ showAdminTab(saved); }, 300);
   }
 });
+/* ========== ANIMATED BALANCE COUNTER ========== */
+(function(){
+  var lastUsd = 0;
+  var animFrame = null;
+
+  function animateNumber(from, to, duration){
+    var start = performance.now();
+    var el = document.getElementById('bal');
+    if (!el) return;
+
+    function tick(now){
+      var elapsed = now - start;
+      var progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = from + (to - from) * eased;
+
+      el.textContent = '$' + current.toLocaleString('en-US',{
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+      });
+
+      if (progress < 1){
+        animFrame = requestAnimationFrame(tick);
+      } else {
+        animFrame = null;
+      }
+    }
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = requestAnimationFrame(tick);
+  }
+
+  // Наблюдаем за изменениями в #bal (st.usd)
+  setInterval(function(){
+    if (typeof st === 'undefined' || !st.usd) return;
+    var target = Number(st.usd);
+    if (Math.abs(target - lastUsd) > 0.01){
+      animateNumber(lastUsd, target, 900);
+      lastUsd = target;
+    }
+  }, 500);
+})();
+/* ========== WELCOME ENTRANCE ========== */
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      if (!localStorage.getItem('user_email')) return;
+      if (localStorage.getItem('welcomeShown_' + new Date().toDateString())) return;
+
+      var name = localStorage.getItem('user_name') || 'there';
+      var first = name.split(' ')[0];
+
+      if (typeof playChime === 'function') playChime();
+      if (typeof toast === 'function') {
+        toast('👋 Welcome back, ' + first + '!');
+      }
+      if (typeof spawnConfetti === 'function') {
+        setTimeout(function(){ spawnConfetti(); }, 400);
+      }
+
+      localStorage.setItem('welcomeShown_' + new Date().toDateString(), '1');
+    }, 1500);
+  });
+})();
