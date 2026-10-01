@@ -5280,44 +5280,6 @@ function updateChatBadge() {
   }
 }
 
-// Опрос новых сообщений
-setInterval(async function(){
-  var token = getSessionToken();
-  if (!token) return;
-  try {
-    var r = await fetch(WORKER_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: window.adminViewingEmail || localStorage.getItem('user_email') })
-    });
-    var fresh = await r.json();
-    if (!fresh || !fresh.chat) return;
-    var freshLen = fresh.chat.length;
-    var localLen = (st.chat || []).length;
-        // ВСЕГДА обновляем st.chat и badge
-    st.chat = fresh.chat;
-    var panel = document.getElementById('chatPanel');
-    var isOpen = panel && panel.style.display === 'flex';
-    
-    if (isOpen) {
-      renderChatMessages();
-      markChatRead();
-    }
-    
-    // Всегда обновляем бейдж (даже если длина не изменилась)
-    updateChatBadge();
-    
-    // Если было новое от админа — звук + title
-    if (freshLen > localLen) {
-      var newMsgs = fresh.chat.slice(localLen);
-      var hadNewFromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
-      if (hadNewFromAdmin && !isOpen) {
-        if (typeof playChatSound === 'function') playChatSound();
-        if (typeof flashTitle === 'function') flashTitle('💬 New message from Elena');
-      }
-    }
-  } catch(e) {}
-}, 5000);
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function(){
