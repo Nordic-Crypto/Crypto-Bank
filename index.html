@@ -847,7 +847,29 @@ body.light-theme .top-search input{color:#0f172a}
 body.light-theme .top-icon,body.light-theme .settings-btn,body.light-theme .notif-bell{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:#0f172a}
 body.light-theme .recent-tx-item{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.06)}
 body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-color:rgba(91,141,239,.2)}
-
+/* PREMIUM CARD PULSE */
+.nc3-bank-card{position:relative}
+.nc3-bank-card::after{
+  content:'';
+  position:absolute;
+  inset:-2px;
+  border-radius:24px;
+  background:linear-gradient(120deg,
+    transparent 0%,
+    rgba(71,220,255,.4) 20%,
+    rgba(255,83,190,.5) 40%,
+    rgba(95,76,255,.5) 60%,
+    transparent 80%);
+  background-size:200% 200%;
+  z-index:-1;
+  animation:cardPulseBorder 4s ease-in-out infinite;
+  filter:blur(8px);
+  pointer-events:none;
+}
+@keyframes cardPulseBorder{
+  0%,100%{background-position:0% 50%;opacity:.6}
+  50%{background-position:100% 50%;opacity:1}
+}
 </style>
 
 <script>
