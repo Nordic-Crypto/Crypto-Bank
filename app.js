@@ -1938,17 +1938,25 @@ function createVirtualCard(name, type, cur){
   var num = genCardNumber(prefix);
   var expiry = genExpiry();
   var cvv = genCvv();
+
   var hueSlider = document.getElementById('hueSlider');
   var hueValue = null;
   if (hueSlider && hueSlider.dataset.touched === '1') hueValue = Number(hueSlider.value);
+
+  // ===== ГАРАНТИРОВАННОЕ ИМЯ =====
+  var finalName = name;
+  if (!finalName || !finalName.trim() || finalName === 'YOUR NAME'){
+    var stored = localStorage.getItem('user_name') || 'CARD HOLDER';
+    finalName = stored;
+  }
 
   st.card = {
     num: num,
     cvv: cvv,
     expiry: expiry,
-    name: name.toUpperCase(),
-    type: type,
-    cur: cur,
+    name: finalName.toUpperCase(),
+    type: type || 'Visa',
+    cur: cur || 'USD',
     status: 'Active',
     design: selectedDesign || 'cosmic',
     hue: hueValue,
@@ -1957,8 +1965,12 @@ function createVirtualCard(name, type, cur){
   };
   if (!st.user) st.user = {};
   st.user.country = st.card.country;
-  saveToServer();
+
+  // СРАЗУ ОТРИСОВАТЬ
   renderCard();
+  saveToServer();
+
+  console.log('[createVirtualCard] ✅ Card created:', st.card);
 }
 
 function checkOnboarding(){
@@ -1975,8 +1987,9 @@ function checkOnboarding(){
 }
 
 function renderCard(){
+  // ===== НЕТ КАРТЫ =====
   if (!st.card){
-    var cardDash = $('cardDash'); if (cardDash) cardDash.classList.add('frozen');
+    if ($('cardDash')) $('cardDash').classList.add('frozen');
     if ($('cardNumDash')) $('cardNumDash').textContent = '— — — —   — — — —   — — — —   — — — —';
     if ($('cardNameDash')) $('cardNameDash').textContent = '—';
     if ($('cardExpDash')) $('cardExpDash').textContent = '—/—';
@@ -1996,9 +2009,28 @@ function renderCard(){
   }
 
   var c = st.card;
-  var frozen = (c.status === 'Frozen');
-  var numFormatted = fmtCard(c.num);
 
+  // ===== ВОССТАНОВЛЕНИЕ ОТСУТСТВУЮЩИХ ПОЛЕЙ =====
+  if (!c.name || c.name === '—' || c.name === 'CARD HOLDER'){
+    var fbName = localStorage.getItem('user_name') || 'CARD HOLDER';
+    c.name = fbName.toUpperCase();
+  }
+  if (!c.expiry || c.expiry === '—/—'){
+    var dd = new Date();
+    var mm = dd.getMonth() + 1;
+    var yy = dd.getFullYear() + 3;
+    c.expiry = (mm < 10 ? '0' + mm : mm) + '/' + String(yy).slice(2);
+  }
+  if (!c.cvv) c.cvv = String(Math.floor(Math.random() * 900) + 100);
+  if (!c.cur) c.cur = 'USD';
+  if (!c.type) c.type = 'Visa';
+  if (!c.status) c.status = 'Active';
+  if (!c.num) c.num = '5399000000000000';
+
+  var numFormatted = fmtCard(c.num);
+  var frozen = (c.status === 'Frozen');
+
+  // ===== VISA / MASTERCARD SVG =====
   var networkHTML;
   if (c.type === 'Mastercard') {
     networkHTML = '<svg viewBox="0 0 100 40"><circle cx="35" cy="20" r="14" fill="#EB001B"/><circle cx="65" cy="20" r="14" fill="#F79E1B"/><circle cx="50" cy="20" r="14" fill="#FF5F00" opacity="0.9"/></svg>';
@@ -2010,35 +2042,39 @@ function renderCard(){
   var net2 = document.getElementById('cardNetwork2');
   if (net2) net2.innerHTML = networkHTML;
 
-  // Dashboard
+  // ===== DASHBOARD =====
   if ($('cardDash')) $('cardDash').classList.toggle('frozen', frozen);
   if ($('cardNumDash')) $('cardNumDash').textContent = numFormatted;
-  if ($('cardNameDash')) $('cardNameDash').textContent = c.name || '—';
-  if ($('cardExpDash')) $('cardExpDash').textContent = c.expiry || '—/—';
-  if ($('cardTypeDash')) $('cardTypeDash').textContent = ((c.type || 'Visa') + ' ' + (c.cur || 'USD')).toUpperCase();
+  if ($('cardNameDash')) $('cardNameDash').textContent = c.name;
+  if ($('cardExpDash')) $('cardExpDash').textContent = c.expiry;
+  if ($('cardTypeDash')) $('cardTypeDash').textContent = (c.type + ' ' + c.cur).toUpperCase();
 
-  // Full page
+  // ===== MY CARDS =====
   if ($('cardFull')) $('cardFull').classList.toggle('frozen', frozen);
   if ($('cardNumFull')) $('cardNumFull').textContent = numFormatted;
-  if ($('cardNameFull')) $('cardNameFull').textContent = c.name || '—';
-  if ($('cardExpFull')) $('cardExpFull').textContent = c.expiry || '—/—';
-  if ($('cardTypeFull')) $('cardTypeFull').textContent = ((c.type || 'Visa') + ' ' + (c.cur || 'USD')).toUpperCase();
+  if ($('cardNameFull')) $('cardNameFull').textContent = c.name;
+  if ($('cardExpFull')) $('cardExpFull').textContent = c.expiry;
+  if ($('cardTypeFull')) $('cardTypeFull').textContent = (c.type + ' ' + c.cur).toUpperCase();
 
-  // Details panel
+  // ===== CARD DETAILS =====
   if ($('detNum')) $('detNum').textContent = numFormatted;
-  if ($('detCvv')) $('detCvv').textContent = cvvVisible ? (c.cvv || '●●●') : '●●●';
-  if ($('detExp')) $('detExp').textContent = c.expiry || '—';
-  if ($('detName')) $('detName').textContent = c.name || '—';
-  if ($('detType')) $('detType').textContent = c.type || '—';
-  if ($('detCur')) $('detCur').textContent = c.cur || '—';
-  if ($('detStatus')){
-    $('detStatus').textContent = c.status || 'Active';
+  if ($('detCvv')) $('detCvv').textContent = cvvVisible ? c.cvv : '●●●';
+  if ($('detExp')) $('detExp').textContent = c.expiry;
+  if ($('detName')) $('detName').textContent = c.name;
+  if ($('detType')) $('detType').textContent = c.type;
+  if ($('detCur')) $('detCur').textContent = c.cur;
+  if ($('detStatus')) {
+    $('detStatus').textContent = c.status;
     $('detStatus').style.color = frozen ? 'var(--warn)' : 'var(--ok)';
   }
 
   if ($('btnShowCvv')) $('btnShowCvv').textContent = cvvVisible ? '🙈 Hide CVV' : '👁 Show CVV';
   if ($('btnFreeze')) $('btnFreeze').textContent = frozen ? '🔥 Unfreeze Card' : '❄ Freeze Card';
+
   applyCardDesign();
+
+  // ===== СОХРАНЯЕМ ЕСЛИ ЧТО-ТО ДОЗАПОЛНИЛИ =====
+  if (typeof saveToServer === 'function') saveToServer();
 }
 
 /* ========== MODAL (Add / Transfer) ========== */
@@ -4123,3 +4159,37 @@ setInterval(function(){
     }
   });
 })();
+/* ========== UPDATE USER UI ========== */
+function updateUserUI(){
+  var name = localStorage.getItem('user_name') || '';
+  if (!name || name === 'User'){
+    var em = localStorage.getItem('user_email') || '';
+    if (em){
+      var derived = em.split('@')[0];
+      name = derived.charAt(0).toUpperCase() + derived.slice(1);
+      localStorage.setItem('user_name', name);
+    } else {
+      name = 'User';
+    }
+  }
+  var parts = name.trim().split(' ');
+  var initials = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
+
+  var nameEl = document.getElementById('userName');
+  if (nameEl) nameEl.textContent = name;
+  var avEl = document.getElementById('userAvatar');
+  if (avEl) avEl.textContent = initials;
+
+  var sName = document.getElementById('settingsName');
+  if (sName) sName.textContent = name;
+  var sEmail = document.getElementById('settingsEmail');
+  if (sEmail) sEmail.textContent = localStorage.getItem('user_email') || '—';
+  var sRole = document.getElementById('settingsRole');
+  if (sRole){
+    var role = localStorage.getItem('user_role') || 'user';
+    sRole.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', updateUserUI);
+setInterval(updateUserUI, 5000);
