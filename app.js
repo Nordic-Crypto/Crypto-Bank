@@ -3373,20 +3373,58 @@ async function sendAdminChatMsg(email) {
   var text = (input.value || '').trim();
   if (!text) return;
   input.value = '';
-  var token = getSessionToken();
-  var r = await fetch(WORKER_URL + '?action=getUserState', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: token, email: email })
-  });
-  var state = await r.json();
-  if (!state.chat) state.chat = [];
-  state.chat.push({ id: 'msg_' + Date.now(), from: 'admin', text: text, ts: Date.now(), read: false });
-  await fetch(WORKER_URL + '?action=setUserState', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: token, email: email, state: state, force: true })
-  });
-  document.getElementById('adminChatModal').remove();
-  openAdminChat(email);
+
+  try {
+    var token = getSessionToken();
+    if (!token) { alert('No session'); return; }
+
+    // 1. Загружаем СВЕЖИЙ state клиента
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var state = await r.json();
+    if (!state || state.error) { alert('Failed to load client state'); return; }
+
+    // 2. Добавляем сообщение от админа
+    if (!state.chat) state.chat = [];
+    state.chat.push({
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      from: 'admin',
+      text: text,
+      ts: Date.now(),
+      read: false
+    });
+
+    // 3. СОХРАНЯЕМ с force:true и email клиента
+    var sr = await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        token: token,
+        email: email,
+        state: state,
+        force: true
+      })
+    });
+    var saveRes = await sr.json();
+    console.log('[sendAdminChatMsg] saved:', saveRes);
+
+    if (!saveRes.ok) {
+      alert('Save failed: ' + (saveRes.error || 'unknown'));
+      return;
+    }
+
+    // 4. Перерисовываем модалку
+    var modal = document.getElementById('adminChatModal');
+    if (modal) modal.remove();
+    openAdminChat(email);
+
+  } catch(e) {
+    console.error('[sendAdminChatMsg] error:', e);
+    alert('Error: ' + e.message);
+  }
 }
 
 async function endAdminChat(email) {
