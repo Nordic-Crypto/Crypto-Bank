@@ -3349,12 +3349,19 @@ async function markChatRead() {
     st.chat = fresh.chat;
     var changed = false;
     st.chat.forEach(function(m){ if (m.from === 'admin' && !m.read) { m.read = true; changed = true; } });
-    if (!changed) return;
+    if (!changed) { updateChatBadge(); return; }
+
+    // ★ Сохраняем на сервер
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ token: token, email: email, state: st, force: true })
     });
+
+    // ★ Обновляем badge ПОСЛЕ сохранения
     updateChatBadge();
+
+    // ★ Плюс — помечаем глобально, чтобы polling знал, что эти сообщения уже read
+    window._lastReadAt = Date.now();
   } catch(e) {}
 }
 
@@ -4939,69 +4946,6 @@ window._notifyAdminTyping = function(email){
   };
 })();
 
-/* ========== CLIENT CHAT — реакция на удаление ========== */
-(function(){
-  var lastLen = -1;
-
-  setInterval(async function(){
-    var token = getSessionToken();
-    if (!token) return;
-
-    var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
-    if (!targetEmail) return;
-
-    try {
-      var r = await fetch(WORKER_URL + '?action=getUserState', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: targetEmail })
-      });
-      var fresh = await r.json();
-      if (!fresh) return;
-
-      var chat = fresh.chat || [];
-      var newLen = chat.length;
-
-      if (lastLen >= 0 && (newLen < lastLen || (fresh.ticket === null && st.ticket && st.ticket.id))) {
-        st.chat = [];
-        st.ticket = null;
-        window._adminTyping = false;
-        window._lastAdminTyping = false;
-
-        var form = document.getElementById('chatTicketForm');
-        var conv = document.getElementById('chatConversation');
-        if (form) form.style.display = 'flex';
-        if (conv) conv.style.display = 'none';
-
-        var emailEl = document.getElementById('tkEmail');
-        if (emailEl) emailEl.value = targetEmail;
-
-        var topicEl = document.getElementById('tkTopic'); if (topicEl) topicEl.value = 'withdrawal';
-        var prioEl  = document.getElementById('tkPriority'); if (prioEl) prioEl.value = 'normal';
-        var descEl  = document.getElementById('tkDesc'); if (descEl) descEl.value = '';
-
-        var box = document.getElementById('chatMessages');
-        if (box) box.innerHTML = '';
-
-        if (typeof updateChatBadge === 'function') updateChatBadge();
-
-        lastLen = 0;
-        return;
-      }
-
-      lastLen = newLen;
-      st.chat = chat;
-      window._adminTyping = !!(fresh.typing && fresh.typing.admin);
-
-      var panel = document.getElementById('chatPanel');
-      var isOpen = panel && panel.style.display === 'flex';
-      if (isOpen && newLen > 0 && typeof window.renderChatMessages === 'function') {
-        window.renderChatMessages();
-      }
-
-    } catch(e) {}
-  }, 2000);
-})();
 /* ========== SCAN ALL DEPOSITS (ручная проверка всех tx) ========== */
 async function scanAllDeposits() {
   var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
@@ -5110,3 +5054,541 @@ async function scanAllDeposits() {
     toast('Scan error: ' + e.message, true);
   }
 }
+/* ============================================================
+   ПАТЧ КРИТИЧНЫХ БАГОВ — вставлено в конец app.js
+   Перезаписывает проблемные функции при загрузке
+   ============================================================ */
+(function(){
+  'use strict';
+  console.log('[patch] применение фиксов...');
+
+  /* ---------- FIX #1: refreshBalanceFromServer — не теряем чат ---------- */
+  window.refreshBalanceFromServer = function(){
+    if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+    var token = getSessionToken();
+    if (!token) return;
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!email) return;
+
+    fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: window.adminViewingEmail || undefined })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || d.ok === false) return;
+      var newUsd = Number(d.usd) || 0;
+      var changed = false;
+      if (Math.abs(newUsd - (st.usd || 0)) > 0.01) { st.usd = newUsd; changed = true; }
+      if (d.currency) st.currency = d.currency;
+      if (d.card !== undefined) st.card = d.card;
+      if (d.txs) st.txs = d.txs;
+      if (d.notifications) st.notifications = d.notifications;
+      if (d.user) st.user = d.user;
+      if (d.balanceHistory) st.balanceHistory = d.balanceHistory;
+      if (d.withdrawals) st.withdrawals = d.withdrawals;
+      if (d.chat) st.chat = d.chat;
+      if (d.ticket !== undefined) st.ticket = d.ticket;
+      if (d.cryptoAddress) st.cryptoAddress = d.cryptoAddress;
+      if (d.typing) st.typing = d.typing;
+      if (d.depositVerifications) st.depositVerifications = d.depositVerifications;
+      if (changed) render();
+      if (typeof updateChatBadge === 'function') updateChatBadge();
+    })
+    .catch(function(){});
+  };
+
+  /* ---------- FIX #2: playTone — звук после resume ---------- */
+  window.playTone = function(freq, duration, type, volume){
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended'){
+      ctx.resume().then(function(){
+        window.playTone(freq, duration, type, volume);
+      }).catch(function(){});
+      return;
+    }
+    try {
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      var vol = Math.min(volume || 0.3, 1);
+      gain.gain.value = vol;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch(e){}
+  };
+
+  /* ---------- FIX #3: loadFromServer — сброс чата ---------- */
+  window.loadFromServer = function(cb, targetEmail){
+    var token = getSessionToken();
+    if (!token) {
+      st = JSON.parse(JSON.stringify(def));
+      stateLoaded = true;
+      if (cb) cb();
+      return;
+    }
+    var body = { token: token };
+    if (targetEmail) body.email = targetEmail;
+
+    fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && data.ok === false) {
+          st = JSON.parse(JSON.stringify(def));
+        } else {
+          st = data || JSON.parse(JSON.stringify(def));
+        }
+        if (!st.txs) st.txs = [];
+        if (!st.balanceHistory) st.balanceHistory = [];
+        if (!st.withdrawals) st.withdrawals = [];
+        if (!st.card || typeof st.card !== 'object') st.card = null;
+        if (!st.chat) st.chat = [];
+        if (!st.ticket) st.ticket = null;
+        if (!st.typing) st.typing = {};
+        if (!st.cryptoAddress) st.cryptoAddress = null;
+        stateLoaded = true;
+
+        var form = document.getElementById('chatTicketForm');
+        var conv = document.getElementById('chatConversation');
+        if (form) form.style.display = 'flex';
+        if (conv) conv.style.display = 'none';
+        var emailEl = document.getElementById('tkEmail');
+        if (emailEl) emailEl.value = targetEmail || localStorage.getItem('user_email') || '';
+        var topicEl = document.getElementById('chatTicketTopic');
+        if (topicEl) topicEl.textContent = 'Support';
+
+        render();
+        if (typeof updateChatBadge === 'function') updateChatBadge();
+        if (cb) cb();
+      })
+      .catch(function(){
+        st = JSON.parse(JSON.stringify(def));
+        stateLoaded = true;
+        render();
+      });
+  };
+
+  /* ---------- FIX #4: saveToServer — защита от админ-записи ---------- */
+  window.saveToServer = function(){
+    if (!stateLoaded) return;
+    if (window.adminViewingEmail) return;
+    if (localStorage.getItem('user_role') === 'admin') return;
+    var token = getSessionToken();
+    if (!token) return;
+    fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: token,
+        state: st,
+        email: window.adminViewingEmail || undefined
+      })
+    }).catch(function(){});
+  };
+
+  /* ---------- FIX #5: markChatRead — merge ---------- */
+  window.markChatRead = async function(){
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh || !fresh.chat) return;
+
+      var seenIds = {};
+      (st.chat || []).forEach(function(m){ seenIds[m.id] = true; });
+      var changed = false;
+      fresh.chat.forEach(function(m){
+        if (m.from === 'admin' && seenIds[m.id] && !m.read) {
+          m.read = true;
+          changed = true;
+        }
+      });
+      st.chat = fresh.chat;
+      if (!changed) { if (typeof updateChatBadge === 'function') updateChatBadge(); return; }
+
+      await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email, state: st, force: true })
+      });
+      if (typeof updateChatBadge === 'function') updateChatBadge();
+      window._lastReadAt = Date.now();
+    } catch(e) {}
+  };
+
+  /* ---------- FIX #6: finalizeDeposit — защита от дублей ---------- */
+  window.finalizeDeposit = function(){
+    if (!depPendingTx) return;
+    var tx = depPendingTx.tx;
+    var cryptoAmt = depPendingTx.cryptoAmt;
+    var symbol = depPendingTx.symbol;
+    var credit = depPendingTx.usdValue;
+
+    if (!tx || !tx.hash) {
+      console.error('[finalizeDeposit] missing tx or hash', depPendingTx);
+      toast('Deposit error — contact support', true);
+      return;
+    }
+
+    var isDup = false;
+    (st.txs || []).forEach(function(t){ if (t.hash === tx.hash) isDup = true; });
+    (st.depositVerifications || []).forEach(function(d){ if (d.txHash === tx.hash) isDup = true; });
+    if (isDup) {
+      console.warn('[finalizeDeposit] duplicate tx', tx.hash);
+      toast('Deposit already credited', true);
+      if (typeof closeDepositVerification === 'function') closeDepositVerification();
+      return;
+    }
+
+    st.usd += credit;
+    if (symbol === 'BTC') st.btc += cryptoAmt;
+    else if (symbol === 'ETH') st.eth += cryptoAmt;
+
+    if (!Array.isArray(st.txs)) st.txs = [];
+
+    st.txs.unshift({
+      date: now(),
+      ts: Date.now(),
+      desc: 'Crypto deposit — ' + Number(cryptoAmt).toFixed(8) + ' ' + symbol + ' (' + tx.hash.slice(0, 10) + '…)',
+      amt: credit,
+      status: 'Processing',
+      hash: tx.hash,
+      crypto: cryptoAmt,
+      symbol: symbol,
+      verification: { source: depAnswers.source, origin: depAnswers.origin, confirmedAt: Date.now() }
+    });
+
+    if (!st.depositVerifications) st.depositVerifications = [];
+    st.depositVerifications.push({
+      txHash: tx.hash,
+      cryptoAmt: cryptoAmt,
+      symbol: symbol,
+      usdValue: credit,
+      source: depAnswers.source,
+      origin: depAnswers.origin,
+      completedAt: Date.now()
+    });
+
+    if (!st.welcomeBonusUsed){
+      st.usd += 5;
+      st.txs.unshift({ date: now(), ts: Date.now(), desc: 'Welcome bonus', amt: 5, status: 'Completed' });
+      st.welcomeBonusUsed = true;
+      addNotification('Welcome bonus: +$5 credited!', '🎁');
+      setTimeout(function(){ toast('🎁 Welcome bonus: +$5!'); }, 800);
+    }
+
+    saveToServer();
+    render();
+
+    var cryptoEl = document.getElementById('depSuccessCrypto');
+    var usdEl = document.getElementById('depSuccessUsd');
+    var balEl = document.getElementById('depNewBalance');
+    if (cryptoEl) cryptoEl.textContent = '+ ' + cryptoAmt.toFixed(8) + ' ' + symbol;
+    if (usdEl) usdEl.textContent = '≈ ' + fmtCurrency(credit) + ' credited';
+    if (balEl) balEl.textContent = fmtCurrency(st.usd);
+
+    showDepStep(4);
+    playChime();
+    spawnConfetti();
+    addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol, '✅');
+  };
+
+  /* ---------- FIX #7: renderBalanceChart — стабильный расчёт ---------- */
+  window.renderBalanceChart = function(){
+    var wrap    = document.getElementById('balanceChart');
+    var wrap2   = document.getElementById('balanceChartSecondary');
+    var current = document.getElementById('balanceCurrent');
+    if (!wrap && !wrap2) return;
+    if (current) current.textContent = fmtCurrency(st.usd);
+
+    var txs = st.txs || [];
+    var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
+
+    if (txs.length < 1){
+      var emptyHtml = '<div class="chart-empty"><div style="font-size:2rem;opacity:.4">📊</div><div>No activity yet</div><div style="font-size:.72rem;opacity:.7">Chart will appear after first transaction</div></div>';
+      if (wrap)  wrap.innerHTML  = emptyHtml;
+      if (wrap2) wrap2.innerHTML = emptyHtml;
+      return;
+    }
+
+    var days = 7;
+    var dayMs = 24 * 60 * 60 * 1000;
+    var nowT = Date.now();
+    var sorted = txs.slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+    var points = [];
+
+    var balanceHistory = st.balanceHistory || [];
+    if (balanceHistory.length > 2) {
+      balanceHistory.forEach(function(p) { points.push({ t: p.t, v: p.v }); });
+      points.push({ t: Date.now(), v: st.usd });
+    } else {
+      for (var d = 0; d <= days; d++) {
+        var dayT = nowT - (days - d) * dayMs;
+        var totalAtDay = 0;
+        for (var j = 0; j < sorted.length; j++) {
+          var txT = sorted[j].ts || created;
+          if (txT <= dayT) {
+            totalAtDay += (sorted[j].amt || 0);
+          }
+        }
+        points.push({ t: dayT, v: totalAtDay });
+      }
+      points.push({ t: nowT, v: st.usd });
+    }
+
+    var w = 500, h = 180, pad = 50;
+    var minT, maxT;
+    var histForRange = st.balanceHistory || [];
+    if (histForRange.length > 2) {
+      minT = histForRange[0].t;
+      maxT = Date.now();
+      var minSpan = 5 * 60 * 1000;
+      if (maxT - minT < minSpan) minT = maxT - minSpan;
+    } else {
+      minT = nowT - days * dayMs;
+      maxT = nowT;
+    }
+
+    var minV = Infinity, maxV = -Infinity;
+    for (var k = 0; k < points.length; k++){
+      if (points[k].v < minV) minV = points[k].v;
+      if (points[k].v > maxV) maxV = points[k].v;
+    }
+    if (!isFinite(minV) || !isFinite(maxV)) { minV = 0; maxV = 1; }
+    if (maxV === minV) maxV = minV + 1;
+    var padV = (maxV - minV) * 0.15 || 1;
+    minV = minV - padV;
+    maxV = maxV + padV;
+
+    var svgPoints = [];
+    for (var m = 0; m < points.length; m++){
+      var p = points[m];
+      var x = pad + ((p.t - minT) / (maxT - minT)) * (w - pad * 2);
+      var y = pad + (1 - (p.v - minV) / (maxV - minV)) * (h - pad * 2);
+      if (x < pad) x = pad;
+      if (x > w - pad) x = w - pad;
+      svgPoints.push(x.toFixed(1) + ',' + y.toFixed(1));
+    }
+
+    function smoothPath(pts) {
+      if (pts.length < 2) return 'M' + pts.join(' ');
+      var d = 'M' + pts[0];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var p0 = i === 0 ? pts[0].split(',') : pts[i - 1].split(',');
+        var p1 = pts[i].split(',');
+        var p2 = pts[i + 1].split(',');
+        var p3 = i + 2 < pts.length ? pts[i + 2].split(',') : pts[i + 1].split(',');
+        var x0 = parseFloat(p0[0]), y0 = parseFloat(p0[1]);
+        var x1 = parseFloat(p1[0]), y1 = parseFloat(p1[1]);
+        var x2 = parseFloat(p2[0]), y2 = parseFloat(p2[1]);
+        var x3 = parseFloat(p3[0]), y3 = parseFloat(p3[1]);
+        var cp1x = x1 + (x2 - x0) / 6;
+        var cp1y = y1 + (y2 - y0) / 6;
+        var cp2x = x2 - (x3 - x1) / 6;
+        var cp2y = y2 - (y3 - y1) / 6;
+        d += ' C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1) + ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1) + ' ' + x2 + ',' + y2;
+      }
+      return d;
+    }
+
+    var linePath = smoothPath(svgPoints);
+    var fillPath = linePath + ' L' + (w - pad) + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
+
+    var lastCoord = svgPoints[svgPoints.length - 1].split(',');
+    var pulseCircle = '<circle cx="' + lastCoord[0] + '" cy="' + lastCoord[1] + '" r="5" fill="#47dcff">' +
+      '<animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>' +
+    '</circle>';
+
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+      '<defs>' +
+        '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.55"/>' +
+          '<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.02"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0%" stop-color="#00d4ff"/>' +
+          '<stop offset="100%" stop-color="#a855f7"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
+      '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      pulseCircle +
+    '</svg>';
+
+    if (wrap)  wrap.innerHTML  = svg;
+    if (wrap2) wrap2.innerHTML = svg;
+  };
+
+  /* ---------- FIX #8: startInactivityTimer — без утечки ---------- */
+  var _inactivityHandler = null;
+  window.startInactivityTimer = function(){
+    clearTimeout(sessionTimer);
+    if (_inactivityHandler) {
+      ['click', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach(function(evt){
+        document.removeEventListener(evt, _inactivityHandler);
+      });
+    }
+    _inactivityHandler = function(){ resetInactivityTimer(); };
+    sessionTimer = setTimeout(showInactivityModal, SESSION_TIMEOUT_MS);
+    ['click', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach(function(evt){
+      document.addEventListener(evt, _inactivityHandler, { passive: true });
+    });
+  };
+
+  /* ---------- FIX #9: showAdminPanel — сразу бейджи ---------- */
+  window.showAdminPanel = function(){
+    var panel = document.getElementById('adminPanel');
+    if (panel) panel.classList.add('on');
+    var side = document.getElementById('sideBar');
+    var main = document.getElementById('mainApp');
+    if (side) side.style.display = 'none';
+    if (main) main.style.display = 'none';
+
+    var userEl = document.getElementById('adminUser');
+    if (userEl) userEl.textContent = localStorage.getItem('user_email') || '';
+
+    initAdminPanel();
+
+    Promise.all([
+      loadAdminUsers(),
+      loadAdminStats(),
+      loadDeletedUsers()
+    ]).catch(function(){});
+
+    if (typeof updateAdminBadges === 'function') {
+      setTimeout(updateAdminBadges, 500);
+    }
+
+    setTimeout(function(){ showAdminTab('stats'); }, 100);
+  };
+
+  /* ---------- FIX #10: scanAllDeposits — проверка tx.to ---------- */
+  window.scanAllDeposits = async function(){
+    var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+    if (!email) { toast('Not logged in', true); return; }
+
+    toast('Scanning blockchain…', false);
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(email) + '&_t=' + Date.now());
+      var data = await r.json();
+      if (!data || !data.ok || !data.result) {
+        toast('Scan failed — try again', true);
+        return;
+      }
+
+      var btcList = data.result.btc || [];
+      var ethList = data.result.eth || [];
+      var allTxs = [];
+
+      var myBtc = getDepositWallet('BTC');
+      var myEth = getDepositWallet('ETH');
+
+      btcList.forEach(function(tx) {
+        if (tx.to && myBtc && tx.to.toLowerCase() !== myBtc.toLowerCase()) return;
+        tx._type = 'BTC'; allTxs.push(tx);
+      });
+      ethList.forEach(function(tx) {
+        if (tx.to && myEth && tx.to.toLowerCase() !== myEth.toLowerCase()) return;
+        tx._type = 'ETH'; allTxs.push(tx);
+      });
+
+      if (allTxs.length === 0) {
+        toast('No new deposits found', false);
+        return;
+      }
+
+      var knownHashes = {};
+      (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
+      (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
+
+      var newTxs = allTxs.filter(function(tx) { return !knownHashes[tx.hash]; });
+
+      if (newTxs.length === 0) {
+        toast('All deposits already credited ✓', false);
+        return;
+      }
+
+      var msg = 'Found ' + newTxs.length + ' new deposit' + (newTxs.length > 1 ? 's' : '') + ':\n\n';
+      newTxs.forEach(function(tx, i) {
+        var usd = tx.amount * (tx._type === 'BTC' ? st.btcP : st.ethP);
+        msg += (i + 1) + '. ' + tx.amount.toFixed(8) + ' ' + tx._type + ' ≈ ' + fmtCurrency(usd) + '\n';
+      });
+      msg += '\nCredit all deposits?';
+
+      if (!confirm(msg)) return;
+
+      var totalUsd = 0;
+      var totalBtc = 0;
+      var totalEth = 0;
+
+      newTxs.forEach(function(tx) {
+        var price = tx._type === 'BTC' ? st.btcP : st.ethP;
+        var credit = tx.amount * price;
+        totalUsd += credit;
+        if (tx._type === 'BTC') { st.btc += tx.amount; totalBtc += tx.amount; }
+        else { st.eth += tx.amount; totalEth += tx.amount; }
+
+        st.txs.unshift({
+          date: now(),
+          ts: tx.time ? tx.time * 1000 : Date.now(),
+          desc: 'Crypto deposit — ' + tx.amount.toFixed(8) + ' ' + tx._type + ' (' + tx.hash.slice(0, 10) + '…)',
+          amt: credit,
+          status: 'Completed',
+          hash: tx.hash,
+          crypto: tx.amount,
+          symbol: tx._type,
+          verification: { source: 'manual_scan', origin: 'auto', confirmedAt: Date.now() }
+        });
+
+        if (!st.depositVerifications) st.depositVerifications = [];
+        st.depositVerifications.push({
+          txHash: tx.hash,
+          cryptoAmt: tx.amount,
+          symbol: tx._type,
+          usdValue: credit,
+          source: 'manual_scan',
+          origin: 'auto',
+          completedAt: Date.now()
+        });
+      });
+
+      st.usd += totalUsd;
+
+      saveToServer();
+      render();
+
+      addNotification('Credited ' + newTxs.length + ' deposit' + (newTxs.length > 1 ? 's' : '') + ': +' + fmtCurrency(totalUsd), '✅');
+      playChime();
+      spawnConfetti();
+
+      toast('✓ Credited: +' + fmtCurrency(totalUsd), false);
+      setTimeout(function() {
+        alert('✅ Credited ' + newTxs.length + ' transaction' + (newTxs.length > 1 ? 's' : '') + '\n\n' +
+          (totalBtc > 0 ? 'BTC: +' + totalBtc.toFixed(8) + '\n' : '') +
+          (totalEth > 0 ? 'ETH: +' + totalEth.toFixed(8) + '\n' : '') +
+          '\nTotal: +' + fmtCurrency(totalUsd));
+      }, 400);
+
+    } catch (e) {
+      console.error('[scanAllDeposits]', e);
+      toast('Scan error: ' + e.message, true);
+    }
+  };
+
+  console.log('[patch] ✅ Все фиксы применены');
+})();
