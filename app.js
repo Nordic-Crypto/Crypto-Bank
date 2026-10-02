@@ -2298,7 +2298,8 @@ function confirmModal(){
   var m = methodEl.value;
   if (!a || a <= 0){ toast('Please enter a valid amount', true); return; }
 
- if (isCrypto(m)){
+ if (mode === 'add'){
+if (isCrypto(m)){
   var coin = (m === 'Bitcoin (BTC)') ? 'BTC' : 'ETH';
   var wallet = getDepositWallet(coin);
   if (!wallet){
