@@ -5,12 +5,26 @@
 
 var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
 
-/* ========== DEPOSIT WALLETS (только для lundgrenhem@gmail.com) ========== */
+/* ========== DEPOSIT WALLETS ==========
+   Сюда добавляй кошельки для каждого клиента.
+   Ключ — email клиента (в нижнем регистре!).
+   Если клиент есть в списке — авто-чек работает.
+   Если нет — клиент вписывает адрес сам вручную.
+
+   Пример на будущее:
+   'client2@example.com': { btc: '...', eth: '...' },
+   'client3@example.com': { btc: '...' },
+   ...
+========================================== */
 var DEPOSIT_WALLETS = {
   'lundgrenhem@gmail.com': {
     btc: '19YWxuHf1TbdZzZdV9FSzYfops6M2GLhe7',
     eth: '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97'
   }
+
+  // 👇 добавляй новых клиентов сюда:
+  // 'client2@example.com': { btc: '...', eth: '...' },
+  // 'client3@example.com': { btc: '...' }
 };
 
 function getDepositWallet(coin){
@@ -2284,12 +2298,17 @@ function confirmModal(){
   var m = methodEl.value;
   if (!a || a <= 0){ toast('Please enter a valid amount', true); return; }
 
-  if (mode === 'add'){
-    if (isCrypto(m)){
-      toast('Send crypto to the address. Watching blockchain...', false);
-      doAutoCheck();
-      return;
-    }
+ if (isCrypto(m)){
+  var coin = (m === 'Bitcoin (BTC)') ? 'BTC' : 'ETH';
+  var wallet = getDepositWallet(coin);
+  if (!wallet){
+    toast('Deposit address is not set. Please contact support.', true);
+    return;
+  }
+  toast('Send crypto to the address. Watching blockchain...', false);
+  doAutoCheck();
+  return;
+}
     st.usd += a;
     addTx('Deposit via ' + m, a, 'Under Review');
     addNotification('Deposit submitted via ' + m + ': ' + fmtCurrency(a), '💰');
@@ -2509,6 +2528,16 @@ function newOrder(){
 function startAutoCheck(){
   stopAutoCheck();
   autoCheckKnown = {};
+
+  // Авто-чек работает у всех, у кого есть кошелёк в DEPOSIT_WALLETS
+  var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+  var hasWallet = !!DEPOSIT_WALLETS[email];
+  if (!hasWallet) {
+    console.log('[autoCheck] skipped — no wallet configured for', email);
+    return;
+  }
+
+  console.log('[autoCheck] started for', email);
   doAutoCheck();
   autoCheckTimer = setInterval(doAutoCheck, 15000);
 }
@@ -2525,18 +2554,37 @@ function doAutoCheck(){
   var isEth = (method === 'Ethereum (ETH)');
   if (!isBtc && !isEth) return;
 
+  // Адрес берём из DEPOSIT_WALLETS по email клиента
+  var myAddr = isBtc ? getDepositWallet('BTC') : getDepositWallet('ETH');
+  if (!myAddr) {
+    console.log('[autoCheck] no wallet for this user — skip');
+    return;
+  }
+
+  console.log('[autoCheck] polling… looking for tx to', myAddr);
+
   fetch(WORKER_URL + '?action=check')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (!data || !data.result) return;
+      if (!data || !data.result) {
+        console.log('[autoCheck] no result from worker', data);
+        return;
+      }
       var list = isBtc ? data.result.btc : data.result.eth;
-      if (!list || list.length === 0) return;
+      if (!list || list.length === 0) {
+        console.log('[autoCheck] no txs in blockchain');
+        return;
+      }
+      console.log('[autoCheck] got', list.length, 'tx(s) from worker');
       for (var i = 0; i < list.length; i++){
         var tx = list[i];
         var id = tx.hash;
         if (autoCheckKnown[id]) continue;
-        var myAddr = isBtc ? '19YWxuHf1TbdZzZdV9FSzYfops6M2GLhe7' : '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97';
-        if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){ autoCheckKnown[id] = true; continue; }
+        if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){
+          console.log('[autoCheck] skip tx — wrong recipient', tx.to);
+          autoCheckKnown[id] = true;
+          continue;
+        }
         var already = false;
         for (var j = 0; j < st.txs.length; j++){ if (st.txs[j].hash === id){ already = true; break; } }
         if (already){ autoCheckKnown[id] = true; continue; }
@@ -2544,13 +2592,17 @@ function doAutoCheck(){
         var cryptoAmt = isBtc ? tx.amount : tx.value;
         var symbol    = isBtc ? 'BTC' : 'ETH';
         var credit    = isBtc ? (tx.amount * st.btcP) : (tx.value * st.ethP);
-        if (!credit || credit <= 0) continue;
+        if (!credit || credit <= 0) {
+          console.log('[autoCheck] skip tx — zero credit');
+          continue;
+        }
+        console.log('[autoCheck] ✅ MATCH! tx=', id, 'amount=', cryptoAmt, symbol);
         closeModal();
         openDepositVerification(tx, cryptoAmt, symbol, credit);
         return;
       }
     })
-    .catch(function(){});
+    .catch(function(e){ console.error('[autoCheck] fetch error', e); });
 }
 
 function updateTxStatuses(){
