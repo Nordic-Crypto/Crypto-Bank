@@ -2853,6 +2853,8 @@ function initCardActions(){
 function initEvents(){
   var btnAdd = document.getElementById('btnAdd');
   if (btnAdd) btnAdd.onclick = function(){ openModal('add'); };
+ var btnScan = document.getElementById('btnScanDeposits');
+  if (btnScan) btnScan.onclick = scanAllDeposits;
   var btnTransfer = document.getElementById('btnTransferV2');
   if (btnTransfer) btnTransfer.onclick = function(){ openModal('transfer'); };
   var btnWithdraw = document.getElementById('btnWithdrawV2');
