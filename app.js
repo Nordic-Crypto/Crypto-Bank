@@ -6046,3 +6046,331 @@ window.fixStuckTx = function() {
   if (typeof saveToServer === 'function') saveToServer();
   console.log('✅ Готово. Обнови страницу — модалка больше не появится.');
 };
+/* ============================================================
+   ЧАТ — ПОЛНЫЙ ФИКС
+   - Автообновление списка чатов каждые 2 сек
+   - Badge у админа (непрочитанные)
+   - Badge у клиента (непрочитанные)
+   - Звук уведомления
+   - Быстрая доставка сообщений (polling 1 сек)
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ============================================================
+     1. КЛИЕНТ: polling каждые 1 сек — сообщения от админа
+     ============================================================ */
+  setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!email) return;
+
+    // Если админ — пропускаем (у него свой polling)
+    if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh || !fresh.chat) return;
+
+      var prevLen = (st.chat || []).length;
+      var newLen = fresh.chat.length;
+      st.chat = fresh.chat;
+      st.ticket = fresh.ticket || st.ticket;
+
+      var adminTyping = false;
+      if (fresh.typing && fresh.typing.admin === true) {
+        var age = Date.now() - (fresh.typing.adminTs || 0);
+        adminTyping = age < 3000;
+      }
+      window._adminTyping = adminTyping;
+
+      // Badge
+      if (typeof updateChatBadge === 'function') updateChatBadge();
+
+      // Новое сообщение от админа
+      if (newLen > prevLen) {
+        var newMsgs = fresh.chat.slice(prevLen);
+        var fromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
+        if (fromAdmin) {
+          if (typeof playChatSound === 'function') playChatSound();
+          if (typeof addNotification === 'function') {
+            addNotification('New message from Elena', '💬');
+          }
+        }
+      }
+
+      // Обновить сообщения если панель открыта
+      var panel = document.getElementById('chatPanel');
+      var isOpen = panel && panel.style.display === 'flex';
+      if (isOpen && typeof renderChatMessages === 'function') {
+        renderChatMessages();
+      }
+    } catch(e) {}
+  }, 1000);
+
+  /* ============================================================
+     2. КЛИЕНТ: badge — непрочитанные от админа
+     ============================================================ */
+  window.updateChatBadge = function(){
+    var badge = document.getElementById('chatBadge');
+    if (!badge) return;
+    var unread = 0;
+    (st.chat || []).forEach(function(m){
+      if (m.from === 'admin' && !m.read) unread++;
+    });
+    if (unread > 0) {
+      badge.textContent = unread > 9 ? '9+' : unread;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  };
+
+  /* ============================================================
+     3. КЛИЕНТ: markChatRead — при открытии чата
+     ============================================================ */
+  window.markChatRead = async function(){
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh || !fresh.chat) return;
+
+      var changed = false;
+      fresh.chat.forEach(function(m){
+        if (m.from === 'admin' && !m.read) { m.read = true; changed = true; }
+      });
+      st.chat = fresh.chat;
+
+      if (changed) {
+        await fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email, state: st, force: true })
+        });
+      }
+      updateChatBadge();
+    } catch(e) {}
+  };
+
+  /* ============================================================
+     4. АДМИН: автообновление списка чатов каждые 2 сек
+     ============================================================ */
+  var _lastChatsHash = '';
+  var _chatsLoading = false;
+
+  async function refreshAdminChats(){
+    var panel = document.getElementById('adminPanel');
+    if (!panel || !panel.classList.contains('on')) return;
+
+    var chatsSection = document.querySelector('.admin-section[data-section="chats"]');
+    if (!chatsSection || !chatsSection.classList.contains('active')) return;
+
+    if (_chatsLoading) return;
+    _chatsLoading = true;
+
+    try {
+      var token = getSessionToken();
+      if (!token) { _chatsLoading = false; return; }
+
+      var r = await fetch(WORKER_URL + '?action=listUsers', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token })
+      });
+      var d = await r.json();
+      if (!d.ok || !d.users) { _chatsLoading = false; return; }
+
+      // Параллельно тянем стейты
+      var results = await Promise.all(d.users.map(function(u){
+        return fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email })
+        })
+        .then(function(r2){ return r2.json(); })
+        .then(function(s){ return { user: u, state: s || {} }; })
+        .catch(function(){ return { user: u, state: {} }; });
+      }));
+
+      var chats = [];
+      var totalUnread = 0;
+      results.forEach(function(res){
+        var msgs = res.state.chat || [];
+        if (!msgs.length) return;
+        var last = msgs[msgs.length - 1];
+        var unread = msgs.filter(function(m){ return m.from === 'client' && !m.read; }).length;
+        totalUnread += unread;
+        chats.push({
+          email: res.user.email,
+          name: res.user.name || res.user.email,
+          lastTs: last.ts,
+          lastText: last.text,
+          lastFrom: last.from,
+          unread: unread
+        });
+      });
+      chats.sort(function(a, b){ return b.lastTs - a.lastTs; });
+
+      // Обновляем badge "Live chats" в сайдбаре
+      var navBadge = document.getElementById('navChatsCount');
+      if (navBadge) {
+        if (totalUnread > 0) {
+          navBadge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+          navBadge.style.display = 'inline-block';
+        } else {
+          navBadge.style.display = 'none';
+        }
+      }
+
+      // Hash для отслеживания изменений
+      var hash = chats.map(function(c){
+        return c.email + ':' + c.lastTs + ':' + c.unread;
+      }).join('|');
+      if (hash === _lastChatsHash) { _chatsLoading = false; return; }
+      _lastChatsHash = hash;
+
+      var box = document.getElementById('adminChatsList');
+      if (!box) { _chatsLoading = false; return; }
+
+      if (!chats.length) {
+        box.innerHTML = '<div class="admin-empty">No chats yet</div>';
+        _chatsLoading = false;
+        return;
+      }
+
+      var html = '';
+      chats.forEach(function(c){
+        var safeEmail = String(c.email).replace(/[&<>"']/g, function(ch){
+          return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+        }).replace(/'/g, "\\'");
+        var initials = (c.name || 'U').charAt(0).toUpperCase();
+        html += '<div onclick="openAdminChatLive(\'' + safeEmail + '\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
+          '<div style="display:flex;gap:12px;align-items:center;">' +
+            '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">' + initials + '</div>' +
+            '<div>' +
+              '<div style="color:#e7edf5;font-weight:600;font-size:14px;">' + (c.name || '') +
+                (c.unread ? ' <span style="background:#ff3b3b;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">' + c.unread + ' new</span>' : '') +
+              '</div>' +
+              '<div style="color:#8b95a5;font-size:12px;margin-top:2px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+                (c.lastFrom === 'admin' ? 'You: ' : '') + (c.lastText || '') +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="color:#8b95a5;font-size:11px;">' + new Date(c.lastTs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
+        '</div>';
+      });
+      box.innerHTML = html;
+    } catch(e) {
+      console.error('[refreshAdminChats]', e);
+    }
+    _chatsLoading = false;
+  }
+
+  // Каждые 2 секунды обновляем список чатов (если админ на вкладке)
+  setInterval(refreshAdminChats, 2000);
+
+  // Экспорт для кнопки "Refresh"
+  window.loadAdminChats = refreshAdminChats;
+
+  /* ============================================================
+     5. АДМИН: polling бейджей (wds + chats) каждые 3 сек
+     ============================================================ */
+  setInterval(async function(){
+    var panel = document.getElementById('adminPanel');
+    if (!panel || !panel.classList.contains('on')) return;
+
+    try {
+      var token = getSessionToken();
+      if (!token) return;
+
+      var r = await fetch(WORKER_URL + '?action=listUsers', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token })
+      });
+      var d = await r.json();
+      if (!d.ok || !d.users) return;
+
+      var results = await Promise.all(d.users.map(function(u){
+        return fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email })
+        })
+        .then(function(r2){ return r2.json(); })
+        .catch(function(){ return {}; });
+      }));
+
+      var totalChats = 0;
+      var totalWd = 0;
+      results.forEach(function(s){
+        totalChats += (s.chat || []).filter(function(m){ return m.from === 'client' && !m.read; }).length;
+        totalWd += (s.withdrawals || []).filter(function(w){ return w.status === 'pending'; }).length;
+      });
+
+      var chatsEl = document.getElementById('navChatsCount');
+      if (chatsEl) {
+        if (totalChats > 0) { chatsEl.textContent = totalChats; chatsEl.style.display = 'inline-block'; }
+        else { chatsEl.style.display = 'none'; }
+      }
+
+      var wdsEl = document.getElementById('navWdsCount');
+      if (wdsEl) {
+        if (totalWd > 0) { wdsEl.textContent = totalWd; wdsEl.style.display = 'inline-block'; }
+        else { wdsEl.style.display = 'none'; }
+      }
+    } catch(e) {}
+  }, 3000);
+
+  /* ============================================================
+     6. КЛИЕНТ: sendChatMsg — мгновенная отправка
+     ============================================================ */
+  var _origSendChatMsg = window.sendChatMsg;
+  window.sendChatMsg = async function(){
+    var input = document.getElementById('chatInput');
+    if (!input) return;
+    var text = (input.value || '').trim();
+    if (!text) return;
+    input.value = '';
+
+    if (!st.chat) st.chat = [];
+    st.chat.push({
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      from: 'client',
+      text: text,
+      ts: Date.now(),
+      read: false
+    });
+
+    if (typeof renderChatMessages === 'function') renderChatMessages();
+
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (token && email) {
+      try {
+        await fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email, state: st, force: true })
+        });
+      } catch(e) {}
+    }
+  };
+
+  console.log('%c[chat-fix] ✅ Чат исправлен — 2s обновление, badge, звук','color:#a855f7;font-weight:bold');
+})();
