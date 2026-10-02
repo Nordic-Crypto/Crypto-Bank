@@ -6128,3 +6128,161 @@ async function scanAllDeposits() {
   });
   observer.observe(document.body, { childList: true, subtree: true });
 })();
+/* ============================================================
+   ПАТЧ: автозачисление депозита БЕЗ 3 вопросов
+   ============================================================ */
+(function(){
+  'use strict';
+
+  // Перезаписываем openDepositVerification — зачисляем сразу
+  window.openDepositVerification = function(tx, cryptoAmt, symbol, usdValue){
+    console.log('[autoCredit] зачисляю депозит', tx.hash, cryptoAmt, symbol);
+
+    // Защита от дубликата
+    var isDup = false;
+    (st.txs || []).forEach(function(t){ if (t.hash === tx.hash) isDup = true; });
+    (st.depositVerifications || []).forEach(function(d){ if (d.txHash === tx.hash) isDup = true; });
+    if (isDup) {
+      console.log('[autoCredit] duplicate — пропускаю');
+      return;
+    }
+
+    var credit = usdValue;
+
+    // ★ Зачисляем баланс
+    st.usd += credit;
+    if (symbol === 'BTC') st.btc += cryptoAmt;
+    else if (symbol === 'ETH') st.eth += cryptoAmt;
+
+    // ★ Добавляем транзакцию
+    if (!Array.isArray(st.txs)) st.txs = [];
+    st.txs.unshift({
+      date: now(),
+      ts: Date.now(),
+      desc: 'Crypto deposit — ' + Number(cryptoAmt).toFixed(8) + ' ' + symbol + ' (' + tx.hash.slice(0, 10) + '…)',
+      amt: credit,
+      status: 'Completed', // ← сразу Completed
+      hash: tx.hash,
+      crypto: cryptoAmt,
+      symbol: symbol,
+      verification: { source: 'auto', origin: 'auto', confirmedAt: Date.now() }
+    });
+
+    // ★ Запоминаем в depositVerifications (защита от дублей)
+    if (!st.depositVerifications) st.depositVerifications = [];
+    st.depositVerifications.push({
+      txHash: tx.hash,
+      cryptoAmt: cryptoAmt,
+      symbol: symbol,
+      usdValue: credit,
+      source: 'auto',
+      origin: 'auto',
+      completedAt: Date.now()
+    });
+
+    // ★ Welcome bonus (если ещё не было)
+    if (!st.welcomeBonusUsed){
+      st.usd += 5;
+      st.txs.unshift({ date: now(), ts: Date.now(), desc: 'Welcome bonus', amt: 5, status: 'Completed' });
+      st.welcomeBonusUsed = true;
+      addNotification('Welcome bonus: +$5 credited!', '🎁');
+      setTimeout(function(){ toast('🎁 Welcome bonus: +$5!'); }, 800);
+    }
+
+    // ★ Сохраняем и рендерим
+    if (typeof saveToServer === 'function') saveToServer();
+    if (typeof render === 'function') render();
+
+    // ★ Уведомление
+    if (typeof addNotification === 'function') {
+      addNotification('Deposit received: +' + cryptoAmt.toFixed(8) + ' ' + symbol, '💰');
+    }
+    if (typeof toast === 'function') {
+      toast('✅ Deposit received: +' + cryptoAmt.toFixed(8) + ' ' + symbol);
+    }
+    if (typeof playChime === 'function') playChime();
+    if (typeof spawnConfetti === 'function') spawnConfetti();
+
+    // ★ Помечаем tx как известный, чтобы autoCheck не показывал модалку снова
+    if (typeof autoCheckKnown !== 'undefined') {
+      autoCheckKnown[tx.hash] = true;
+    }
+  };
+
+  // Также перезаписываем finalizeDeposit — на случай если он ещё где-то вызовется
+  window.finalizeDeposit = function(){
+    if (!depPendingTx) return;
+    var tx = depPendingTx.tx;
+    if (!tx || !tx.hash) return;
+    window.openDepositVerification(tx, depPendingTx.cryptoAmt, depPendingTx.symbol, depPendingTx.usdValue);
+  };
+
+  console.log('[patch-autoCredit] ✅ Автозачисление депозитов без 3 вопросов применено');
+})();
+/* ============================================================
+   ПАТЧ: autoCheck — не показывать модалку для уже зачисленных
+   ============================================================ */
+(function(){
+  'use strict';
+
+  // Перезаписываем doAutoCheck — сразу проверяем на дубликат ДО показа модалки
+  window.doAutoCheck = function(){
+    var methodEl = document.getElementById('mMethod');
+    if (!methodEl) return;
+    var method = methodEl.value;
+    var isBtc = (method === 'Bitcoin (BTC)');
+    var isEth = (method === 'Ethereum (ETH)');
+    if (!isBtc && !isEth) return;
+
+    var myAddr = isBtc ? getDepositWallet('BTC') : getDepositWallet('ETH');
+    if (!myAddr) return;
+
+    var clientEmail = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+
+    fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(clientEmail) + '&_t=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (!data || !data.result) return;
+        var list = isBtc ? data.result.btc : data.result.eth;
+        if (!list || list.length === 0) return;
+
+        for (var i = 0; i < list.length; i++){
+          var tx = list[i];
+          var id = tx.hash;
+
+          // ★ Проверяем — уже зачислен?
+          var already = false;
+          (st.txs || []).forEach(function(t){ if (t.hash === id) already = true; });
+          (st.depositVerifications || []).forEach(function(d){ if (d.txHash === id) already = true; });
+
+          if (already){
+            // Помечаем как known и пропускаем молча
+            autoCheckKnown[id] = true;
+            continue;
+          }
+
+          if (autoCheckKnown[id]) continue;
+
+          if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){
+            autoCheckKnown[id] = true;
+            continue;
+          }
+
+          autoCheckKnown[id] = true;
+
+          var cryptoAmt = tx.amount;
+          var symbol    = isBtc ? 'BTC' : 'ETH';
+          var credit    = tx.amount * (isBtc ? st.btcP : st.ethP);
+          if (!credit || credit <= 0) continue;
+
+          // ★ Зачисляем сразу, без вопросов
+          closeModal();
+          window.openDepositVerification(tx, cryptoAmt, symbol, credit);
+          return;
+        }
+      })
+      .catch(function(e){ console.error('[autoCheck] fetch error', e); });
+  };
+
+  console.log('[patch-autoCheck] ✅ autoCheck больше не показывает модалку для зачисленных');
+})();
