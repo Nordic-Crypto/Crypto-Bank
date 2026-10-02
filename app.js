@@ -1,3 +1,338 @@
+/* ============================================================
+   NORDIC CRYPTO — APP.JS (Clean v2)
+   ============================================================ */
+
+var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
+var WORKER_URL = WORKER_LOGIN_URL;
+var SESSION_TIMEOUT_MS = 5 * 60 * 1000;
+var LOGOUT_COUNTDOWN = 60;
+var sessionTimer = null;
+var countdownTimer = null;
+var countdownLeft = 60;
+
+/* ========== STATE ========== */
+var def = { usd:0, btc:0, eth:0, btcP:68000, ethP:3200, eurR:0.92, sekR:10.45, currency:'USD', txs:[], order:null, card:null, notifications:[], withdrawals:[], balanceHistory:[] };
+var st = JSON.parse(JSON.stringify(def));
+var stateLoaded = false;
+var mode = null, tt = null;
+var autoCheckTimer = null;
+var autoCheckKnown = {};
+var cvvVisible = false;
+var cvvTimer = null;
+var selectedDesign = 'cosmic';
+var onbType = 'Visa';
+var onbCur = 'USD';
+
+function $(i){ return document.getElementById(i); }
+function fmt(n){ return '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function eurF(n){ return '≈ €' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function now(){ return new Date().toISOString().slice(0,10); }
+
+/* ========== SESSION ========== */
+function getSessionToken() { return localStorage.getItem('session_token'); }
+function setSessionToken(t) { localStorage.setItem('session_token', t); }
+function clearSessionToken() { localStorage.removeItem('session_token'); }
+
+/* ========== LOAD / SAVE ========== */
+function loadFromServer(cb, targetEmail){
+  var token = getSessionToken();
+  if (!token) { st = JSON.parse(JSON.stringify(def)); stateLoaded = true; if (cb) cb(); return; }
+  var body = { token: token };
+  if (targetEmail) body.email = targetEmail;
+  fetch(WORKER_LOGIN_URL + '?action=getUserState', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && data.ok === false) { st = JSON.parse(JSON.stringify(def)); }
+      else { st = data || JSON.parse(JSON.stringify(def)); }
+      if (!st.txs) st.txs = [];
+      if (!st.balanceHistory) st.balanceHistory = [];
+      if (!st.withdrawals) st.withdrawals = [];
+      if (!st.card || typeof st.card !== 'object') st.card = null;
+      stateLoaded = true;
+
+      var form = document.getElementById('chatTicketForm');
+      var conv = document.getElementById('chatConversation');
+      if (form) form.style.display = 'flex';
+      if (conv) conv.style.display = 'none';
+      var emailEl = document.getElementById('tkEmail');
+      if (emailEl) emailEl.value = targetEmail || localStorage.getItem('user_email') || '';
+      var topicEl = document.getElementById('chatTicketTopic');
+      if (topicEl) topicEl.textContent = 'Support';
+
+      render();
+      if (cb) cb();
+    })
+    .catch(function(){
+      st = JSON.parse(JSON.stringify(def));
+      stateLoaded = true;
+      render();
+    });
+}
+
+function saveToServer(){
+  if (!stateLoaded) return;
+  if (window.adminViewingEmail && !window.adminViewingReadonly) {
+    if (!st.__allowSave) return;
+  }
+  if (localStorage.getItem('user_role') === 'admin') return;
+  var token = getSessionToken();
+  if (!token) return;
+  fetch(WORKER_LOGIN_URL + '?action=setUserState', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
+  }).catch(function(){});
+}
+
+/* ========== AUTH ========== */
+async function doLogin() {
+  var emailEl = document.getElementById('loginEmail');
+  var passEl = document.getElementById('loginPassword');
+  var errorEl = document.getElementById('loginError');
+  var btnLogin = document.getElementById('btnLogin');
+  var loginForm = document.getElementById('loginForm');
+  var loginLoading = document.getElementById('loginLoading');
+  var email = emailEl.value.trim().toLowerCase();
+  var password = passEl.value;
+
+  if (!email || !password) { showLoginError('Please enter email and password'); return; }
+
+  errorEl.style.display = 'none';
+  loginForm.style.display = 'none';
+  loginLoading.style.display = 'block';
+  btnLogin.disabled = true;
+
+  try {
+    var res = await fetch(WORKER_LOGIN_URL + '?action=login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password })
+    });
+    var data = await res.json();
+
+    if (data.ok && data.token) {
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      setSessionToken(data.token);
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('user_role', data.user.role);
+      var niceName = data.user.name || 'User';
+      if (!data.user.name) {
+        var fromEmail = (data.user.email || '').split('@')[0];
+        niceName = fromEmail.charAt(0).toUpperCase() + fromEmail.slice(1);
+      }
+      localStorage.setItem('user_name', niceName);
+      hideLoginScreen();
+      showApp();
+      startInactivityTimer();
+      playChime();
+    } else {
+      loginForm.style.display = 'block';
+      loginLoading.style.display = 'none';
+      btnLogin.disabled = false;
+      var errMsg = data.error || 'Login failed';
+      if (data.attempts && data.attempts >= 3) errMsg += ' (' + data.attempts + ' attempts)';
+      showLoginError(errMsg);
+      playTone(220, 0.2, 'sine', 0.3);
+    }
+  } catch (e) {
+    loginForm.style.display = 'block';
+    loginLoading.style.display = 'none';
+    btnLogin.disabled = false;
+    showLoginError('Connection error. Try again.');
+  }
+}
+
+function showLoginError(msg) {
+  var errorEl = document.getElementById('loginError');
+  if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+}
+
+async function checkSession() {
+  var token = getSessionToken();
+  if (!token) { showLoginScreen(); return; }
+  try {
+    var res = await fetch(WORKER_LOGIN_URL + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await res.json();
+    if (data.ok && data.user) {
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('user_role', data.user.role || 'user');
+      hideLoginScreen();
+      showApp();
+      startInactivityTimer();
+    } else {
+      clearSessionToken();
+      showLoginScreen();
+    }
+  } catch (e) { showLoginScreen(); }
+}
+
+function showLoginScreen() {
+  var login = document.getElementById('loginScreen');
+  var side = document.getElementById('sideBar');
+  var main = document.getElementById('mainApp');
+  if (login) login.classList.remove('hidden');
+  if (side) side.style.display = 'none';
+  if (main) main.style.display = 'none';
+  var suMask = document.getElementById('signupMask');
+  if (suMask) suMask.classList.remove('on');
+  var emailEl = document.getElementById('loginEmail');
+  var passEl = document.getElementById('loginPassword');
+  var form = document.getElementById('loginForm');
+  var loading = document.getElementById('loginLoading');
+  var err = document.getElementById('loginError');
+  if (emailEl) emailEl.value = '';
+  if (passEl) passEl.value = '';
+  if (form) form.style.display = 'block';
+  if (loading) loading.style.display = 'none';
+  if (err) err.style.display = 'none';
+}
+
+function hideLoginScreen() {
+  var login = document.getElementById('loginScreen');
+  if (login) login.classList.add('hidden');
+}
+
+function showApp() {
+  if (isAdmin()) { showAdminPanel(); return; }
+  var side = document.getElementById('sideBar');
+  var main = document.getElementById('mainApp');
+  if (side) side.style.display = 'flex';
+  if (main) main.style.display = 'flex';
+
+  loadFromServer(function(){
+    loadPrices();
+    loadExchangeRates();
+    initCurrencySwitcher();
+    initNotifications();
+    renderNotifications();
+    initSoundButton();
+    initVerification();
+    initDesignPicker();
+    startIbanGeneration();
+    initRecentTx();
+    initTrackingActions();
+    initDepositVerification();
+    initWelcomeBanner();
+    initLoginLogout();
+    initSignup();
+    initSettings();
+    initAdminPanel();
+    loadCharts();
+    render();
+
+    if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
+    if (!st.card){ $('onboard').classList.add('on'); return; }
+    if (!st.user || !st.user.verified){ showVerifyScreen(); return; }
+    $('onboard').classList.remove('on');
+
+    setInterval(loadPrices, 5 * 60 * 1000);
+    setInterval(loadExchangeRates, 10 * 60 * 1000);
+    setInterval(loadCharts, 30 * 60 * 1000);
+  });
+}
+
+async function doLogout() {
+  var token = getSessionToken();
+  if (token) {
+    try {
+      await fetch(WORKER_LOGIN_URL + '?action=logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+    } catch (e) {}
+  }
+  clearSessionToken();
+  localStorage.removeItem('user_email');
+  localStorage.removeItem('user_role');
+  localStorage.removeItem('user_name');
+  clearInterval(sessionTimer);
+  clearInterval(countdownTimer);
+  hideInactivityModal();
+  document.querySelectorAll('.mask').forEach(function(m){ m.classList.remove('on'); });
+  document.querySelectorAll('.overlay, .inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage').forEach(function(m){ m.classList.remove('on'); });
+  var ap = document.getElementById('adminPanel');
+  if (ap) ap.classList.remove('on');
+  var np = document.getElementById('notifPanel');
+  if (np) np.classList.remove('on');
+  var abb = document.getElementById('adminBackBar');
+  if (abb) abb.style.display = 'none';
+  document.querySelectorAll('.mask').forEach(function(m){ m.style.display = ''; });
+  showLoginScreen();
+}
+
+/* ========== INACTIVITY ========== */
+function initLoginLogout() {
+  var toggle = document.getElementById('passToggle');
+  if (toggle) toggle.onclick = function(){
+    var pwd = document.getElementById('loginPassword');
+    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+    this.textContent = pwd.type === 'password' ? '👁' : '🙈';
+  };
+  var btnLogin = document.getElementById('btnLogin');
+  if (btnLogin) btnLogin.onclick = doLogin;
+  var emailEl = document.getElementById('loginEmail');
+  var passEl = document.getElementById('loginPassword');
+  if (emailEl) emailEl.onkeydown = function(e){ if (e.key === 'Enter') doLogin(); };
+  if (passEl) passEl.onkeydown = function(e){ if (e.key === 'Enter') doLogin(); };
+  var forgot = document.getElementById('forgotPass');
+  if (forgot) forgot.onclick = function(e){ e.preventDefault(); alert('Contact support: support@nordiccrypto.com'); };
+  var btnStillHere = document.getElementById('btnStillHere');
+  var btnLogout = document.getElementById('btnLogoutNow');
+  if (btnStillHere) btnStillHere.onclick = function(){ hideInactivityModal(); resetInactivityTimer(); };
+  if (btnLogout) btnLogout.onclick = function(){ doLogout(); };
+}
+
+function startInactivityTimer() {
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(showInactivityModal, SESSION_TIMEOUT_MS);
+  ['click', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach(function(evt){
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+}
+
+function resetInactivityTimer() {
+  var modal = document.getElementById('inactivityOverlay');
+  if (modal && modal.classList.contains('on')) return;
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(showInactivityModal, SESSION_TIMEOUT_MS);
+}
+
+function showInactivityModal() {
+  var overlay = document.getElementById('inactivityOverlay');
+  if (!overlay) return;
+  overlay.classList.add('on');
+  countdownLeft = LOGOUT_COUNTDOWN;
+  updateCountdown();
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(function(){
+    countdownLeft--;
+    updateCountdown();
+    if (countdownLeft <= 0) { clearInterval(countdownTimer); doLogout(); }
+  }, 1000);
+}
+
+function updateCountdown() {
+  var el = document.getElementById('inactivityTimer');
+  if (el) el.textContent = countdownLeft;
+}
+
+function hideInactivityModal() {
+  var overlay = document.getElementById('inactivityOverlay');
+  if (overlay) overlay.classList.remove('on');
+  clearInterval(countdownTimer);
+}
+
 /* ========== SETTINGS ========== */
 function initSettings() {
   var btnSettings = document.getElementById('settingsBtn');
@@ -22,12 +357,8 @@ function initSettings() {
     roleEl.style.color = role === 'admin' ? '#a78bfa' : 'var(--pri)';
   }
 
-  if (btnSettings) btnSettings.onclick = function(){
-    if (mask) mask.classList.add('on');
-  };
-  if (closeBtn) closeBtn.onclick = function(){
-    if (mask) mask.classList.remove('on');
-  };
+  if (btnSettings) btnSettings.onclick = function(){ if (mask) mask.classList.add('on'); };
+  if (closeBtn) closeBtn.onclick = function(){ if (mask) mask.classList.remove('on'); };
 
   if (logoutBtn) logoutBtn.onclick = function(){
     if (!confirm('Log out of your account?')) return;
@@ -44,32 +375,24 @@ function initSettings() {
     var e2 = document.getElementById('cpSuccess'); if (e2) e2.style.display = 'none';
   };
 
-  // ← Back button
   var cpBack = document.getElementById('cpBack');
   if (cpBack) cpBack.onclick = function(){
     if (changePassMask) changePassMask.classList.remove('on');
     if (mask) mask.classList.add('on');
   };
 
-  // Close — закрывает всё
   if (cpCancel) cpCancel.onclick = function(){
     if (changePassMask) changePassMask.classList.remove('on');
   };
 
-  // Глазки в полях пароля
   var cpToggles = document.querySelectorAll('.pass-toggle[data-target]');
   for (var i = 0; i < cpToggles.length; i++){
     cpToggles[i].onclick = function(){
       var targetId = this.getAttribute('data-target');
       var input = document.getElementById(targetId);
       if (!input) return;
-      if (input.type === 'password'){
-        input.type = 'text';
-        this.textContent = '🙈';
-      } else {
-        input.type = 'password';
-        this.textContent = '👁';
-      }
+      if (input.type === 'password'){ input.type = 'text'; this.textContent = '🙈'; }
+      else { input.type = 'password'; this.textContent = '👁'; }
     };
   }
 
@@ -79,48 +402,25 @@ function initSettings() {
     var confP = document.getElementById('cpConfirm').value;
     var errEl = document.getElementById('cpError');
     var okEl = document.getElementById('cpSuccess');
-
     errEl.style.display = 'none';
     okEl.style.display = 'none';
-
-    if (!oldP || !newP) {
-      errEl.textContent = 'Please fill all fields';
-      errEl.style.display = 'block';
-      return;
-    }
-    if (newP.length < 6) {
-      errEl.textContent = 'Password must be at least 6 characters';
-      errEl.style.display = 'block';
-      return;
-    }
-    if (newP !== confP) {
-      errEl.textContent = 'Passwords do not match';
-      errEl.style.display = 'block';
-      return;
-    }
-
+    if (!oldP || !newP) { errEl.textContent = 'Please fill all fields'; errEl.style.display = 'block'; return; }
+    if (newP.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+    if (newP !== confP) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
     cpSave.disabled = true;
     cpSave.textContent = 'Changing...';
-
     try {
       var res = await fetch(WORKER_LOGIN_URL + '?action=changePassword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: getSessionToken(),
-          oldPassword: oldP,
-          newPassword: newP
-        })
+        body: JSON.stringify({ token: getSessionToken(), oldPassword: oldP, newPassword: newP })
       });
       var data = await res.json();
-
       if (data.ok) {
         okEl.textContent = '✓ Password changed successfully';
         okEl.style.display = 'block';
         playChime();
-        setTimeout(function(){
-          if (changePassMask) changePassMask.classList.remove('on');
-        }, 2000);
+        setTimeout(function(){ if (changePassMask) changePassMask.classList.remove('on'); }, 2000);
       } else {
         errEl.textContent = data.error || 'Failed to change password';
         errEl.style.display = 'block';
@@ -129,20 +429,14 @@ function initSettings() {
       errEl.textContent = 'Connection error';
       errEl.style.display = 'block';
     }
-
     cpSave.disabled = false;
     cpSave.textContent = 'Change password';
   };
 
   if (deleteBtn) deleteBtn.onclick = function(){
-    if (!confirm('Delete your account? This will remove ALL data permanently. This cannot be undone.')) return;
-    if (!confirm('Are you SURE? All your funds, cards, and transactions will be erased.')) return;
-    st = {
-      usd: 0, btc: 0, eth: 0,
-      btcP: 68000, ethP: 3200, eurR: 0.92, sekR: 10.45,
-      currency: 'USD',
-      txs: [], order: null, card: null, notifications: []
-    };
+    if (!confirm('Delete your account? This will remove ALL data permanently.')) return;
+    if (!confirm('Are you SURE? All data will be erased.')) return;
+    st = JSON.parse(JSON.stringify(def));
     saveToServer();
     render();
     if (mask) mask.classList.remove('on');
@@ -150,525 +444,7 @@ function initSettings() {
     setTimeout(function(){ doLogout(); }, 1500);
   };
 }
-
-/* ========== AUTHENTICATION ========== */
-var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
-var SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут
-var LOGOUT_COUNTDOWN = 60; // 60 секунд
-var sessionTimer = null;
-var countdownTimer = null;
-var countdownLeft = 60;
-
-function getSessionToken() {
-  return localStorage.getItem('session_token');
-}
-
-function setSessionToken(token) {
-  localStorage.setItem('session_token', token);
-}
-
-function clearSessionToken() {
-  localStorage.removeItem('session_token');
-}
-
-async function doLogin() {
-  var emailEl = document.getElementById('loginEmail');
-  var passEl = document.getElementById('loginPassword');
-  var errorEl = document.getElementById('loginError');
-  var btnLogin = document.getElementById('btnLogin');
-  var loginForm = document.getElementById('loginForm');
-  var loginLoading = document.getElementById('loginLoading');
-
-  var email = emailEl.value.trim().toLowerCase();
-  var password = passEl.value;
-
-  if (!email || !password) {
-    showLoginError('Please enter email and password');
-    return;
-  }
-
-  // Показать загрузку
-  errorEl.style.display = 'none';
-  loginForm.style.display = 'none';
-  loginLoading.style.display = 'block';
-  btnLogin.disabled = true;
-
-  try {
-    var res = await fetch(WORKER_LOGIN_URL + '?action=login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: password })
-    });
-    var data = await res.json();
-
-    if (data.ok && data.token) {
-      // Сначала ОЧИЩАЕМ старые данные
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('user_name');
-
-      // Потом записываем свежие
-      setSessionToken(data.token);
-      localStorage.setItem('user_email', data.user.email);
-      localStorage.setItem('user_role', data.user.role);
-      localStorage.setItem('user_name', data.user.name || 'User');
-      // Если сервер не вернул имя — берём из email
-if (!data.user.name) {
-  var fromEmail = (data.user.email || '').split('@')[0];
-  var niceName = fromEmail.charAt(0).toUpperCase() + fromEmail.slice(1);
-  localStorage.setItem('user_name', niceName);
-  console.log('[login] name from email:', niceName);
-}
-
-      // Скрыть логин, показать приложение
-      hideLoginScreen();
-      showApp();
-      startInactivityTimer();
-      playChime();
-      return;
-    } else {
-      // Ошибка
-      loginForm.style.display = 'block';
-      loginLoading.style.display = 'none';
-      btnLogin.disabled = false;
-      var errMsg = data.error || 'Login failed';
-      if (data.attempts && data.attempts >= 3) {
-        errMsg += ' (' + data.attempts + ' attempts)';
-      }
-      showLoginError(errMsg);
-      playTone(220, 0.2, 'sine', 0.3);
-    }
-  } catch (e) {
-    loginForm.style.display = 'block';
-    loginLoading.style.display = 'none';
-    btnLogin.disabled = false;
-    showLoginError('Connection error. Try again.');
-  }
-}
-
-function showLoginError(msg) {
-  var errorEl = document.getElementById('loginError');
-  if (errorEl) {
-    errorEl.textContent = msg;
-    errorEl.style.display = 'block';
-  }
-}
-
-async function checkSession() {
-  var token = getSessionToken();
-  if (!token) {
-    showLoginScreen();
-    return;
-  }
-
-  try {
-    var res = await fetch(WORKER_LOGIN_URL + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
-    });
-    var data = await res.json();
-
-    if (data.ok && data.user) {
-      // Session valid
-      localStorage.setItem('user_email', data.user.email);
-      localStorage.setItem('user_role', data.user.role || 'user');
-      hideLoginScreen();
-      showApp();
-      startInactivityTimer();
-    } else {
-      // Session invalid
-      clearSessionToken();
-      showLoginScreen();
-    }
-  } catch (e) {
-    // Если Worker недоступен — показываем логин
-    showLoginScreen();
-  }
-}
-
-function showLoginScreen() {
-  var login = document.getElementById('loginScreen');
-  var side = document.getElementById('sideBar');
-  var main = document.getElementById('mainApp');
-  if (login) login.classList.remove('hidden');
-  if (side) side.style.display = 'none';
-  if (main) main.style.display = 'none';
-  
-  // Закрыть модалку Sign Up, если она вдруг открыта
-  var suMask = document.getElementById('signupMask');
-  if (suMask) suMask.classList.remove('on');
-  
-  // Сброс формы
-  var emailEl = document.getElementById('loginEmail');
-  var passEl = document.getElementById('loginPassword');
-  var form = document.getElementById('loginForm');
-  var loading = document.getElementById('loginLoading');
-  var err = document.getElementById('loginError');
-  if (emailEl) emailEl.value = '';
-  if (passEl) passEl.value = '';
-  if (form) form.style.display = 'block';
-  if (loading) loading.style.display = 'none';
-  if (err) err.style.display = 'none';
-}
-
-function hideLoginScreen() {
-  var login = document.getElementById('loginScreen');
-  if (login) login.classList.add('hidden');
-}
-
-function showApp() {
-  // Проверка роли — если admin, показываем админ-панель
-  if (isAdmin()) {
-    showAdminPanel();
-    return;
-  }
-
-  var side = document.getElementById('sideBar');
-  var main = document.getElementById('mainApp');
-  if (side) side.style.display = 'flex';
-  if (main) main.style.display = 'flex';
-
-  // Загружаем state и инициализируем всё
-  loadFromServer(function(){
-    loadPrices();
-    loadExchangeRates();
-    initCurrencySwitcher();
-    initNotifications();
-    renderNotifications();
-    initSoundButton();
-    initVerification();
-    initDesignPicker();
-    startIbanGeneration();
-    initRecentTx();
-    initTrackingActions();
-    initDepositVerification();
-    initWelcomeBanner();
-    initLoginLogout();
-    initSignup();
-    initSettings();
-    initAdminPanel();
-    loadCharts();
-
-        // === ПОРЯДОК ПРОВЕРОК ===
-    render();
-
-    // 1. Не залогинен → логин
-    if (!localStorage.getItem('user_email')){
-      showLoginScreen();
-      return;
-    }
-
-   // 2. Нет карты → онбординг
-    if (!st.card){
-      $('onboard').classList.add('on');
-      return;
-    }
-
-    // 3. Нет верификации → верификация
-    if (!st.user || !st.user.verified){
-      showVerifyScreen();
-      return;
-    }
-
-    // 4. Всё ок
-    $('onboard').classList.remove('on');
-
-    setInterval(loadPrices, 5 * 60 * 1000);
-    setInterval(loadExchangeRates, 10 * 60 * 1000);
-    setInterval(loadCharts, 15 * 60 * 1000);
-  // Автообновление баланса клиента (из getUserState)
-  if (localStorage.getItem('user_role') !== 'admin' && localStorage.getItem('user_email')) {
-    fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (!d || d.error) return;
-      var newUsd = Number(d.usd) || 0;
-      console.log('[auto-refresh] server usd:', newUsd, 'local:', st.usd);
-      if (Math.abs(newUsd - (st.usd || 0)) > 0.01) {
-        st.usd = newUsd;
-        if (d.card) st.card = d.card;
-        if (d.txs) st.txs = d.txs;
-        if (d.notifications) st.notifications = d.notifications;
-        console.log('[auto-refresh] UPDATED to', st.usd);
-        if (typeof render === 'function') render();
-      }
-    })
-    .catch(function(){});
-  }
-      });
-}
-
-// Обновление при возврате на вкладку
-document.addEventListener('visibilitychange', function(){
-  if (document.visibilityState === 'visible') {
-    if (localStorage.getItem('user_role') === 'admin') return;
-    if (!localStorage.getItem('user_email')) return;
-    
-    fetch(WORKER_LOGIN_URL + '?action=listUsers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (!d.ok || !d.users) return;
-      var myEmail = localStorage.getItem('user_email');
-      for (var i = 0; i < d.users.length; i++) {
-        if (d.users[i].email === myEmail) {
-          st.usd = Number(d.users[i].balance) || 0;
-          st.card = d.users[i].card || st.card;
-          render();
-          break;
-        }
-      }
-    })
-    .catch(function(){});
-  }
-});
-
-async function dologout() {
-  var token = getSessionToken();
-  if (token) {
-    try {
-      await fetch(WORKER_LOGIN_URL + '?action=logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token })
-      });
-    } catch (e) {}
-  }
-
-  clearSessionToken();
-  localStorage.removeItem('user_email');
-  localStorage.removeItem('user_email');
-  localStorage.removeItem('user_role');
-  localStorage.removeItem('user_name');
-  clearInterval(sessionTimer);
-  clearInterval(countdownTimer);
-  hideInactivityModal();
-
-// Закрыть ВСЕ модалки и оверлеи
-document.querySelectorAll('.mask').forEach(function(m){ m.classList.remove('on'); });
-document.querySelectorAll('.overlay, .inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage').forEach(function(m){ m.classList.remove('on'); });
-
-// Закрыть админ-панель
-var ap = document.getElementById('adminPanel');
-if (ap) ap.classList.remove('on');
-
-// Закрыть панель уведомлений
-var np = document.getElementById('notifPanel');
-if (np) np.classList.remove('on');
-
-// Скрыть админ-бар
-var abb = document.getElementById('adminBackBar');
-if (abb) abb.style.display = 'none';
-
-// Сбросить inline-стили, если есть
-document.querySelectorAll('.mask').forEach(function(m){ m.style.display = ''; });
-
-showLoginScreen();
-}
-
-function initLoginLogout() {
-  // Eye toggle
-  var toggle = document.getElementById('passToggle');
-  if (toggle) {
-    toggle.onclick = function(){
-      var pwd = document.getElementById('loginPassword');
-      pwd.type = pwd.type === 'password' ? 'text' : 'password';
-      this.textContent = pwd.type === 'password' ? '👁' : '🙈';
-    };
-  }
-
-  // Кнопка Sign in
-  var btnLogin = document.getElementById('btnLogin');
-  if (btnLogin) btnLogin.onclick = doLogin;
-
-  // Enter в полях
-  var emailEl = document.getElementById('loginEmail');
-  var passEl = document.getElementById('loginPassword');
-  if (emailEl) emailEl.onkeydown = function(e){ if (e.key === 'Enter') doLogin(); };
-  if (passEl) passEl.onkeydown = function(e){ if (e.key === 'Enter') doLogin(); };
-
-  // Забыли пароль
-  var forgot = document.getElementById('forgotPass');
-  if (forgot) forgot.onclick = function(e){
-    e.preventDefault();
-    alert('Contact support: support@nordiccrypto.com');
-  };
-
-  // Кнопки в модалке неактивности
-  var btnStillHere = document.getElementById('btnStillHere');
-  var btnLogout = document.getElementById('btnLogoutNow');
-  if (btnStillHere) btnStillHere.onclick = function(){
-    hideInactivityModal();
-    resetInactivityTimer();
-  };
-  if (btnLogout) btnLogout.onclick = function(){
-    doLogout();
-  };
-}
-
-function startInactivityTimer() {
-  clearTimeout(sessionTimer);
-  sessionTimer = setTimeout(showInactivityModal, SESSION_TIMEOUT_MS);
-
-  // События, которые сбрасывают таймер
-  ['click', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach(function(evt){
-    document.addEventListener(evt, resetInactivityTimer, { passive: true });
-  });
-}
-
-function resetInactivityTimer() {
-  var modal = document.getElementById('inactivityOverlay');
-  if (modal && modal.classList.contains('on')) return;
-  clearTimeout(sessionTimer);
-  sessionTimer = setTimeout(showInactivityModal, SESSION_TIMEOUT_MS);
-}
-
-function showInactivityModal() {
-  var overlay = document.getElementById('inactivityOverlay');
-  if (!overlay) return;
-  overlay.classList.add('on');
-  countdownLeft = LOGOUT_COUNTDOWN;
-  updateCountdown();
-
-  clearInterval(countdownTimer);
-  countdownTimer = setInterval(function(){
-    countdownLeft--;
-    updateCountdown();
-    if (countdownLeft <= 0) {
-      clearInterval(countdownTimer);
-      doLogout();
-    }
-  }, 1000);
-}
-
-function updateCountdown() {
-  var el = document.getElementById('inactivityTimer');
-  if (el) el.textContent = countdownLeft;
-}
-
-function hideInactivityModal() {
-  var overlay = document.getElementById('inactivityOverlay');
-  if (overlay) overlay.classList.remove('on');
-  clearInterval(countdownTimer);
-}
-/* ========== WORKER API ========== */
-var WORKER_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
-var def = { usd:0, btc:0, eth:0, btcP:68000, ethP:3200, eurR:0.92, sekR:10.45, currency:'USD', txs:[], order:null, card:null, notifications:[] };
-var st = JSON.parse(JSON.stringify(def));
-var mode = null, tt = null;
-var autoCheckTimer = null;
-var autoCheckKnown = {};
-var cvvVisible = false;
-var cvvTimer = null;
-
-function $(i){ return document.getElementById(i); }
-function fmt(n){ return '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function eurF(n){ return '≈ €' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function now(){ return new Date().toISOString().slice(0,10); }
-
-function loadFromServer(cb, targetEmail){
-  var token = getSessionToken();
-  if (!token) {
-    st = JSON.parse(JSON.stringify(def));
-    stateLoaded = true;
-    if (cb) cb();
-    return;
-  }
-
-  var body = { token: token };
-  if (targetEmail) body.email = targetEmail;   // ← НОВОЕ
-
-  fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data && data.ok === false) {
-        // Не авторизован
-        console.warn('Load failed:', data.error);
-        st = JSON.parse(JSON.stringify(def));
-      } else {
-        st = data || JSON.parse(JSON.stringify(def));
-      }
-      if (!st.txs) st.txs = [];
-      if (!st.balanceHistory) st.balanceHistory = [];
-      if (!st.withdrawals) st.withdrawals = [];
-      if (!st.card || typeof st.card !== 'object') st.card = null;
-      stateLoaded = true;
-      // СБРОС ЧАТ-UI при загрузке клиента
-(function resetChatUI(){
-  var form = document.getElementById('chatTicketForm');
-  var conv = document.getElementById('chatConversation');
-  if (form) form.style.display = 'flex';     // показать форму
-  if (conv) conv.style.display = 'none';     // скрыть чат
-  
-  var emailEl = document.getElementById('tkEmail');
-  if (emailEl) emailEl.value = targetEmail || localStorage.getItem('user_email') || '';
-  
-  var topicEl = document.getElementById('chatTicketTopic');
-  if (topicEl) topicEl.textContent = 'Support';
-  
-  console.log('[resetChatUI] для', targetEmail, '| ticket:', st.ticket);
-})();
-      render();
-      setTimeout(function(){ checkOnboarding(); }, 50);
-      if (cb) cb();
-    })
-    .catch(function(e){
-      console.error('Load failed:', e);
-      st = JSON.parse(JSON.stringify(def));
-      stateLoaded = true;
-      render();
-      checkOnboarding();
-    });
-}
-
-function saveToServer(){
-  // 1. Не сохраняем если данные не загружены
-  if (!stateLoaded) {
-    console.log('[saveToServer] Skip — not loaded');
-    return;
-  }
-
-  // 1.5. Не сохраняем в режиме View (админ смотрит клиента)
-  if (window.adminViewingEmail && !window.adminViewingReadonly) {
-    // В View сохраняем ТОЛЬКО когда явно разрешено
-    // По умолчанию — блокируем автоматическое сохранение
-    if (!st.__allowSave) {
-      console.log('[saveToServer] Skip — viewing as admin (readonly)');
-      return;
-    }
-  }
-  // 2. Admin не сохраняет
-  if (localStorage.getItem('user_role') === 'admin') {
-    console.log('[saveToServer] Skip — admin');
-    return;
-  }
-
-  // 3. Проверяем токен
-  var token = getSessionToken();
-  if (!token) {
-    console.log('[saveToServer] Skip — no token');
-    return;
-  }
-
-  fetch(WORKER_LOGIN_URL + '?action=setUserState', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
-  }).catch(function(e){ console.error('Save failed:', e); });
-}
-/* ========== LIVE PRICES ========== */
+/* ========== PRICES ========== */
 function loadPrices(){
   fetch(WORKER_URL + '?action=prices')
     .then(function(r){ return r.json(); })
@@ -676,7 +452,6 @@ function loadPrices(){
       if (d && d.btc && d.eth){
         var prevBtc = st.btcP || d.btc;
         var prevEth = st.ethP || d.eth;
-
         st.btcP = d.btc;
         st.ethP = d.eth;
 
@@ -687,14 +462,14 @@ function loadPrices(){
 
         updateCryptoTrends(prevBtc, prevEth);
 
-        // НЕ трогаем баланс в режиме View
         if (window.adminViewingEmail) return;
 
         if (!st.balanceHistory) st.balanceHistory = [];
         var lastPoint = st.balanceHistory[st.balanceHistory.length - 1];
         var nowTs = Date.now();
         if (st.usd > 0 && st.usd < 1000000 && (!lastPoint || nowTs - lastPoint.t > 60000)) {
-          $('bal').textContent = fmtCurrency(st.usd);
+          var balEl = $('bal');
+          if (balEl) balEl.textContent = fmtCurrency(st.usd);
         }
         var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         st.balanceHistory = st.balanceHistory.filter(function(p){
@@ -711,12 +486,26 @@ function loadPrices(){
     .catch(function(e){ console.error('Prices load failed:', e); });
 }
 
+function updateCryptoTrends(prevBtc, prevEth) {
+  var btcTrend = document.getElementById('btcChange');
+  var ethTrend = document.getElementById('ethChange');
+  if (btcTrend) {
+    var btcChg = ((st.btcP - prevBtc) / prevBtc) * 100;
+    var btcSign = btcChg >= 0 ? '▲ +' : '▼ ';
+    btcTrend.textContent = btcSign + btcChg.toFixed(2) + '%';
+    btcTrend.className = 'crypto-change ' + (btcChg >= 0 ? 'up' : 'down');
+  }
+  if (ethTrend) {
+    var ethChg = ((st.ethP - prevEth) / prevEth) * 100;
+    var ethSign = ethChg >= 0 ? '▲ +' : '▼ ';
+    ethTrend.textContent = ethSign + ethChg.toFixed(2) + '%';
+    ethTrend.className = 'crypto-change ' + (ethChg >= 0 ? 'up' : 'down');
+  }
+}
+
 /* ========== REFRESH BALANCE ========== */
 function refreshBalanceFromServer(){
-  if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) {
-    console.log('[refreshBalance] Skip — admin');
-    return;
-  }
+  if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
   var token = getSessionToken();
   if (!token) return;
   var email = window.adminViewingEmail || localStorage.getItem('user_email');
@@ -731,7 +520,6 @@ function refreshBalanceFromServer(){
   .then(function(d){
     if (!d || d.ok === false) return;
     var newUsd = Number(d.usd) || 0;
-    console.log('[refreshBalance] server usd:', newUsd, 'local:', st.usd);
     if (Math.abs(newUsd - (st.usd || 0)) > 0.01) {
       st.usd = newUsd;
       if (d.currency) st.currency = d.currency;
@@ -741,11 +529,10 @@ function refreshBalanceFromServer(){
       if (d.user) st.user = d.user;
       if (d.balanceHistory) st.balanceHistory = d.balanceHistory;
       if (d.withdrawals) st.withdrawals = d.withdrawals;
-      console.log('[refreshBalance] UPDATED to', st.usd);
       render();
     }
   })
-  .catch(function(e){ console.warn('refreshBalance failed:', e); });
+  .catch(function(){});
 }
 
 (function initRefreshBtn(){
@@ -760,80 +547,27 @@ function refreshBalanceFromServer(){
   }
 })();
 
+// Обновление баланса раз в 60 секунд
 setInterval(function(){
   if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
   if (!localStorage.getItem('user_email') && !window.adminViewingEmail) return;
   refreshBalanceFromServer();
-}, 30000);
+}, 60000);
 
-
-  
-// Движение % (BTC/ETH)
-function updateCryptoTrends(prevBtc, prevEth) {
-  var btcTrend = document.getElementById('btcChange');
-  var ethTrend = document.getElementById('ethChange');
-  
-  if (btcTrend) {
-    var btcChg = ((st.btcP - prevBtc) / prevBtc) * 100;
-    var btcSign = btcChg >= 0 ? '▲ +' : '▼ ';
-    btcTrend.textContent = btcSign + btcChg.toFixed(2) + '%';
-    btcTrend.className = 'crypto-change ' + (btcChg >= 0 ? 'up' : 'down');
-  }
-  
-  if (ethTrend) {
-    var ethChg = ((st.ethP - prevEth) / prevEth) * 100;
-    var ethSign = ethChg >= 0 ? '▲ +' : '▼ ';
-    ethTrend.textContent = ethSign + ethChg.toFixed(2) + '%';
-    ethTrend.className = 'crypto-change ' + (ethChg >= 0 ? 'up' : 'down');
-  }
-}
-
-/* ========== CURRENCY SWITCHER ========== */
+/* ========== CURRENCY ========== */
 function fmtCurrency(usdAmount){
   var cur = st.currency || 'USD';
   var amount = usdAmount;
   var symbol = '$';
   var suffix = '';
-  if (cur === 'EUR'){
-    amount = usdAmount * st.eurR;
-    symbol = '€';
-  } else if (cur === 'SEK'){
-    amount = usdAmount * st.sekR;
-    symbol = 'kr ';
-  } else if (cur === 'NOK'){
-    amount = usdAmount * (st.nokR || 10.5);
-    symbol = 'kr ';
-    suffix = ' NOK';
-  } else if (cur === 'DKK'){
-    amount = usdAmount * (st.dkkR || 6.9);
-    symbol = 'kr ';
-    suffix = ' DKK';
-  } else if (cur === 'GBP'){
-    amount = usdAmount * (st.gbpR || 0.79);
-    symbol = '£';
-  }
+  if (cur === 'EUR'){ amount = usdAmount * st.eurR; symbol = '€'; }
+  else if (cur === 'SEK'){ amount = usdAmount * st.sekR; symbol = 'kr '; }
+  else if (cur === 'NOK'){ amount = usdAmount * (st.nokR || 10.5); symbol = 'kr '; suffix = ' NOK'; }
+  else if (cur === 'DKK'){ amount = usdAmount * (st.dkkR || 6.9); symbol = 'kr '; suffix = ' DKK'; }
+  else if (cur === 'GBP'){ amount = usdAmount * (st.gbpR || 0.79); symbol = '£'; }
   var formatted = Number(amount).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
   return symbol + formatted + suffix;
 }
-/* ========== INPUT FORMATTERS ========== */
-function attachExpiryFormatter(input) {
-  if (!input) return;
-  input.addEventListener('input', function(e) {
-    var v = e.target.value.replace(/\D/g, '').slice(0, 4);
-    if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
-    e.target.value = v;
-  });
-}
-
-function attachCardFormatter(input) {
-  if (!input) return;
-  input.addEventListener('input', function(e) {
-    var v = e.target.value.replace(/\D/g, '').slice(0, 16);
-    var parts = v.match(/.{1,4}/g);
-    e.target.value = parts ? parts.join(' ') : v;
-  });
-}
-
 
 function loadExchangeRates(){
   fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD')
@@ -850,16 +584,16 @@ function loadExchangeRates(){
         if (rateEl) rateEl.textContent = '1$ = ' + st.eurR.toFixed(2) + '€';
         var rateEl2 = document.getElementById('rateSEK');
         if (rateEl2) rateEl2.textContent = '1$ = ' + st.sekR.toFixed(2) + 'kr';
-        render();
-                var rateNOK = document.getElementById('rateNOK');
+        var rateNOK = document.getElementById('rateNOK');
         if (rateNOK && r.NOK) rateNOK.textContent = '1$ = ' + Number(r.NOK).toFixed(2) + 'kr';
         var rateDKK = document.getElementById('rateDKK');
         if (rateDKK && r.DKK) rateDKK.textContent = '1$ = ' + Number(r.DKK).toFixed(2) + 'kr';
         var rateGBP = document.getElementById('rateGBP');
         if (rateGBP && r.GBP) rateGBP.textContent = '1$ = ' + Number(r.GBP).toFixed(2) + '£';
+        render();
       }
     })
-    .catch(function(e){ console.error('Rates load failed:', e); });
+    .catch(function(){});
 }
 
 function setCurrency(cur){
@@ -881,41 +615,31 @@ function initCurrencySwitcher(){
   var btn = document.getElementById('currBtnTop');
   var menu = document.getElementById('currMenu');
   if (btn && menu){
-    btn.onclick = function(e){
-      e.stopPropagation();
-      menu.classList.toggle('on');
-    };
-    document.addEventListener('click', function(){
-      if (menu) menu.classList.remove('on');
-    });
+    btn.onclick = function(e){ e.stopPropagation(); menu.classList.toggle('on'); };
+    document.addEventListener('click', function(){ if (menu) menu.classList.remove('on'); });
   }
   var opts = document.querySelectorAll('.curr-opt');
   for (var i = 0; i < opts.length; i++){
     opts[i].onclick = function(e){
       e.stopPropagation();
-      var cur = this.getAttribute('data-cur');
-      setCurrency(cur);
+      setCurrency(this.getAttribute('data-cur'));
     };
   }
   var codeEl = document.getElementById('currCode');
   if (codeEl) codeEl.textContent = st.currency || 'USD';
 }
-/* ========== ENABLE SOUND BUTTON ========== */
+
+/* ========== SOUND BUTTON ========== */
 function initSoundButton(){
   var btn = document.getElementById('soundBtn');
   if (!btn) return;
-
-  if (localStorage.getItem('audioUnlocked') === '1'){
-    btn.classList.add('hidden');
-  }
-
+  if (localStorage.getItem('audioUnlocked') === '1'){ btn.classList.add('hidden'); }
   btn.onclick = function(){
     var ctx = getAudioCtx();
     if (ctx){
       ctx.resume().then(function(){
         localStorage.setItem('audioUnlocked', '1');
         btn.classList.add('hidden');
-        // Тестовый звук
         setTimeout(function(){
           playTone(880, 0.15, 'sine', 0.4);
           setTimeout(function(){ playTone(1320, 0.2, 'sine', 0.35); }, 120);
@@ -928,10 +652,9 @@ function initSoundButton(){
 /* ========== NOTIFICATIONS ========== */
 function playNotificationSound(){
   playTone(880, 0.12, 'sine', 0.35);
-  setTimeout(function(){
-    playTone(1320, 0.18, 'sine', 0.28);
-  }, 100);
+  setTimeout(function(){ playTone(1320, 0.18, 'sine', 0.28); }, 100);
 }
+
 function addNotification(text, icon){
   if (!st.notifications) st.notifications = [];
   st.notifications.unshift({
@@ -966,18 +689,13 @@ function renderNotifications(){
   var badge = document.getElementById('notifBadge');
   var sub = document.getElementById('notifSub');
   if (!listEl) return;
-
   var notifs = st.notifications || [];
   var unread = 0;
   for (var i = 0; i < notifs.length; i++) if (!notifs[i].read) unread++;
 
   if (badge){
-    if (unread > 0){
-      badge.style.display = 'flex';
-      badge.textContent = unread > 9 ? '9+' : unread;
-    } else {
-      badge.style.display = 'none';
-    }
+    if (unread > 0){ badge.style.display = 'flex'; badge.textContent = unread > 9 ? '9+' : unread; }
+    else { badge.style.display = 'none'; }
   }
   if (sub) sub.textContent = unread > 0 ? (unread + ' unread') : 'All read';
 
@@ -985,7 +703,6 @@ function renderNotifications(){
     listEl.innerHTML = '<div class="notif-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:8px">🔔</div><div>No notifications yet</div></div>';
     return;
   }
-
   var html = '';
   for (var j = 0; j < notifs.length; j++){
     var n = notifs[j];
@@ -998,23 +715,16 @@ function renderNotifications(){
     '</div>';
   }
   listEl.innerHTML = html;
-
   var items = listEl.querySelectorAll('.notif-item');
   for (var k = 0; k < items.length; k++){
-    items[k].onclick = function(){
-      var id = Number(this.getAttribute('data-id'));
-      markRead(id);
-    };
+    items[k].onclick = function(){ markRead(Number(this.getAttribute('data-id'))); };
   }
 }
 
 function markRead(id){
   if (!st.notifications) return;
   for (var i = 0; i < st.notifications.length; i++){
-    if (st.notifications[i].id === id){
-      st.notifications[i].read = true;
-      break;
-    }
+    if (st.notifications[i].id === id){ st.notifications[i].read = true; break; }
   }
   saveToServer();
   renderNotifications();
@@ -1043,13 +753,12 @@ function initNotifications(){
     if (panel) panel.classList.remove('on');
     if (overlay) overlay.classList.remove('on');
   }
-
   if (overlay) overlay.onclick = closePanel;
   if (closeBtn) closeBtn.onclick = closePanel;
 }
-/* ========== PRICE CHARTS + RECENT TX ========== */
+
+/* ========== CHARTS ========== */
 function loadCharts(){
-  // CoinGecko — история цен за 7 дней
   fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=7')
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -1061,7 +770,7 @@ function loadCharts(){
         renderBalanceChart();
       }
     })
-    .catch(function(e){ console.error('BTC chart:', e); });
+    .catch(function(){});
 
   fetch('https://api.coingecko.com/api/v3/coins/ethereum/market_chart?vs_currency=usd&days=7')
     .then(function(r){ return r.json(); })
@@ -1074,49 +783,36 @@ function loadCharts(){
         renderBalanceChart();
       }
     })
-    .catch(function(e){ console.error('ETH chart:', e); });
+    .catch(function(){});
 }
 
 function drawChart(elId, prices, color){
   var el = document.getElementById(elId);
   if (!el || !prices || prices.length < 2) return;
-
-  var w = 200;
-  var h = 42;
-  var pad = 4;
-
+  var w = 200, h = 42, pad = 4;
   var min = Math.min.apply(null, prices);
   var max = Math.max.apply(null, prices);
   var range = max - min || 1;
-
   var points = [];
   for (var i = 0; i < prices.length; i++){
     var x = pad + (i / (prices.length - 1)) * (w - pad * 2);
     var y = pad + (1 - (prices[i] - min) / range) * (h - pad * 2);
     points.push(x.toFixed(1) + ',' + y.toFixed(1));
   }
-
   var linePath = 'M' + points.join(' L');
-  // Закрываем область заливки до конца
-var lastPoint = points[points.length - 1];
-var lastX = lastPoint.split(',')[0];
-var firstPoint = points[0];
-var firstX = firstPoint.split(',')[0];
-var fillPath = linePath + 
-  ' L' + lastX + ',' + (h - pad) + 
-  ' L' + firstX + ',' + (h - pad) + ' Z';
-
+  var lastPoint = points[points.length - 1];
+  var lastX = lastPoint.split(',')[0];
+  var firstPoint = points[0];
+  var firstX = firstPoint.split(',')[0];
+  var fillPath = linePath + ' L' + lastX + ',' + (h - pad) + ' L' + firstX + ',' + (h - pad) + ' Z';
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-    '<defs>' +
-      '<linearGradient id="grad_' + elId + '" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.55"/>' +
-        '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
-      '</linearGradient>' +
-    '</defs>' +
+    '<defs><linearGradient id="grad_' + elId + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.55"/>' +
+      '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
+    '</linearGradient></defs>' +
     '<path d="' + fillPath + '" fill="url(#grad_' + elId + ')"/>' +
     '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 4px ' + color + ')"/>' +
   '</svg>';
-
   el.innerHTML = svg;
 }
 
@@ -1134,34 +830,23 @@ var depPendingTx = null;
 var depAnswers = { source: null, origin: null };
 
 function openDepositVerification(tx, cryptoAmt, symbol, usdValue){
-  depPendingTx = {
-    tx: tx,
-    cryptoAmt: cryptoAmt,
-    symbol: symbol,
-    usdValue: usdValue
-  };
+  depPendingTx = { tx: tx, cryptoAmt: cryptoAmt, symbol: symbol, usdValue: usdValue };
   depAnswers = { source: null, origin: null };
 
-  // Устанавливаем суммы
   var cryptoEl = document.getElementById('depAmountCrypto');
   var usdEl = document.getElementById('depAmountUsd');
   if (cryptoEl) cryptoEl.textContent = '+ ' + cryptoAmt.toFixed(8) + ' ' + symbol;
   if (usdEl) usdEl.textContent = '≈ ' + fmtCurrency(usdValue);
 
-  // Сброс чекбокса
   var check = document.getElementById('depConfirmCheck');
   if (check) check.checked = false;
   var btnConfirm = document.getElementById('depBtnConfirm');
   if (btnConfirm) btnConfirm.disabled = true;
 
-  // Показать шаг 0
   showDepStep(0);
-
-  // Показать модалку
   var overlay = document.getElementById('depVerifyOverlay');
   if (overlay) overlay.classList.add('on');
 
-  // Звук
   playTone(660, 0.15, 'sine', 0.3);
   setTimeout(function(){ playTone(880, 0.15, 'sine', 0.25); }, 150);
 }
@@ -1181,7 +866,6 @@ function showDepStep(n){
 }
 
 function initDepositVerification(){
-  // Кнопка Start (шаг 0)
   var btnStart = document.getElementById('depBtnStart');
   if (btnStart){
     btnStart.onclick = function(){
@@ -1189,21 +873,15 @@ function initDepositVerification(){
       showDepStep(1);
     };
   }
-
-  // Опции на шагах 1 и 2
   var allOpts = document.querySelectorAll('.dep-opt');
   for (var i = 0; i < allOpts.length; i++){
     allOpts[i].onclick = function(){
       var step = this.closest('.dep-step');
       var value = this.getAttribute('data-value');
-
-      // Убираем .on у всех в этом шаге
       var siblings = step.querySelectorAll('.dep-opt');
       for (var j = 0; j < siblings.length; j++) siblings[j].classList.remove('on');
       this.classList.add('on');
-
       playTone(880, 0.08, 'sine', 0.25);
-
       if (step.id === 'depStep1'){
         depAnswers.source = value;
         setTimeout(function(){ showDepStep(2); }, 300);
@@ -1213,31 +891,16 @@ function initDepositVerification(){
       }
     };
   }
-
-  // Checkbox подтверждения
   var check = document.getElementById('depConfirmCheck');
   var btnConfirm = document.getElementById('depBtnConfirm');
   if (check && btnConfirm){
-    check.onchange = function(){
-      btnConfirm.disabled = !this.checked;
-    };
+    check.onchange = function(){ btnConfirm.disabled = !this.checked; };
   }
-
-  // Кнопка Confirm (шаг 3)
   if (btnConfirm){
-    btnConfirm.onclick = function(){
-      if (!depPendingTx) return;
-      finalizeDeposit();
-    };
+    btnConfirm.onclick = function(){ if (depPendingTx) finalizeDeposit(); };
   }
-
-  // Кнопка Done (шаг 4)
   var btnDone = document.getElementById('depBtnDone');
-  if (btnDone){
-    btnDone.onclick = function(){
-      closeDepositVerification();
-    };
-  }
+  if (btnDone) btnDone.onclick = closeDepositVerification;
 }
 
 function finalizeDeposit(){
@@ -1247,12 +910,10 @@ function finalizeDeposit(){
   var symbol = depPendingTx.symbol;
   var credit = depPendingTx.usdValue;
 
-  // Зачисляем в state
   st.usd += credit;
   if (symbol === 'BTC') st.btc += cryptoAmt;
   else if (symbol === 'ETH') st.eth += cryptoAmt;
 
-  // Добавляем транзакцию
   st.txs.unshift({
     date: now(),
     ts: Date.now(),
@@ -1262,14 +923,9 @@ function finalizeDeposit(){
     hash: tx.hash,
     crypto: cryptoAmt,
     symbol: symbol,
-    verification: {
-      source: depAnswers.source,
-      origin: depAnswers.origin,
-      confirmedAt: Date.now()
-    }
+    verification: { source: depAnswers.source, origin: depAnswers.origin, confirmedAt: Date.now() }
   });
 
-  // Сохраняем ответы отдельно для отчётности
   if (!st.depositVerifications) st.depositVerifications = [];
   st.depositVerifications.push({
     txHash: tx.hash,
@@ -1281,16 +937,9 @@ function finalizeDeposit(){
     completedAt: Date.now()
   });
 
-  // Welcome bonus $5 при первом депозите
   if (!st.welcomeBonusUsed){
     st.usd += 5;
-    st.txs.unshift({
-      date: now(),
-      ts: Date.now(),
-      desc: 'Welcome bonus',
-      amt: 5,
-      status: 'Completed'
-    });
+    st.txs.unshift({ date: now(), ts: Date.now(), desc: 'Welcome bonus', amt: 5, status: 'Completed' });
     st.welcomeBonusUsed = true;
     addNotification('Welcome bonus: +$5 credited!', '🎁');
     setTimeout(function(){ toast('🎁 Welcome bonus: +$5!'); }, 800);
@@ -1299,7 +948,6 @@ function finalizeDeposit(){
   saveToServer();
   render();
 
-  // Показываем экран успеха
   var cryptoEl = document.getElementById('depSuccessCrypto');
   var usdEl = document.getElementById('depSuccessUsd');
   var balEl = document.getElementById('depNewBalance');
@@ -1308,13 +956,226 @@ function finalizeDeposit(){
   if (balEl) balEl.textContent = fmtCurrency(st.usd);
 
   showDepStep(4);
-
-  // Звук + конфетти
   playChime();
   spawnConfetti();
+  addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol, '✅');
+}
 
-  // Уведомление
-  addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol + ' (' + fmtCurrency(credit) + ')', '✅');
+/* ========== BALANCE CHART ========== */
+function renderBalanceChart(){
+  var wrap = document.getElementById('balanceChart');
+  var wrap2 = document.getElementById('balanceChartSecondary');
+  var current = document.getElementById('balanceCurrent');
+  if (!wrap && !wrap2) return;
+  if (current) current.textContent = fmtCurrency(st.usd);
+
+  var txs = st.txs || [];
+  var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
+
+  if (txs.length < 1){
+    var emptyHtml = '<div class="chart-empty"><div style="font-size:2rem;opacity:.4">📊</div><div>No activity yet</div><div style="font-size:.72rem;opacity:.7">Chart will appear after first transaction</div></div>';
+    if (wrap) wrap.innerHTML = emptyHtml;
+    if (wrap2) wrap2.innerHTML = emptyHtml;
+    return;
+  }
+
+  var days = 7;
+  var dayMs = 24 * 60 * 60 * 1000;
+  var nowT = Date.now();
+  var sorted = txs.slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+  var points = [];
+
+  var balanceHistory = st.balanceHistory || [];
+  if (balanceHistory.length > 2) {
+    balanceHistory.forEach(function(p) { points.push({ t: p.t, v: p.v }); });
+    points.push({ t: Date.now(), v: st.usd });
+  } else {
+    for (var d = 0; d <= days; d++) {
+      var dayT = nowT - (days - d) * dayMs;
+      var totalAtDay = 0;
+      for (var j = 0; j < sorted.length; j++) {
+        var txT = sorted[j].ts || created;
+        if (txT <= dayT) {
+          var tx = sorted[j];
+          if (tx.crypto && tx.symbol) {
+            var price = tx.symbol === 'ETH' ? (st.ethP || 0) : (st.btcP || 0);
+            totalAtDay += tx.crypto * price;
+          } else {
+            totalAtDay += (tx.amt || 0);
+          }
+        }
+      }
+      points.push({ t: dayT, v: totalAtDay });
+    }
+    points.push({ t: nowT, v: st.usd });
+  }
+
+  var w = 500, h = 180, pad = 50;
+  var minT, maxT;
+  var histForRange = st.balanceHistory || [];
+  if (histForRange.length > 2) {
+    minT = histForRange[0].t;
+    maxT = Date.now();
+    var minSpan = 5 * 60 * 1000;
+    if (maxT - minT < minSpan) minT = maxT - minSpan;
+  } else {
+    minT = nowT - days * dayMs;
+    maxT = nowT;
+  }
+
+  var minV = Infinity, maxV = -Infinity;
+  for (var k = 0; k < points.length; k++){
+    if (points[k].v < minV) minV = points[k].v;
+    if (points[k].v > maxV) maxV = points[k].v;
+  }
+  if (!isFinite(minV) || !isFinite(maxV)) { minV = 0; maxV = 1; }
+  if (maxV === minV) maxV = minV + 1;
+  var padV = (maxV - minV) * 0.15 || 1;
+  minV = minV - padV;
+  maxV = maxV + padV;
+
+  var svgPoints = [];
+  for (var m = 0; m < points.length; m++){
+    var p = points[m];
+    var x = pad + ((p.t - minT) / (maxT - minT)) * (w - pad * 2);
+    var y = pad + (1 - (p.v - minV) / (maxV - minV)) * (h - pad * 2);
+    if (x < pad) x = pad;
+    if (x > w - pad) x = w - pad;
+    svgPoints.push(x.toFixed(1) + ',' + y.toFixed(1));
+  }
+
+  function smoothPath(pts) {
+    if (pts.length < 2) return 'M' + pts.join(' ');
+    var d = 'M' + pts[0];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = i === 0 ? pts[0].split(',') : pts[i - 1].split(',');
+      var p1 = pts[i].split(',');
+      var p2 = pts[i + 1].split(',');
+      var p3 = i + 2 < pts.length ? pts[i + 2].split(',') : pts[i + 1].split(',');
+      var x0 = parseFloat(p0[0]), y0 = parseFloat(p0[1]);
+      var x1 = parseFloat(p1[0]), y1 = parseFloat(p1[1]);
+      var x2 = parseFloat(p2[0]), y2 = parseFloat(p2[1]);
+      var x3 = parseFloat(p3[0]), y3 = parseFloat(p3[1]);
+      var cp1x = x1 + (x2 - x0) / 6;
+      var cp1y = y1 + (y2 - y0) / 6;
+      var cp2x = x2 - (x3 - x1) / 6;
+      var cp2y = y2 - (y3 - y1) / 6;
+      d += ' C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1) + ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1) + ' ' + x2 + ',' + y2;
+    }
+    return d;
+  }
+
+  var linePath = smoothPath(svgPoints);
+  var fillPath = linePath + ' L' + (w - pad) + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
+
+  var lastCoord = svgPoints[svgPoints.length - 1].split(',');
+  var pulseCircle = '<circle cx="' + lastCoord[0] + '" cy="' + lastCoord[1] + '" r="5" fill="#47dcff">' +
+    '<animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>' +
+  '</circle>';
+
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+    '<defs>' +
+      '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.55"/>' +
+        '<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.02"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
+        '<stop offset="0%" stop-color="#00d4ff"/>' +
+        '<stop offset="100%" stop-color="#a855f7"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    pulseCircle +
+  '</svg>';
+
+  if (wrap) wrap.innerHTML = svg;
+  if (wrap2) wrap2.innerHTML = svg;
+}
+
+/* ========== STATS ========== */
+function renderStats(){
+  var txs = st.txs || [];
+  var income = 0, spending = 0;
+  for (var i = 0; i < txs.length; i++){
+    var amt = txs[i].amt || 0;
+    if (amt > 0) income += amt;
+    else if (amt < 0) spending += Math.abs(amt);
+  }
+  var incomeEl = document.getElementById('statIncome');
+  if (incomeEl) incomeEl.textContent = fmtCurrency(income);
+  var spendEl = document.getElementById('statSpending');
+  if (spendEl) spendEl.textContent = fmtCurrency(spending);
+  var countEl = document.getElementById('statTxCount');
+  if (countEl) countEl.textContent = txs.length;
+  var daysEl = document.getElementById('statDays');
+  if (daysEl){
+    if (st.card && st.card.createdAt){
+      var days = Math.max(1, Math.ceil((Date.now() - st.card.createdAt) / (24 * 60 * 60 * 1000)));
+      daysEl.textContent = days;
+    } else {
+      daysEl.textContent = '1';
+    }
+  }
+  var now30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  var inc30 = 0, sp30 = 0, cnt30 = 0;
+  for (var k = 0; k < txs.length; k++) {
+    var t30 = txs[k].ts || (st.card && st.card.createdAt) || 0;
+    if (t30 >= now30) {
+      cnt30++;
+      var a30 = txs[k].amt || 0;
+      if (a30 > 0) inc30 += a30;
+      else if (a30 < 0) sp30 += Math.abs(a30);
+    }
+  }
+  var elInc30 = document.getElementById('statIncome30');
+  var elSp30 = document.getElementById('statSpending30');
+  var elCnt30 = document.getElementById('statTxCount');
+  if (elInc30) elInc30.textContent = inc30 > 0 ? '+' + fmtCurrency(inc30) : '—';
+  if (elSp30) elSp30.textContent = sp30 > 0 ? '-' + fmtCurrency(sp30) : '—';
+  if (elCnt30) elCnt30.textContent = cnt30;
+
+  var sumDeposits = 0;
+  for (var p = 0; p < txs.length; p++) {
+    if (txs[p].amt > 0) sumDeposits += txs[p].amt;
+  }
+  var pnlEl = document.getElementById('pnlLine');
+  var pnlIconEl = document.getElementById('pnlIcon');
+  var pnlValueEl = document.getElementById('pnlValue');
+  var pnlPctEl = document.getElementById('pnlPct');
+  if (pnlEl && sumDeposits > 0) {
+    var pnl = st.usd - sumDeposits;
+    var pnlPct = (pnl / sumDeposits) * 100;
+    pnlEl.style.display = 'block';
+    var pnlExplainEl = document.getElementById('pnlExplain');
+    if (pnlExplainEl) {
+      pnlExplainEl.style.display = 'block';
+      if (pnl < 0) {
+        pnlExplainEl.textContent = 'ℹ Your crypto value decreased since deposit';
+        pnlExplainEl.style.color = '#ff5470';
+      } else if (pnl > 0) {
+        pnlExplainEl.textContent = 'ℹ Your crypto value increased since deposit 🎉';
+        pnlExplainEl.style.color = '#00e08a';
+      } else {
+        pnlExplainEl.textContent = 'ℹ Your crypto value is unchanged';
+        pnlExplainEl.style.color = 'var(--mut)';
+      }
+    }
+    pnlEl.className = 'pnl-line ' + (pnl >= 0 ? 'positive' : 'negative');
+    if (pnlIconEl) pnlIconEl.textContent = pnl >= 0 ? '▲' : '▼';
+    if (pnlValueEl) pnlValueEl.textContent = (pnl >= 0 ? '+' : '') + fmtCurrency(pnl);
+    if (pnlPctEl) pnlPctEl.textContent = '(' + (pnl >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)';
+  } else if (pnlEl) {
+    pnlEl.style.display = 'none';
+    var pnlExplainEl2 = document.getElementById('pnlExplain');
+    if (pnlExplainEl2) pnlExplainEl2.style.display = 'none';
+  }
+}
+
+function initWelcomeBlock(){
+  var welcomeEl = document.getElementById('welcomeBlock');
+  if (!welcomeEl) return;
+  welcomeEl.style.display = (st.txs && st.txs.length > 0) ? 'none' : '';
 }
 /* ========== WITHDRAWALS ========== */
 function openWithdraw() {
@@ -1322,37 +1183,54 @@ function openWithdraw() {
   if (!modal) return;
   var avail = document.getElementById('wdAvailable');
   if (avail) avail.textContent = fmtCurrency(st.usd);
-  document.getElementById('wdAmount').value = '';
-  document.getElementById('wdError').style.display = 'none';
-  document.getElementById('wdMethod').value = 'iban';
-   wdSwitchMethod();
+  var amtIn = document.getElementById('wdAmount');
+  if (amtIn) amtIn.value = '';
+  var errIn = document.getElementById('wdError');
+  if (errIn) errIn.style.display = 'none';
+  var mIn = document.getElementById('wdMethod');
+  if (mIn) mIn.value = 'iban';
+  wdSwitchMethod();
   modal.style.display = 'flex';
 
-  // Автоформат полей
   var expEl = document.getElementById('wdCardExpiry');
   var numEl = document.getElementById('wdCardNumber');
   if (expEl && !expEl.dataset.fmt) { attachExpiryFormatter(expEl); expEl.dataset.fmt = '1'; }
   if (numEl && !numEl.dataset.fmt) { attachCardFormatter(numEl); numEl.dataset.fmt = '1'; }
 }
+
 function closeWithdraw() {
   var modal = document.getElementById('withdrawModal');
   if (modal) modal.style.display = 'none';
 }
+
 function wdSwitchMethod() {
-  var m = document.getElementById('wdMethod').value;
-  document.getElementById('wdFieldsIban').style.display = (m === 'iban') ? 'block' : 'none';
-  document.getElementById('wdFieldsCard').style.display = (m === 'card') ? 'block' : 'none';
-  document.getElementById('wdFieldsCrypto').style.display = (m === 'crypto') ? 'block' : 'none';
+  var mEl = document.getElementById('wdMethod');
+  if (!mEl) return;
+  var m = mEl.value;
+  var f1 = document.getElementById('wdFieldsIban');
+  var f2 = document.getElementById('wdFieldsCard');
+  var f3 = document.getElementById('wdFieldsCrypto');
+  if (f1) f1.style.display = (m === 'iban') ? 'block' : 'none';
+  if (f2) f2.style.display = (m === 'card') ? 'block' : 'none';
+  if (f3) f3.style.display = (m === 'crypto') ? 'block' : 'none';
   if (m === 'crypto') wdSwitchCryptoDest();
 }
+
 function wdSwitchCryptoDest() {
-  var d = document.getElementById('wdCryptoDest').value;
-  document.getElementById('wdMemoWrap').style.display = (d === 'external') ? 'block' : 'none';
+  var dEl = document.getElementById('wdCryptoDest');
+  if (!dEl) return;
+  var mEl = document.getElementById('wdMemoWrap');
+  if (mEl) mEl.style.display = (dEl.value === 'external') ? 'block' : 'none';
 }
+
 function submitWithdraw() {
-  var amount = parseFloat(document.getElementById('wdAmount').value) || 0;
-  var method = document.getElementById('wdMethod').value;
+  var amountEl = document.getElementById('wdAmount');
+  var methodEl = document.getElementById('wdMethod');
   var errEl = document.getElementById('wdError');
+  if (!amountEl || !methodEl || !errEl) return;
+
+  var amount = parseFloat(amountEl.value) || 0;
+  var method = methodEl.value;
   function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
   errEl.style.display = 'none';
 
@@ -1373,61 +1251,49 @@ function submitWithdraw() {
   };
 
   if (method === 'iban') {
-    var name = (document.getElementById('wdIbanName').value || '').trim();
-    var iban = (document.getElementById('wdIbanNumber').value || '').trim();
-    var swift = (document.getElementById('wdIbanSwift').value || '').trim();
-    var bank = (document.getElementById('wdIbanBank').value || '').trim();
-    var country = (document.getElementById('wdIbanCountry').value || '').trim();
+    var name = (document.getElementById('wdIbanName')?.value || '').trim();
+    var iban = (document.getElementById('wdIbanNumber')?.value || '').trim();
+    var swift = (document.getElementById('wdIbanSwift')?.value || '').trim();
+    var bank = (document.getElementById('wdIbanBank')?.value || '').trim();
+    var country = (document.getElementById('wdIbanCountry')?.value || '').trim();
     if (name.length < 2) return showErr('Enter recipient name');
     if (iban.replace(/\s/g, '').length < 15) return showErr('Enter valid IBAN');
     if (swift.length < 6) return showErr('Enter valid SWIFT / BIC');
     wd.details = { name: name, iban: iban, swift: swift, bank: bank, country: country };
   } else if (method === 'card') {
-    var cn = (document.getElementById('wdCardName').value || '').trim();
-    var num = (document.getElementById('wdCardNumber').value || '').trim();
-    var exp = (document.getElementById('wdCardExpiry').value || '').trim();
+    var cn = (document.getElementById('wdCardName')?.value || '').trim();
+    var num = (document.getElementById('wdCardNumber')?.value || '').trim();
+    var exp = (document.getElementById('wdCardExpiry')?.value || '').trim();
     if (cn.length < 2) return showErr('Enter card holder name');
     if (num.replace(/\s/g, '').length < 16) return showErr('Enter valid card number');
     if (!/^\d{2}\/\d{2}$/.test(exp)) return showErr('Expiry must be MM/YY');
     wd.details = { cardName: cn, cardNumber: num, expiry: exp };
   } else if (method === 'crypto') {
-    var dest = document.getElementById('wdCryptoDest').value;
-    var net = document.getElementById('wdCryptoNetwork').value;
-    var coin = document.getElementById('wdCryptoCoin').value;
-    var addr = (document.getElementById('wdCryptoAddress').value || '').trim();
-    var memo = (document.getElementById('wdCryptoMemo').value || '').trim();
+    var dest = document.getElementById('wdCryptoDest')?.value;
+    var net = document.getElementById('wdCryptoNetwork')?.value;
+    var coin = document.getElementById('wdCryptoCoin')?.value;
+    var addr = (document.getElementById('wdCryptoAddress')?.value || '').trim();
+    var memo = (document.getElementById('wdCryptoMemo')?.value || '').trim();
     if (addr.length < 10) return showErr('Enter valid wallet address');
     wd.details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
   }
 
-    if (!st.withdrawals) st.withdrawals = [];
-    st.withdrawals.unshift(wd);
+  if (!st.withdrawals) st.withdrawals = [];
+  st.withdrawals.unshift(wd);
+  closeWithdraw();
+  if (typeof render === 'function') render();
+  showWithdrawStatus(method, amount);
 
-    closeWithdraw();
-    if (typeof render === 'function') render();
-
-    showWithdrawStatus(method, amount);
-
-    // ЯВНО СОХРАНЯЕМ НА СЕРВЕР
-    var token = getSessionToken();
-    if (token) {
-      var email = window.adminViewingEmail || localStorage.getItem('user_email');
-      console.log('[submitWithdraw] saving. email:', email, 'wd:', st.withdrawals.length);
-      fetch(WORKER_LOGIN_URL + '?action=setUserState', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        console.log('[submitWithdraw] SAVED:', d);
-      })
-      .catch(function(e){ console.error('[submitWithdraw] save failed:', e); });
-    } else {
-      console.warn('[submitWithdraw] NO TOKEN');
-    }
+  var token = getSessionToken();
+  if (token) {
+    fetch(WORKER_LOGIN_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
+    }).catch(function(){});
   }
-/* ========== WITHDRAW STATUS ANIMATION ========== */
+}
+
 function showWithdrawStatus(method, amount) {
   var modal = document.getElementById('txStatus');
   var icon = document.getElementById('txStatusIcon');
@@ -1436,653 +1302,72 @@ function showWithdrawStatus(method, amount) {
   var step1 = document.getElementById('txStep1');
   var step2 = document.getElementById('txStep2');
   var step3 = document.getElementById('txStep3');
-
   if (!modal) return;
 
   modal.style.display = 'flex';
   modal.classList.add('on');
-  icon.className = 'tx-status-icon processing';
-  icon.innerHTML = '<div class="tx-spinner"></div>';
-  title.textContent = 'Submitting request...';
-  desc.textContent = 'Creating your withdrawal request for ' + fmtCurrency(amount);
-  step1.className = 'tx-status-step done';
-  step2.className = 'tx-status-step';
-  step3.className = 'tx-status-step';
+  if (icon) { icon.className = 'tx-status-icon processing'; icon.innerHTML = '<div class="tx-spinner"></div>'; }
+  if (title) title.textContent = 'Submitting request...';
+  if (desc) desc.textContent = 'Creating your withdrawal request for ' + fmtCurrency(amount);
+  if (step1) step1.className = 'tx-status-step done';
+  if (step2) step2.className = 'tx-status-step';
+  if (step3) step3.className = 'tx-status-step';
 
   setTimeout(function() {
-    icon.className = 'tx-status-icon verifying';
-    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-    title.textContent = 'Verifying details...';
-    desc.textContent = 'Checking your IBAN and recipient information.';
-    step2.className = 'tx-status-step done';
+    if (icon) { icon.className = 'tx-status-icon verifying'; icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'; }
+    if (title) title.textContent = 'Verifying details...';
+    if (desc) desc.textContent = 'Checking your IBAN and recipient information.';
+    if (step2) step2.className = 'tx-status-step done';
   }, 1500);
 
   setTimeout(function() {
-    icon.className = 'tx-status-icon review';
-    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-    title.textContent = 'Under review';
- desc.textContent = 'Your withdrawal is being processed. We will notify you once it is complete.';
-    step3.className = 'tx-status-step done';
+    if (icon) { icon.className = 'tx-status-icon review'; icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'; }
+    if (title) title.textContent = 'Under review';
+    if (desc) desc.textContent = 'Your withdrawal is being processed. We will notify you once it is complete.';
+    if (step3) step3.className = 'tx-status-step done';
   }, 3000);
 
   setTimeout(function() {
     modal.classList.remove('on');
-    setTimeout(function() {
-      modal.style.display = 'none';
-    }, 300);
+    setTimeout(function() { modal.style.display = 'none'; }, 300);
   }, 5500);
 }
 
-/* ========== DEPOSIT VERIFICATION ========== */
-var depPendingTx = null;
-var depAnswers = { source: null, origin: null };
-
-function openDepositVerification(tx, cryptoAmt, symbol, usdValue){
-  depPendingTx = {
-    tx: tx,
-    cryptoAmt: cryptoAmt,
-    symbol: symbol,
-    usdValue: usdValue
-  };
-  depAnswers = { source: null, origin: null };
-
-  var cryptoEl = document.getElementById('depAmountCrypto');
-  var usdEl = document.getElementById('depAmountUsd');
-  if (cryptoEl) cryptoEl.textContent = '+ ' + cryptoAmt.toFixed(8) + ' ' + symbol;
-  if (usdEl) usdEl.textContent = '≈ ' + fmtCurrency(usdValue);
-
-  var check = document.getElementById('depConfirmCheck');
-  if (check) check.checked = false;
-  var btnConfirm = document.getElementById('depBtnConfirm');
-  if (btnConfirm) btnConfirm.disabled = true;
-
-  showDepStep(0);
-
-  var overlay = document.getElementById('depVerifyOverlay');
-  if (overlay) overlay.classList.add('on');
-
-  playTone(660, 0.15, 'sine', 0.3);
-  setTimeout(function(){ playTone(880, 0.15, 'sine', 0.25); }, 150);
-}
-
-function closeDepositVerification(){
-  var overlay = document.getElementById('depVerifyOverlay');
-  if (overlay) overlay.classList.remove('on');
-  depPendingTx = null;
-  depAnswers = { source: null, origin: null };
-}
-
-function showDepStep(n){
-  var steps = document.querySelectorAll('.dep-step');
-  for (var i = 0; i < steps.length; i++) steps[i].classList.remove('on');
-  var target = document.getElementById('depStep' + n);
-  if (target) target.classList.add('on');
-}
-
-function initDepositVerification(){
-  var btnStart = document.getElementById('depBtnStart');
-  if (btnStart){
-    btnStart.onclick = function(){
-      playTone(880, 0.08, 'sine', 0.25);
-      showDepStep(1);
-    };
-  }
-
-  var allOpts = document.querySelectorAll('.dep-opt');
-  for (var i = 0; i < allOpts.length; i++){
-    allOpts[i].onclick = function(){
-      var step = this.closest('.dep-step');
-      var value = this.getAttribute('data-value');
-
-      var siblings = step.querySelectorAll('.dep-opt');
-      for (var j = 0; j < siblings.length; j++) siblings[j].classList.remove('on');
-      this.classList.add('on');
-
-      playTone(880, 0.08, 'sine', 0.25);
-
-      if (step.id === 'depStep1'){
-        depAnswers.source = value;
-        setTimeout(function(){ showDepStep(2); }, 300);
-      } else if (step.id === 'depStep2'){
-        depAnswers.origin = value;
-        setTimeout(function(){ showDepStep(3); }, 300);
-      }
-    };
-  }
-
-  var check = document.getElementById('depConfirmCheck');
-  var btnConfirm = document.getElementById('depBtnConfirm');
-  if (check && btnConfirm){
-    check.onchange = function(){
-      btnConfirm.disabled = !this.checked;
-    };
-  }
-
-  if (btnConfirm){
-    btnConfirm.onclick = function(){
-      if (!depPendingTx) return;
-      finalizeDeposit();
-    };
-  }
-
-  var btnDone = document.getElementById('depBtnDone');
-  if (btnDone){
-    btnDone.onclick = function(){
-      closeDepositVerification();
-    };
-  }
-}
-
-function finalizeDeposit(){
-  if (!depPendingTx) return;
-  var tx = depPendingTx.tx;
-  var cryptoAmt = depPendingTx.cryptoAmt;
-  var symbol = depPendingTx.symbol;
-  var credit = depPendingTx.usdValue;
-
-  st.usd += credit;
-  if (symbol === 'BTC') st.btc += cryptoAmt;
-  else if (symbol === 'ETH') st.eth += cryptoAmt;
-
-  st.txs.unshift({
-    date: now(),
-    ts: Date.now(),
-    desc: 'Crypto deposit — ' + cryptoAmt.toFixed(8) + ' ' + symbol + ' (' + tx.hash.slice(0, 10) + '…)',
-    amt: credit,
-    status: 'Processing',
-    hash: tx.hash,
-    crypto: cryptoAmt,
-    symbol: symbol,
-    verification: {
-      source: depAnswers.source,
-      origin: depAnswers.origin,
-      confirmedAt: Date.now()
-    }
-  });
-
-  if (!st.depositVerifications) st.depositVerifications = [];
-  st.depositVerifications.push({
-    txHash: tx.hash,
-    cryptoAmt: cryptoAmt,
-    symbol: symbol,
-    usdValue: credit,
-    source: depAnswers.source,
-    origin: depAnswers.origin,
-    completedAt: Date.now()
-  });
-
-  saveToServer();
-  render();
-
-  var cryptoEl = document.getElementById('depSuccessCrypto');
-  var usdEl = document.getElementById('depSuccessUsd');
-  var balEl = document.getElementById('depNewBalance');
-  if (cryptoEl) cryptoEl.textContent = '+ ' + cryptoAmt.toFixed(8) + ' ' + symbol;
-  if (usdEl) usdEl.textContent = '≈ ' + fmtCurrency(credit) + ' credited';
-  if (balEl) balEl.textContent = fmtCurrency(st.usd);
-
-  showDepStep(4);
-
-  playChime();
-  spawnConfetti();
-
-  addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol + ' (' + fmtCurrency(credit) + ')', '✅');
-}
-
-/* ========== BALANCE CHART ========== */
-function renderBalanceChart(){
-  var wrap = document.getElementById('balanceChart');
-  var wrap2 = document.getElementById('balanceChartSecondary');
-  var current = document.getElementById('balanceCurrent');
-  if (!wrap && !wrap2) return;
-
- if (current) current.textContent = fmtCurrency(st.usd);
-
-  var txs = st.txs || [];
-  var created = (st.card && st.card.createdAt) ? st.card.createdAt : Date.now();
-
-   if (txs.length < 1){
-    var emptyHtml = '<div class="chart-empty">' +
-      '<div style="font-size:2rem;opacity:.4">📊</div>' +
-      '<div>No activity yet</div>' +
-      '<div style="font-size:.72rem;opacity:.7">Balance chart will appear after your first transaction</div>' +
-    '</div>';
-    if (wrap) wrap.innerHTML = emptyHtml;
-    if (wrap2) wrap2.innerHTML = emptyHtml;
-    return;
-  }
-
-  var days = 7;
-  var dayMs = 24 * 60 * 60 * 1000;
-  var now = Date.now();
-
-  var sorted = txs.slice().sort(function(a, b){
-    return (a.ts || 0) - (b.ts || 0);
-  });
-
-  var points = [];
-  var running = 0;
-
-
-  // Считаем баланс на каждый день за 7 дней
-// Баланс = сумма депозитов до этого дня + (стоимость ETH на этот день)
-
-  // Проходим по 7 дням — считаем баланс на конец каждого дня
-  // Строим график из истории баланса (записанной каждые 10 сек)
-    var _userKey = (st.userId || (st.card && st.card.owner) || st.email || 'default');
-  var balanceHistory = st.balanceHistory || [];
-
-  if (balanceHistory.length > 2) {
-    // История есть — используем её
-    balanceHistory.forEach(function(p) {
-      points.push({ t: p.t, v: p.v });
-    });
-    // Финальная точка — текущий баланс
-    points.push({ t: Date.now(), v: st.usd });
-  } else {
-    // История пустая (клиент только зашёл) — используем старую логику по дням
-    for (var d = 0; d <= days; d++) {
-      var dayT = now - (days - d) * dayMs;
-      var totalAtDay = 0;
-      for (var j = 0; j < sorted.length; j++) {
-        var txT = sorted[j].ts || created;
-        if (txT <= dayT) {
-          var tx = sorted[j];
-          if (tx.crypto && tx.symbol) {
-            var price = tx.symbol === 'ETH' ? (st.ethP || 0) : (st.btcP || 0);
-            totalAtDay += tx.crypto * price;
-          } else {
-            totalAtDay += (tx.amt || 0);
-          }
-        }
-      }
-      points.push({ t: dayT, v: totalAtDay });
-    }
-    points.push({ t: now, v: st.usd });
-  }
-
-  var w = 500;
-  var h = 180;
-  var pad = 50;
-
-  // Если есть история — используем её реальный диапазон времени
-var minT, maxT;
-var histForRange = st.balanceHistory || [];
-if (histForRange.length > 2) {
-  minT = histForRange[0].t;
-  maxT = Date.now();
-  // Если история короткая — растягиваем на минимум 30 минут для красоты
-  var minSpan = 5 * 60 * 1000;
-  if (maxT - minT < minSpan) {
-    minT = maxT - minSpan;
-  }
-} else {
-  minT = now - days * dayMs;
-  maxT = now;
-}
-    // Авто-zoom: считаем реальный min/max по точкам + padding
-  var minV = Infinity;
-  var maxV = -Infinity;
-
-  for (var k = 0; k < points.length; k++){
-    if (points[k].v < minV) minV = points[k].v;
-    if (points[k].v > maxV) maxV = points[k].v;
-  }
-
-  if (!isFinite(minV) || !isFinite(maxV)) { minV = 0; maxV = 1; }
-  if (maxV === minV) { maxV = minV + 1; }
-
-  // Padding 15% от диапазона (минимум 1 USD)
-  var padV = (maxV - minV) * 0.15 || 1;
-  minV = minV - padV;
-  maxV = maxV + padV;
-
-  var svgPoints = [];
-  for (var m = 0; m < points.length; m++){
-    var p = points[m];
-    var x = pad + ((p.t - minT) / (maxT - minT)) * (w - pad * 2);
-    var y = pad + (1 - (p.v - minV) / (maxV - minV)) * (h - pad * 2);
-    if (x < pad) x = pad;
-    if (x > w - pad) x = w - pad;
-    svgPoints.push(x.toFixed(1) + ',' + y.toFixed(1));
-  }
-
-  // Сглаженная кривая (Catmull-Rom → Bezier)
-  function smoothPath(pts) {
-    if (pts.length < 2) return 'M' + pts.join(' ');
-    var d = 'M' + pts[0];
-    for (var i = 0; i < pts.length - 1; i++) {
-      var p0 = i === 0 ? pts[0].split(',') : pts[i - 1].split(',');
-      var p1 = pts[i].split(',');
-      var p2 = pts[i + 1].split(',');
-      var p3 = i + 2 < pts.length ? pts[i + 2].split(',') : pts[i + 1].split(',');
-      var x0 = parseFloat(p0[0]), y0 = parseFloat(p0[1]);
-      var x1 = parseFloat(p1[0]), y1 = parseFloat(p1[1]);
-      var x2 = parseFloat(p2[0]), y2 = parseFloat(p2[1]);
-      var x3 = parseFloat(p3[0]), y3 = parseFloat(p3[1]);
-      var cp1x = x1 + (x2 - x0) / 6;
-      var cp1y = y1 + (y2 - y0) / 6;
-      var cp2x = x2 - (x3 - x1) / 6;
-      var cp2y = y2 - (y3 - y1) / 6;
-      d += ' C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1) +
-           ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1) +
-           ' ' + x2 + ',' + y2;
-    }
-    return d;
-  }
-
-  var linePath = smoothPath(svgPoints);
-  var fillPath = linePath +
-    ' L' + (w - pad) + ',' + (h - pad) +
-    ' L' + pad + ',' + (h - pad) + ' Z';
-
-  var labelsHtml = '';
-  for (var d = 0; d < 4; d++){
-    var labelT = now - (days - d * (days / 3)) * dayMs;
-    var dt = new Date(labelT);
-    var label = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    labelsHtml += '<span>' + label + '</span>';
-  }
-
-    // Пульсирующая точка в конце графика
-  var lastCoord = svgPoints[svgPoints.length - 1].split(',');
-  var pulseCircle = '<circle cx="' + lastCoord[0] + '" cy="' + lastCoord[1] + '" r="5" fill="#47dcff" filter="drop-shadow(0 0 8px #47dcff)">' +
-    '<animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>' +
-    '<animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>' +
-  '</circle>';
-    // Подписи по Y (3 уровня)
-  var yGridHtml = '';
-  var yGridCount = 3;
-  for (var g = 0; g < yGridCount; g++) {
-    var frac = (g + 1) / (yGridCount + 1);
-    var yPos = pad + frac * (h - pad * 2);
-    var yVal = maxV - frac * (maxV - minV);
-    yGridHtml +=
-      '<line x1="' + pad + '" y1="' + yPos.toFixed(1) + '" ' +
-            'x2="' + (w - pad) + '" y2="' + yPos.toFixed(1) + '" ' +
-            'stroke="rgba(71, 220, 255, 0.1)" stroke-width="1" ' +
-            'stroke-dasharray="3 4"/>' +
-      '<text x="' + (pad - 2) + '" y="' + (yPos + 3).toFixed(1) + '" ' +
-            'fill="rgba(124, 156, 187, 0.7)" font-size="9" ' +
-            'text-anchor="end" font-family="system-ui, sans-serif">' +
-        fmtCurrency(yVal, true) +
-      '</text>';
-  }
-  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-    '<defs>' +
-      '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.55"/>' +
-      '<stop offset="40%" stop-color="#00d4ff" stop-opacity="0.25"/>' +
-      '<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.02"/>' +
-    '</linearGradient>' +
-          '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
-      '<stop offset="0%" stop-color="#00d4ff"/>' +
-      '<stop offset="50%" stop-color="#47dcff"/>' +
-      '<stop offset="100%" stop-color="#a855f7"/>' +
-    '</linearGradient>' +
-    '<filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">' +
-      '<feGaussianBlur stdDeviation="3" result="blur"/>' +
-      '<feMerge>' +
-        '<feMergeNode in="blur"/>' +
-        '<feMergeNode in="SourceGraphic"/>' +
-      '</feMerge>' +
-    '</filter>' +
-    '</defs>' +
-        yGridHtml +
-    '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
-    '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>' +
-    pulseCircle +
-    '</svg>' +
-  '<div class="balance-chart-labels">' + labelsHtml + '</div>';
-
-     if (wrap) {
-    wrap.style.transition = 'opacity .4s ease';
-    wrap.style.opacity = '0';
-    wrap.innerHTML = svg;
-    setTimeout(function(){ wrap.style.opacity = '1'; }, 50);
-    attachChartTooltip(wrap, points, minT, maxT, minV, maxV, w, h, pad);
-  }
-  if (wrap2) {
-    wrap2.style.transition = 'opacity .4s ease';
-    wrap2.style.opacity = '0';
-    wrap2.innerHTML = svg;
-    setTimeout(function(){ wrap2.style.opacity = '1'; }, 50);
-    attachChartTooltip(wrap2, points, minT, maxT, minV, maxV, w, h, pad);
-  }
-}
-
-/* ========== CHART TOOLTIP ========== */
-function attachChartTooltip(container, points, minT, maxT, minV, maxV, w, h, pad) {
-  if (!container || !points || points.length < 2) return;
-
-  // Убираем старые тултипы
-  var oldTip = container.querySelector('.chart-tooltip');
-  var oldLine = container.querySelector('.chart-tooltip-line');
-  var oldDot = container.querySelector('.chart-tooltip-dot');
-  if (oldTip) oldTip.remove();
-  if (oldLine) oldLine.remove();
-  if (oldDot) oldDot.remove();
-
-  // Контейнер должен быть position: relative
-  var cs = getComputedStyle(container);
-  if (cs.position === 'static') container.style.position = 'relative';
-
-  // Создаём элементы
-  var tip = document.createElement('div');
-  tip.className = 'chart-tooltip';
-  tip.innerHTML = '<span class="tt-date"></span><span class="tt-value"></span>';
-
-  var line = document.createElement('div');
-  line.className = 'chart-tooltip-line';
-
-  var dot = document.createElement('div');
-  dot.className = 'chart-tooltip-dot';
-
-  container.appendChild(line);
-  container.appendChild(dot);
-  container.appendChild(tip);
-
-  var dateEl = tip.querySelector('.tt-date');
-  var valEl = tip.querySelector('.tt-value');
-
-  // Координаты точек в пикселях
-  var rect = container.getBoundingClientRect();
-  var scaleX = rect.width / w;
-  var scaleY = rect.height / h;
-
-  var pxPoints = points.map(function(p) {
-    var x = pad + ((p.t - minT) / (maxT - minT)) * (w - pad * 2);
-    var y = pad + (1 - (p.v - minV) / (maxV - minV)) * (h - pad * 2);
-    return { x: x, y: y, t: p.t, v: p.v };
-  });
-
-  function hideAll() {
-    tip.style.opacity = '0';
-    line.style.opacity = '0';
-    dot.style.opacity = '0';
-  }
-
-  container.addEventListener('mousemove', function(e) {
-    var mx = (e.clientX - rect.left) / scaleX;
-
-    // Ближайшая точка по X
-    var closest = pxPoints[0];
-    var minDist = Math.abs(pxPoints[0].x - mx);
-    for (var i = 1; i < pxPoints.length; i++) {
-      var d = Math.abs(pxPoints[i].x - mx);
-      if (d < minDist) { minDist = d; closest = pxPoints[i]; }
-    }
-
-    var cx = closest.x * scaleX;
-    var cy = closest.y * scaleY;
-
-    // Линия
-    line.style.left = cx + 'px';
-    line.style.height = (rect.height - cy) + 'px';
-    line.style.top = cy + 'px';
-    line.style.opacity = '1';
-
-    // Точка
-    dot.style.left = cx + 'px';
-    dot.style.top = cy + 'px';
-    dot.style.opacity = '1';
-
-    // Тултип
-    var dt = new Date(closest.t);
-    dateEl.textContent = dt.toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short'
-    }) + ', ' + dt.toLocaleTimeString('en-GB', {
-      hour: '2-digit', minute: '2-digit'
-    });
-    valEl.textContent = fmtCurrency(closest.v);
-
-    tip.style.left = cx + 'px';
-    tip.style.top = cy + 'px';
-    tip.style.opacity = '1';
-  });
-
-  container.addEventListener('mouseleave', hideAll);
-}
-/* ========== STATS ========== */
-function renderStats(){
-  var txs = st.txs || [];
-  var income = 0;
-  var spending = 0;
-
-  for (var i = 0; i < txs.length; i++){
-    var amt = txs[i].amt || 0;
-    if (amt > 0) income += amt;
-    else if (amt < 0) spending += Math.abs(amt);
-  }
-
-  var incomeEl = document.getElementById('statIncome');
-  if (incomeEl) incomeEl.textContent = fmtCurrency(income);
-
-  var spendEl = document.getElementById('statSpending');
-  if (spendEl) spendEl.textContent = fmtCurrency(spending);
-
-  var countEl = document.getElementById('statTxCount');
-  if (countEl) countEl.textContent = txs.length;
-
-  var daysEl = document.getElementById('statDays');
-  if (daysEl){
-    if (st.card && st.card.createdAt){
-      var days = Math.max(1, Math.ceil((Date.now() - st.card.createdAt) / (24 * 60 * 60 * 1000)));
-      daysEl.textContent = days;
-    } else {
-      daysEl.textContent = '1';
-    }
-  }
-    // Мини-статистика 30D
-  var now30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  var inc30 = 0, sp30 = 0, cnt30 = 0;
-  for (var k = 0; k < txs.length; k++) {
-    var t30 = txs[k].ts || (st.card && st.card.createdAt) || 0;
-    if (t30 >= now30) {
-      cnt30++;
-      var a30 = txs[k].amt || 0;
-      if (a30 > 0) inc30 += a30;
-      else if (a30 < 0) sp30 += Math.abs(a30);
-    }
-  }
-  var elInc30 = document.getElementById('statIncome30');
-  var elSp30 = document.getElementById('statSpending30');
-  var elCnt30 = document.getElementById('statTxCount');
-  if (elInc30) elInc30.textContent = inc30 > 0 ? '+' + fmtCurrency(inc30) : '—';
-  if (elSp30) elSp30.textContent = sp30 > 0 ? '-' + fmtCurrency(sp30) : '—';
-  if (elCnt30) elCnt30.textContent = cnt30;
-    // P&L относительно депозитов
-  var sumDeposits = 0;
-  for (var p = 0; p < txs.length; p++) {
-    var amt2 = txs[p].amt;
-    if (amt2 > 0) sumDeposits += amt2;
-  }
-  var pnlEl = document.getElementById('pnlLine');
-  var pnlIconEl = document.getElementById('pnlIcon');
-  var pnlValueEl = document.getElementById('pnlValue');
-  var pnlPctEl = document.getElementById('pnlPct');
-  if (pnlEl && sumDeposits > 0) {
-    var pnl = st.usd - sumDeposits;
-    var pnlPct = (pnl / sumDeposits) * 100;
-    pnlEl.style.display = 'block';
-        var pnlExplainEl = document.getElementById('pnlExplain');
-    if (pnlExplainEl) {
-      pnlExplainEl.style.display = 'block';
-      if (pnl < 0) {
-        pnlExplainEl.textContent = 'ℹ Your crypto value decreased since deposit';
-        pnlExplainEl.style.color = '#ff5470';
-      } else if (pnl > 0) {
-        pnlExplainEl.textContent = 'ℹ Your crypto value increased since deposit 🎉';
-        pnlExplainEl.style.color = '#00e08a';
-      } else {
-        pnlExplainEl.textContent = 'ℹ Your crypto value is unchanged';
-        pnlExplainEl.style.color = 'var(--mut)';
-      }
-    }
-    pnlEl.className = 'pnl-line ' + (pnl >= 0 ? 'positive' : 'negative');
-    pnlIconEl.textContent = pnl >= 0 ? '▲' : '▼';
-    pnlValueEl.textContent = (pnl >= 0 ? '+' : '') + fmtCurrency(pnl);
-    pnlPctEl.textContent = '(' + (pnl >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)';
-    } else if (pnlEl) {
-    pnlEl.style.display = 'none';
-    var pnlExplainEl2 = document.getElementById('pnlExplain');
-    if (pnlExplainEl2) pnlExplainEl2.style.display = 'none';
-  }
-}
-
-function initWelcomeBlock(){
-  var welcomeEl = document.getElementById('welcomeBlock');
-  if (!welcomeEl) return;
-
-  if (st.txs && st.txs.length > 0){
-    welcomeEl.style.display = 'none';
-  } else {
-    welcomeEl.style.display = '';
-  }
-}
-
+/* ========== RECENT TX ========== */
 function renderRecentTx(){
   var listEl = document.getElementById('recentTxList');
   if (!listEl) return;
-
-    // Объединяем st.txs + st.withdrawals
   var txs = (st.txs || []).slice();
-  st.withdrawals.forEach(function(w){
-  txs.push({
-    ts: w.createdAt,
-    desc: (w.type === 'transfer' ? 'Transfer via ' : 'Withdrawal via ') + (w.method || 'iban').toUpperCase(),
-    amt: -w.amount,
-    status: w.status === 'pending' ? 'Under Review' :
-            w.status === 'approved' ? 'Completed' :
-            w.status === 'rejected' ? 'Rejected' :
-            w.status,
-    reason: w.reason || '',                       // ← ДОБАВИЛИ — причина reject
-    isWithdrawal: true,
-    isTransfer: w.type === 'transfer',
-    wdId: w.id
+  var withdrawals = st.withdrawals || [];
+  withdrawals.forEach(function(w){
+    txs.push({
+      ts: w.createdAt,
+      desc: (w.type === 'transfer' ? 'Transfer via ' : 'Withdrawal via ') + (w.method || 'iban').toUpperCase(),
+      amt: -w.amount,
+      status: w.status === 'pending' ? 'Under Review' :
+              w.status === 'approved' ? 'Completed' :
+              w.status === 'rejected' ? 'Rejected' : w.status,
+      reason: w.reason || '',
+      isWithdrawal: true,
+      isTransfer: w.type === 'transfer',
+      wdId: w.id
+    });
   });
-});
   txs.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
   txs = txs.slice(0, 5);
   if (txs.length === 0){
     listEl.innerHTML = '<div class="recent-tx-empty"><div style="font-size:2rem;opacity:.4;margin-bottom:8px">📭</div><div>No transactions yet</div></div>';
     return;
   }
-
   var html = '';
   for (var i = 0; i < txs.length; i++){
     var t = txs[i];
     var icon = '💳';
     var iconClass = 'card';
-    if (t.desc && t.desc.toLowerCase().indexOf('deposit') !== -1){
-      icon = '💰'; iconClass = 'deposit';
-    } else if (t.desc && t.desc.toLowerCase().indexOf('transfer') !== -1){
-      icon = '💸'; iconClass = 'transfer';
-    } else if (t.desc && t.desc.toLowerCase().indexOf('withdrawal') !== -1){
-     icon = '💸'; iconClass = 'withdrawal';
-    } else if (t.desc && t.desc.toLowerCase().indexOf('card') !== -1){
-      icon = '💳'; iconClass = 'card';
-    }
+    if (t.desc && t.desc.toLowerCase().indexOf('deposit') !== -1){ icon = '💰'; iconClass = 'deposit'; }
+    else if (t.desc && t.desc.toLowerCase().indexOf('transfer') !== -1){ icon = '💸'; iconClass = 'transfer'; }
+    else if (t.desc && t.desc.toLowerCase().indexOf('withdrawal') !== -1){ icon = '💸'; iconClass = 'withdrawal'; }
+    else if (t.desc && t.desc.toLowerCase().indexOf('card') !== -1){ icon = '💳'; iconClass = 'card'; }
 
     var amtClass = 'neutral';
     var amtText = '—';
@@ -2090,26 +1375,26 @@ function renderRecentTx(){
     else if (t.amt < 0){ amtClass = 'minus'; amtText = fmtCurrency(t.amt); }
 
     var badge = '';
-if (t.status === 'Completed') badge = '<div class="recent-tx-badge ok">✓ Completed</div>';
-else if (t.status === 'Processing') badge = '<div class="recent-tx-badge proc">⏳ Processing</div>';
-else if (t.status === 'Under Review') badge = '<div class="recent-tx-badge pend">⏳ Under review</div>';
-else if (t.status === 'Rejected') badge = '<div class="recent-tx-badge fail">✗ Rejected</div>';
+    if (t.status === 'Completed') badge = '<div class="recent-tx-badge ok">✓ Completed</div>';
+    else if (t.status === 'Processing') badge = '<div class="recent-tx-badge proc">⏳ Processing</div>';
+    else if (t.status === 'Under Review') badge = '<div class="recent-tx-badge pend">⏳ Under review</div>';
+    else if (t.status === 'Rejected') badge = '<div class="recent-tx-badge fail">✗ Rejected</div>';
 
     var timeStr = t.ts ? timeAgo(t.ts) : (t.date || '');
-
     var clickable = t.isWithdrawal && t.wdId;
-html += '<div class="recent-tx-item"' +
-  (clickable ? ' onclick="openWdDetails(\'' + t.wdId + '\')" style="cursor:pointer;"' : '') +
-  '>' +
-  '<div class="recent-tx-icon ' + iconClass + '">' + icon + '</div>' +
-  '<div class="recent-tx-info">' +
-    '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
-    '<div class="recent-tx-time">' + timeStr + '</div>' +
-    badge +
-    (t.reason ? '<div class="recent-tx-reason" style="font-size:11px;color:#ff8a8a;margin-top:4px;">Reason: ' + t.reason + '</div>' : '') +
-  '</div>' +
-  '<div class="recent-tx-amount ' + amtClass + '">' + amtText + '</div>' +
-'</div>';
+
+    html += '<div class="recent-tx-item"' +
+      (clickable ? ' onclick="openWdDetails(\'' + t.wdId + '\')" style="cursor:pointer;"' : '') +
+      '>' +
+      '<div class="recent-tx-icon ' + iconClass + '">' + icon + '</div>' +
+      '<div class="recent-tx-info">' +
+        '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
+        '<div class="recent-tx-time">' + timeStr + '</div>' +
+        badge +
+        (t.reason ? '<div class="recent-tx-reason" style="font-size:11px;color:#ff8a8a;margin-top:4px;">Reason: ' + t.reason + '</div>' : '') +
+      '</div>' +
+      '<div class="recent-tx-amount ' + amtClass + '">' + amtText + '</div>' +
+    '</div>';
   }
   listEl.innerHTML = html;
 }
@@ -2118,7 +1403,6 @@ function initRecentTx(){
   var viewAll = document.getElementById('viewAllTx');
   if (viewAll) viewAll.onclick = function(e){
     e.preventDefault();
-    // Переход на страницу Transactions
     var pgs = document.querySelectorAll('.pg');
     for (var i = 0; i < pgs.length; i++) pgs[i].classList.remove('on');
     var txPg = document.getElementById('tx');
@@ -2131,30 +1415,94 @@ function initRecentTx(){
     if (ttl) ttl.textContent = 'Transactions';
   };
 }
+
+/* ========== WITHDRAWAL DETAILS MODAL ========== */
+function openWdDetails(wdId) {
+  if (!wdId) return;
+  var wd = (st.withdrawals || []).find(function(w){ return w.id === wdId; });
+  if (!wd) { alert('Withdrawal not found'); return; }
+  var old = document.getElementById('wdModal');
+  if (old) old.remove();
+
+  function row(label, value) {
+    if (!value) return '';
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+      '<span style="color:#8b95a5;font-size:12px;">' + label + '</span>' +
+      '<span style="color:#e7edf5;font-size:12px;text-align:right;max-width:60%;word-break:break-all;">' + value + '</span>' +
+      '</div>';
+  }
+
+  var details = wd.details || {};
+  var detailsHtml = '';
+  if (wd.method === 'iban') {
+    detailsHtml = row('Recipient', details.name) + row('IBAN', details.iban) + row('SWIFT / BIC', details.swift) + row('Bank', details.bank) + row('Country', details.country);
+  } else if (wd.method === 'card') {
+    detailsHtml = row('Card holder', details.cardName) + row('Card number', details.cardNumber) + row('Expiry', details.expiry);
+  } else if (wd.method === 'crypto') {
+    detailsHtml = row('Network', details.network) + row('Coin', details.coin) + row('Address', details.address) + (details.memo ? row('Memo', details.memo) : '');
+  }
+
+  var statusInfo = {
+    pending:  { text: '⏳ Under review',  color: '#f6c344' },
+    approved: { text: '✅ Approved',       color: '#22c55e' },
+    rejected: { text: '✗ Rejected',        color: '#ff6b6b' }
+  }[wd.status] || { text: wd.status, color: '#8b95a5' };
+
+  var modal = document.createElement('div');
+  modal.id = 'wdModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:440px;width:100%;padding:24px;color:#e7edf5;font-family:inherit;max-height:80vh;overflow-y:auto;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">' +
+        '<div>' +
+          '<div style="font-size:12px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;">Withdrawal</div>' +
+          '<div style="font-size:22px;font-weight:700;margin-top:4px;">$' + wd.amount + '</div>' +
+          '<div style="font-size:12px;color:#8b95a5;margin-top:2px;">via ' + (wd.method || 'iban').toUpperCase() + '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'wdModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:22px;cursor:pointer;padding:0;line-height:1;">×</button>' +
+      '</div>' +
+      '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);margin-bottom:16px;">' +
+        '<span style="color:' + statusInfo.color + ';font-size:14px;font-weight:600;">' + statusInfo.text + '</span>' +
+      '</div>' +
+      (wd.status === 'rejected' && wd.reason ?
+        '<div style="padding:12px;border-radius:10px;background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.25);margin-bottom:16px;">' +
+          '<div style="font-size:11px;color:#ff8a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Reason</div>' +
+          '<div style="font-size:13px;color:#ffb4b4;">' + wd.reason + '</div>' +
+        '</div>' : '') +
+      (detailsHtml ?
+        '<div style="margin-bottom:16px;">' +
+          '<div style="font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>' +
+          detailsHtml +
+        '</div>' : '') +
+      '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">' +
+        row('Created', new Date(wd.createdAt).toLocaleString('en-GB')) +
+        (wd.reviewedAt ? row('Reviewed', new Date(wd.reviewedAt).toLocaleString('en-GB')) : '') +
+        row('Reference', 'NCB-' + String(wd.id).slice(-8).toUpperCase()) +
+      '</div>' +
+      '<button onclick="document.getElementById(\'wdModal\').remove()" style="margin-top:20px;width:100%;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Close</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if (e.target === modal) modal.remove(); });
+  document.addEventListener('keydown', function esc(e){
+    if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
+  });
+}
+
 /* ========== CARD DESIGN ========== */
 function applyCardDesign(){
   if (!st.card || !st.card.design) {
     var allCards = document.querySelectorAll('.pay');
-    for (var x = 0; x < allCards.length; x++) {
-      allCards[x].style.background = '';
-    }
+    for (var x = 0; x < allCards.length; x++) allCards[x].style.background = '';
     return;
   }
-
   var design = st.card.design || 'cosmic';
   var cards = document.querySelectorAll('.pay');
-
   for (var i = 0; i < cards.length; i++){
     var c = cards[i];
-    // Не трогаем превью в онбординге
     if (c.closest('.onb-preview') || c.closest('.onb-step')) continue;
-    c.classList.remove(
-      'design-cosmic','design-purple','design-silver','design-black',
-      'design-gold','design-ocean','design-mountain','design-aurora','design-city'
-    );
+    c.classList.remove('design-cosmic', 'design-purple', 'design-silver', 'design-black', 'design-gold', 'design-ocean', 'design-mountain', 'design-aurora', 'design-city');
     c.classList.add('design-' + design);
   }
-
   var hue = st.card && st.card.hue;
   if (hue !== null && hue !== undefined && hue !== '') {
     for (var h = 0; h < cards.length; h++) {
@@ -2188,11 +1536,10 @@ function initDesignPicker(){
       opts[i].onclick = function(){
         var d = this.getAttribute('data-design');
         setSelectedDesign(d);
-        updateOnbPreview();
+        if (typeof updateOnbPreview === 'function') updateOnbPreview();
       };
     }
   }
-
   var modalPicker = document.getElementById('designPickerModal');
   if (modalPicker){
     var mopts = modalPicker.querySelectorAll('.design-opt');
@@ -2204,33 +1551,26 @@ function initDesignPicker(){
       };
     }
   }
-
   var btnSave = document.getElementById('designSave');
-if (btnSave){
-  btnSave.onclick = function(){
-    var active = document.querySelector('#designPickerModal .design-opt.on');
-    if (!active){ toast('Please choose a design', true); return; }
-    var d = active.getAttribute('data-design');
-
-    document.getElementById('designMask').classList.remove('on');
-
-    openPasswordConfirm('Confirm changing card design to "' + d + '"', function(){
-      if (!st.card) st.card = {};
-      st.card.hue = null;
-      var allCards = document.querySelectorAll('.pay');
-      for (var i = 0; i < allCards.length; i++) {
-        allCards[i].style.background = '';
-      }
-      st.card.design = d;
-      saveToServer();
-      applyCardDesign();
-      renderCard();
-      toast('Card design updated');
-    });
-  };
-}
-  
-    // Hue slider — кастомный цвет карты
+  if (btnSave){
+    btnSave.onclick = function(){
+      var active = document.querySelector('#designPickerModal .design-opt.on');
+      if (!active){ toast('Please choose a design', true); return; }
+      var d = active.getAttribute('data-design');
+      document.getElementById('designMask').classList.remove('on');
+      openPasswordConfirm('Confirm changing card design to "' + d + '"', function(){
+        if (!st.card) st.card = {};
+        st.card.hue = null;
+        var allCards = document.querySelectorAll('.pay');
+        for (var i = 0; i < allCards.length; i++) allCards[i].style.background = '';
+        st.card.design = d;
+        saveToServer();
+        applyCardDesign();
+        renderCard();
+        toast('Card design updated');
+      });
+    };
+  }
   var hueSlider = document.getElementById('hueSlider');
   var huePreview = document.getElementById('huePreview');
   if (hueSlider) {
@@ -2254,22 +1594,14 @@ if (btnSave){
   }
 }
 
-/* ========== IBAN GENERATION ========== */
-
-/* ========== IBAN GENERATION BY COUNTRY ========== */
+/* ========== IBAN ========== */
 function genIbanByCountry(code) {
   var formats = {
-    SE: { len: 24, prefix: 'SE' },
-    NO: { len: 15, prefix: 'NO' },
-    DK: { len: 18, prefix: 'DK' },
-    FI: { len: 18, prefix: 'FI' },
-    DE: { len: 22, prefix: 'DE' },
-    FR: { len: 27, prefix: 'FR' },
-    ES: { len: 24, prefix: 'ES' },
-    IT: { len: 27, prefix: 'IT' },
-    NL: { len: 18, prefix: 'NL' },
-    GB: { len: 22, prefix: 'GB' },
-    US: { len: 24, prefix: 'US' }
+    SE: { len: 24, prefix: 'SE' }, NO: { len: 15, prefix: 'NO' },
+    DK: { len: 18, prefix: 'DK' }, FI: { len: 18, prefix: 'FI' },
+    DE: { len: 22, prefix: 'DE' }, FR: { len: 27, prefix: 'FR' },
+    ES: { len: 24, prefix: 'ES' }, IT: { len: 27, prefix: 'IT' },
+    NL: { len: 18, prefix: 'NL' }, GB: { len: 22, prefix: 'GB' }, US: { len: 24, prefix: 'US' }
   };
   var f = formats[code] || formats.SE;
   var digits = f.len - f.prefix.length;
@@ -2302,32 +1634,16 @@ function getBankByCountry(code) {
 
 var IBAN_DELAY_MS = 5 * 60 * 1000;
 
-function genIban(){
-  var s = 'SE';
-  for (var i = 0; i < 22; i++) s += Math.floor(Math.random() * 10);
-  return s;
-}
-
 function startIbanGeneration(){
-  if (st.user && st.user.iban){
-    renderIban();
-    return;
-  }
-
+  if (st.user && st.user.iban){ renderIban(); return; }
   if (!st.user) st.user = {};
   if (!st.user.ibanStartedAt){
     st.user.ibanStartedAt = Date.now();
     saveToServer();
   }
-
   var elapsed = Date.now() - st.user.ibanStartedAt;
   var remaining = IBAN_DELAY_MS - elapsed;
-
-  if (remaining <= 0){
-    generateIbanNow();
-    return;
-  }
-
+  if (remaining <= 0){ generateIbanNow(); return; }
   renderIban();
   setTimeout(generateIbanNow, remaining);
 }
@@ -2349,53 +1665,21 @@ function renderIban(){
   var pending = document.getElementById('ibanPending');
   var ready = document.getElementById('ibanReady');
   if (!pending || !ready) return;
-
   if (st.user && st.user.iban){
     pending.style.display = 'none';
     ready.style.display = 'block';
     var ibanEl = document.getElementById('myIban');
-    if (ibanEl){
-      ibanEl.textContent = st.user.iban.replace(/(.{4})/g, '$1 ').trim();
-    }
-        var swiftEl = document.getElementById('mySwift');
+    if (ibanEl) ibanEl.textContent = st.user.iban.replace(/(.{4})/g, '$1 ').trim();
+    var swiftEl = document.getElementById('mySwift');
     if (swiftEl && st.user.swift) swiftEl.textContent = st.user.swift;
     var bankEl = document.getElementById('myBank');
     if (bankEl && st.user.bank) bankEl.textContent = st.user.bank;
-        var titleEl = document.getElementById('ibanTitle');
-    if (titleEl) {
-      var c = st.user.country || 'SE';
-      var tt = {
-        'SE': 'Receive EUR & SEK by IBAN',
-        'NO': 'Receive EUR & NOK by IBAN',
-        'DK': 'Receive EUR & DKK by IBAN',
-        'FI': 'Receive EUR by IBAN',
-        'DE': 'Receive EUR by IBAN',
-        'FR': 'Receive EUR by IBAN',
-        'ES': 'Receive EUR by IBAN',
-        'IT': 'Receive EUR by IBAN',
-        'NL': 'Receive EUR by IBAN',
-        'AT': 'Receive EUR by IBAN',
-        'PT': 'Receive EUR by IBAN',
-        'IE': 'Receive EUR by IBAN',
-        'GB': 'Receive GBP by IBAN',
-        'PL': 'Receive PLN by IBAN',
-        'CZ': 'Receive CZK by IBAN',
-        'CH': 'Receive CHF by IBAN',
-        'HU': 'Receive HUF by IBAN',
-        'RO': 'Receive RON by IBAN',
-        'US': 'Receive USD by Wire',
-        'CA': 'Receive CAD by Wire',
-        'AU': 'Receive AUD by IBAN',
-        'JP': 'Receive JPY by Wire'
-      };
-      titleEl.textContent = tt[c] || 'Receive EUR & USD by IBAN';
-    }
     var countryEl = document.getElementById('myCountry');
     if (countryEl) {
       var names = { SE:'Sweden', NO:'Norway', DK:'Denmark', FI:'Finland', DE:'Germany', FR:'France', ES:'Spain', IT:'Italy', NL:'Netherlands', GB:'United Kingdom', US:'United States' };
       var code = st.user.country || 'SE';
-      var flags = { 'SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','DE':'🇩🇪','FR':'🇫🇷','ES':'🇪🇸','IT':'🇮🇹','NL':'🇳🇱','AT':'🇦🇹','PT':'🇵🇹','IE':'🇮🇪','GB':'🇬🇧','PL':'🇵🇱','CZ':'🇨🇿','CH':'🇨🇭','HU':'🇭🇺','RO':'🇷🇴','US':'🇺🇸','CA':'🇨🇦','AU':'🇦🇺','JP':'🇯🇵' };
-countryEl.textContent = (flags[code] || '') + ' ' + (names[code] || code) + ' (' + code + ')';
+      var flags = { SE:'🇸🇪', NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', DE:'🇩🇪', FR:'🇫🇷', ES:'🇪🇸', IT:'🇮🇹', NL:'🇳🇱', GB:'🇬🇧', US:'🇺🇸' };
+      countryEl.textContent = (flags[code] || '') + ' ' + (names[code] || code) + ' (' + code + ')';
     }
   } else {
     pending.style.display = 'block';
@@ -2404,13 +1688,7 @@ countryEl.textContent = (flags[code] || '') + ' ' + (names[code] || code) + ' ('
 }
 
 /* ========== VERIFICATION ========== */
-var verifyData = {
-  docType: 'Passport',
-  docFile: null,
-  selfieFile: null,
-  address: null,
-  startedAt: null
-};
+var verifyData = { docType: 'Passport', docFile: null, selfieFile: null, address: null, startedAt: null };
 
 function showVerifyScreen(){
   var screen = document.getElementById('verifyScreen');
@@ -2437,7 +1715,6 @@ function fileSizeStr(bytes){
 }
 
 function initVerification(){
-  // Типы документов
   var typeBtns = document.querySelectorAll('.vtype-btn');
   for (var i = 0; i < typeBtns.length; i++){
     typeBtns[i].onclick = function(){
@@ -2446,8 +1723,6 @@ function initVerification(){
       verifyData.docType = this.getAttribute('data-type');
     };
   }
-
-  // Загрузка документа
   var docInput = document.getElementById('docFile');
   if (docInput) docInput.onchange = function(){
     var f = this.files[0];
@@ -2459,8 +1734,6 @@ function initVerification(){
     document.getElementById('docFileSize').textContent = fileSizeStr(f.size);
     document.getElementById('verifyNext1').disabled = false;
   };
-
-  // Загрузка селфи
   var selfieInput = document.getElementById('selfieFile');
   if (selfieInput) selfieInput.onchange = function(){
     var f = this.files[0];
@@ -2472,64 +1745,33 @@ function initVerification(){
     document.getElementById('selfieFileSize').textContent = fileSizeStr(f.size);
     document.getElementById('verifyNext2').disabled = false;
   };
-
-  // Кнопка Continue (шаг 1)
   var btn1 = document.getElementById('verifyNext1');
-  if (btn1) btn1.onclick = function(){
-    playTone(660, 0.08, 'sine', 0.25);
-    showVerifyStep(2);
-  };
-
-  // Back (шаг 2)
+  if (btn1) btn1.onclick = function(){ playTone(660, 0.08, 'sine', 0.25); showVerifyStep(2); };
   var back2 = document.getElementById('verifyBack2');
   if (back2) back2.onclick = function(){ showVerifyStep(1); };
-
-  // Continue (шаг 2)
   var btn2 = document.getElementById('verifyNext2');
-  if (btn2) btn2.onclick = function(){
-    playTone(660, 0.08, 'sine', 0.25);
-    showVerifyStep(3);
-  };
-
-  // Back (шаг 3)
+  if (btn2) btn2.onclick = function(){ playTone(660, 0.08, 'sine', 0.25); showVerifyStep(3); };
   var back3 = document.getElementById('verifyBack3');
   if (back3) back3.onclick = function(){ showVerifyStep(2); };
-
-  // Submit (шаг 3) — старт проверки
   var btn3 = document.getElementById('verifyNext3');
   if (btn3) btn3.onclick = function(){
     var street = document.getElementById('vStreet').value.trim();
     var city = document.getElementById('vCity').value.trim();
     var zip = document.getElementById('vZip').value.trim();
     var country = document.getElementById('vCountry').value;
-
-    if (!street || !city || !zip){
-      toast('Please fill in all address fields', true);
-      return;
-    }
-
+    if (!street || !city || !zip){ toast('Please fill in all address fields', true); return; }
     verifyData.address = { street: street, city: city, zip: zip, country: country };
     startVerification();
   };
-
-  // Finish (шаг 5)
   var finish = document.getElementById('verifyFinish');
-  if (finish) finish.onclick = function(){
-    hideVerifyScreen();
-    // После верификации показать Dashboard
-    render();
-  };
+  if (finish) finish.onclick = function(){ hideVerifyScreen(); render(); };
 }
 
 function startVerification(){
   showVerifyStep(4);
-
-  // Уведомление о старте
   addNotification('Identity verification started', '🔍');
-
   var totalSeconds = 10;
   verifyData.startedAt = Date.now();
-
   var timerEl = document.getElementById('verifyTimer');
   var progressEl = document.getElementById('verifyProgressBar');
   var vstep1 = document.getElementById('vstep1');
@@ -2543,95 +1785,71 @@ function startVerification(){
     var mins = Math.floor(remaining / 60);
     var secs = remaining % 60;
     if (timerEl) timerEl.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
-
     var pct = Math.min(100, (elapsed / totalSeconds) * 100);
     if (progressEl) progressEl.style.width = pct + '%';
-
-    // Обновляем шаги
-    if (elapsed >= 5 && vstep2){
-      vstep2.classList.add('active');
-    }
+    if (elapsed >= 5 && vstep2) vstep2.classList.add('active');
     if (elapsed >= 30 && vstep2){
-      vstep2.classList.remove('active');
-      vstep2.classList.add('done');
+      vstep2.classList.remove('active'); vstep2.classList.add('done');
       if (vstep3) vstep3.classList.add('active');
     }
     if (elapsed >= 60 && vstep3){
-      vstep3.classList.remove('active');
-      vstep3.classList.add('done');
+      vstep3.classList.remove('active'); vstep3.classList.add('done');
       if (vstep4) vstep4.classList.add('active');
     }
     if (elapsed >= 90 && vstep4){
-      vstep4.classList.remove('active');
-      vstep4.classList.add('done');
+      vstep4.classList.remove('active'); vstep4.classList.add('done');
     }
-
     if (remaining <= 0){
-      // Проверка завершена
       if (st.user) st.user.verified = true;
-      if (!st.user) st.user = { verified: true };
+      else st.user = { verified: true };
       saveToServer();
-
-      // Уведомление
       addNotification('Identity verified successfully', '✅');
-
-      // Показываем успех
       var nameEl = document.getElementById('verifySuccessName');
       if (nameEl){
         var fn = (st.card && st.card.name) ? st.card.name.split(' ')[0] : 'there';
         nameEl.textContent = 'Congratulations, ' + fn + '!';
       }
       showVerifyStep(5);
-
-      // Звук успеха
       playChime();
-
-      // Конфетти
       spawnConfetti();
       return;
     }
-
     setTimeout(tick, 1000);
   }
-
   tick();
 }
 
-function checkVerificationNeeded(){
-  // Залогинен и верификации нет — показать
-  if (st.user && !st.user.verified){
-    showVerifyScreen();
-    return true;
-  }
-  return false;
-}
 /* ========== NAV ========== */
 var titles = {dash:'Dashboard',cards:'My Cards',assets:'Crypto Assets',tx:'Transactions',order:'Order New Card'};
-var mis = document.querySelectorAll('.mi');
-for (var i=0; i<mis.length; i++){
-  mis[i].onclick = function(){
-    var p = this.getAttribute('data-p');
-    var pgs = document.querySelectorAll('.pg');
-    for (var j=0; j<pgs.length; j++) pgs[j].classList.remove('on');
-    $(p).classList.add('on');
-    var ms = document.querySelectorAll('.mi');
-    for (var k=0; k<ms.length; k++) ms[k].classList.remove('on');
-    this.classList.add('on');
-        var ttlEl = document.getElementById('ttl');
-    if (ttlEl) ttlEl.textContent = titles[p];
-  };
+
+function initNav(){
+  var mis = document.querySelectorAll('.mi');
+  for (var i = 0; i < mis.length; i++){
+    mis[i].onclick = function(){
+      var p = this.getAttribute('data-p');
+      var pgs = document.querySelectorAll('.pg');
+      for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
+      var page = $(p);
+      if (page) page.classList.add('on');
+      var ms = document.querySelectorAll('.mi');
+      for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
+      this.classList.add('on');
+      var ttlEl = document.getElementById('ttl');
+      if (ttlEl && titles[p]) ttlEl.textContent = titles[p];
+    };
+  }
 }
 
 /* ========== RENDER ========== */
 function render(){
-  $('bal').textContent = fmtCurrency(st.usd);
-  $('balEur').textContent = eurF(st.usd * st.eurR);
-  $('btcB').textContent = st.btc.toFixed(8);
-  $('ethB').textContent = st.eth.toFixed(8);
-  $('aBtc').textContent = st.btc.toFixed(8);
-  $('aEth').textContent = st.eth.toFixed(8);
-  $('aBtcU').textContent = '≈ ' + fmt(st.btc * st.btcP);
-  $('aEthU').textContent = '≈ ' + fmt(st.eth * st.ethP);
+  var balEl = $('bal'); if (balEl) balEl.textContent = fmtCurrency(st.usd);
+  var balEurEl = $('balEur'); if (balEurEl) balEurEl.textContent = eurF(st.usd * st.eurR);
+  var btcBEl = $('btcB'); if (btcBEl) btcBEl.textContent = st.btc.toFixed(8) + ' BTC';
+  var ethBEl = $('ethB'); if (ethBEl) ethBEl.textContent = st.eth.toFixed(8) + ' ETH';
+  var aBtcEl = $('aBtc'); if (aBtcEl) aBtcEl.textContent = st.btc.toFixed(8);
+  var aEthEl = $('aEth'); if (aEthEl) aEthEl.textContent = st.eth.toFixed(8);
+  var aBtcUEl = $('aBtcU'); if (aBtcUEl) aBtcUEl.textContent = '≈ ' + fmt(st.btc * st.btcP);
+  var aEthUEl = $('aEthU'); if (aEthUEl) aEthUEl.textContent = '≈ ' + fmt(st.eth * st.ethP);
   renderTx();
   renderOrder();
   renderCard();
@@ -2652,12 +1870,13 @@ function badgeClass(s){
 
 function renderTx(){
   var b = $('txB');
+  if (!b) return;
   if (!st.txs || st.txs.length === 0){
-    b.innerHTML = '<tr><td colspan="4"><div class="empty"><svg viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg><div>No transactions yet</div></div></td></tr>';
+    b.innerHTML = '<tr><td colspan="4"><div class="empty"><div>No transactions yet</div></div></td></tr>';
     return;
   }
   var h = '';
-  for (var i=0; i<st.txs.length; i++){
+  for (var i = 0; i < st.txs.length; i++){
     var t = st.txs[i];
     var c = t.amt >= 0 ? 'var(--ok)' : 'var(--bad)';
     var s = t.amt >= 0 ? '+' : '';
@@ -2675,16 +1894,16 @@ function addTx(desc, amt, status){
 /* ========== TOAST ========== */
 function toast(msg, warn){
   var t = $('toast');
+  if (!t) return;
   var svg = t.querySelector('svg');
-  $('tMsg').textContent = msg;
+  var tMsg = $('tMsg');
+  if (tMsg) tMsg.textContent = msg;
   if (warn){
     t.style.borderLeftColor = 'var(--warn)';
-    svg.style.stroke = 'var(--warn)';
-    svg.innerHTML = '<path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>';
+    if (svg){ svg.style.stroke = 'var(--warn)'; svg.innerHTML = '<path d="M12 9v4M12 17h.01"/>'; }
   } else {
     t.style.borderLeftColor = 'var(--ok)';
-    svg.style.stroke = 'var(--ok)';
-    svg.innerHTML = '<path d="M20 6L9 17l-5-5"/>';
+    if (svg){ svg.style.stroke = 'var(--ok)'; svg.innerHTML = '<path d="M20 6L9 17l-5-5"/>'; }
   }
   t.classList.add('on');
   clearTimeout(tt);
@@ -2694,21 +1913,18 @@ function toast(msg, warn){
 /* ========== CARD HELPERS ========== */
 function genCardNumber(prefix){
   var s = prefix;
-  for (var i = 0; i < 12; i++) s += Math.floor(Math.random()*10);
+  for (var i = 0; i < 12; i++) s += Math.floor(Math.random() * 10);
   return s;
 }
-
 function fmtCard(num){
   var s = String(num);
   return s.replace(/(.{4})/g, '$1 ').trim();
 }
-
 function genCvv(){
   var s = '';
-  for (var i = 0; i < 3; i++) s += Math.floor(Math.random()*10);
+  for (var i = 0; i < 3; i++) s += Math.floor(Math.random() * 10);
   return s;
 }
-
 function genExpiry(){
   var d = new Date();
   var y = d.getFullYear() + 3;
@@ -2716,17 +1932,15 @@ function genExpiry(){
   var mm = m < 10 ? '0' + m : '' + m;
   return mm + '/' + String(y).slice(2);
 }
+
 function createVirtualCard(name, type, cur){
   var prefix = type === 'Mastercard' ? '5399' : '4921';
   var num = genCardNumber(prefix);
   var expiry = genExpiry();
   var cvv = genCvv();
-
   var hueSlider = document.getElementById('hueSlider');
   var hueValue = null;
-  if (hueSlider && hueSlider.dataset.touched === '1') {
-    hueValue = Number(hueSlider.value);
-  }
+  if (hueSlider && hueSlider.dataset.touched === '1') hueValue = Number(hueSlider.value);
 
   st.card = {
     num: num,
@@ -2744,27 +1958,25 @@ function createVirtualCard(name, type, cur){
   if (!st.user) st.user = {};
   st.user.country = st.card.country;
   saveToServer();
-  renderCard();   // ← сразу отрисовываем
+  renderCard();
 }
+
 function checkOnboarding(){
-  // Если не залогинен — не показываем онбординг
   var email = localStorage.getItem('user_email');
-  if (!email){
-    return false;
-  }
-  // Нет карты — онбординг
+  if (!email) return false;
   if (!st.card){
-    $('onboard').classList.add('on');
+    var onb = $('onboard');
+    if (onb) onb.classList.add('on');
     return true;
   }
-  $('onboard').classList.remove('on');
+  var onb = $('onboard');
+  if (onb) onb.classList.remove('on');
   return false;
 }
 
 function renderCard(){
-  // ===== НЕТ КАРТЫ =====
   if (!st.card){
-    if ($('cardDash')) $('cardDash').classList.add('frozen');
+    var cardDash = $('cardDash'); if (cardDash) cardDash.classList.add('frozen');
     if ($('cardNumDash')) $('cardNumDash').textContent = '— — — —   — — — —   — — — —   — — — —';
     if ($('cardNameDash')) $('cardNameDash').textContent = '—';
     if ($('cardExpDash')) $('cardExpDash').textContent = '—/—';
@@ -2783,63 +1995,53 @@ function renderCard(){
     return;
   }
 
-  // ===== ЕСТЬ КАРТА =====
   var c = st.card;
   var frozen = (c.status === 'Frozen');
   var numFormatted = fmtCard(c.num);
 
-  // Сеть (Visa / Mastercard)
   var networkHTML;
   if (c.type === 'Mastercard') {
-    networkHTML = '<svg viewBox="0 0 100 40">' +
-      '<circle cx="35" cy="20" r="14" fill="#EB001B"/>' +
-      '<circle cx="65" cy="20" r="14" fill="#F79E1B"/>' +
-      '<circle cx="50" cy="20" r="14" fill="#FF5F00" opacity="0.9"/>' +
-      '</svg>';
+    networkHTML = '<svg viewBox="0 0 100 40"><circle cx="35" cy="20" r="14" fill="#EB001B"/><circle cx="65" cy="20" r="14" fill="#F79E1B"/><circle cx="50" cy="20" r="14" fill="#FF5F00" opacity="0.9"/></svg>';
   } else {
-    networkHTML = '<svg viewBox="0 0 100 40">' +
-      '<text x="50" y="28" text-anchor="middle" font-family="Arial Black, Arial" font-size="22" font-weight="900" fill="currentColor" font-style="italic" letter-spacing="1">VISA</text>' +
-      '</svg>';
+    networkHTML = '<svg viewBox="0 0 100 40"><text x="50" y="28" text-anchor="middle" font-family="Arial Black, Arial" font-size="22" font-weight="900" fill="currentColor" font-style="italic" letter-spacing="1">VISA</text></svg>';
   }
   var net1 = document.getElementById('cardNetwork1');
   if (net1) net1.innerHTML = networkHTML;
   var net2 = document.getElementById('cardNetwork2');
   if (net2) net2.innerHTML = networkHTML;
 
-  // ===== DASHBOARD CARD =====
+  // Dashboard
   if ($('cardDash')) $('cardDash').classList.toggle('frozen', frozen);
   if ($('cardNumDash')) $('cardNumDash').textContent = numFormatted;
   if ($('cardNameDash')) $('cardNameDash').textContent = c.name || '—';
   if ($('cardExpDash')) $('cardExpDash').textContent = c.expiry || '—/—';
   if ($('cardTypeDash')) $('cardTypeDash').textContent = ((c.type || 'Visa') + ' ' + (c.cur || 'USD')).toUpperCase();
 
-  // ===== MY CARDS PAGE =====
+  // Full page
   if ($('cardFull')) $('cardFull').classList.toggle('frozen', frozen);
   if ($('cardNumFull')) $('cardNumFull').textContent = numFormatted;
   if ($('cardNameFull')) $('cardNameFull').textContent = c.name || '—';
   if ($('cardExpFull')) $('cardExpFull').textContent = c.expiry || '—/—';
   if ($('cardTypeFull')) $('cardTypeFull').textContent = ((c.type || 'Visa') + ' ' + (c.cur || 'USD')).toUpperCase();
 
-  // ===== CARD DETAILS (нижняя панель) =====
+  // Details panel
   if ($('detNum')) $('detNum').textContent = numFormatted;
   if ($('detCvv')) $('detCvv').textContent = cvvVisible ? (c.cvv || '●●●') : '●●●';
   if ($('detExp')) $('detExp').textContent = c.expiry || '—';
   if ($('detName')) $('detName').textContent = c.name || '—';
   if ($('detType')) $('detType').textContent = c.type || '—';
   if ($('detCur')) $('detCur').textContent = c.cur || '—';
-  if ($('detStatus')) {
+  if ($('detStatus')){
     $('detStatus').textContent = c.status || 'Active';
     $('detStatus').style.color = frozen ? 'var(--warn)' : 'var(--ok)';
   }
 
-  // ===== Кнопки =====
   if ($('btnShowCvv')) $('btnShowCvv').textContent = cvvVisible ? '🙈 Hide CVV' : '👁 Show CVV';
   if ($('btnFreeze')) $('btnFreeze').textContent = frozen ? '🔥 Unfreeze Card' : '❄ Freeze Card';
-
   applyCardDesign();
 }
 
-/* ========== MODAL ========== */
+/* ========== MODAL (Add / Transfer) ========== */
 function destHint(method){
   if (method === 'Bank Transfer (SEPA)')  return { show:true, label:'Recipient IBAN', ph:'XX00 0000 0000 0000 0000 00' };
   if (method === 'Bank Transfer (SWIFT)') return { show:false };
@@ -2850,12 +2052,14 @@ function destHint(method){
 }
 
 function refreshDest(){
-  var m = $('mMethod').value;
+  var mMethod = $('mMethod');
+  if (!mMethod) return;
+  var m = mMethod.value;
   var hint = destHint(m);
   var isAdd = (mode === 'add');
 
-  // Скрываем все блоки
-  $('mDestWrap').style.display = 'none';
+  var mDestWrap = $('mDestWrap');
+  if (mDestWrap) mDestWrap.style.display = 'none';
   var sepa = $('mTransferSepa');
   var swift = $('mTransferSwift');
   var card = $('mTransferCard');
@@ -2863,76 +2067,66 @@ function refreshDest(){
   if (swift) swift.style.display = 'none';
   if (card) card.style.display = 'none';
 
-  // Add Funds — только mDestWrap
   if (isAdd) {
     if (hint.show) {
-      $('mDestWrap').style.display = 'block';
-      $('mDest').value = '';
-      $('mDest').readOnly = false;
+      if (mDestWrap) mDestWrap.style.display = 'block';
+      var destEl = $('mDest');
+      var labelEl = $('mDestLabel');
+      if (destEl){ destEl.value = ''; destEl.readOnly = false; }
       if (m === 'Bitcoin (BTC)') {
-        $('mDestLabel').textContent = 'Send BTC to this address';
-        $('mDest').value = '19Ywxuhf1bdZzdV9Fsyfops6M2GLhe7';
-        $('mDest').readOnly = true;
+        if (labelEl) labelEl.textContent = 'Send BTC to this address';
+        if (destEl){ destEl.value = '19Ywxuhf1bdZzdV9Fsyfops6M2GLhe7'; destEl.readOnly = true; }
       } else if (m === 'Ethereum (ETH)') {
-        $('mDestLabel').textContent = 'Send ETH to this address';
-        $('mDest').value = '0xf8f7A7956AF7f06iD385f38357ef9c8a22CD60e97';
-        $('mDest').readOnly = true;
+        if (labelEl) labelEl.textContent = 'Send ETH to this address';
+        if (destEl){ destEl.value = '0xf8f7A7956AF7f06iD385f38357ef9c8a22CD60e97'; destEl.readOnly = true; }
       } else {
-        $('mDestLabel').textContent = 'Your reference (optional)';
-        $('mDest').placeholder = 'Enter reference';
+        if (labelEl) labelEl.textContent = 'Your reference (optional)';
+        if (destEl) destEl.placeholder = 'Enter reference';
       }
     }
     return;
   }
 
-  // Transfer — показываем блок по методу
-  if (m === 'Bank Transfer (SEPA)') {
-    if (sepa) sepa.style.display = 'block';
-  } else if (m === 'Bank Transfer (SWIFT)') {
-    if (swift) swift.style.display = 'block';
-  } else if (m === 'Credit Card') {
-    if (card) card.style.display = 'block';
-  } else {
-    // BTC / ETH
+  if (m === 'Bank Transfer (SEPA)') { if (sepa) sepa.style.display = 'block'; }
+  else if (m === 'Bank Transfer (SWIFT)') { if (swift) swift.style.display = 'block'; }
+  else if (m === 'Credit Card') { if (card) card.style.display = 'block'; }
+  else {
     if (hint.show) {
-      $('mDestWrap').style.display = 'block';
-      $('mDestLabel').textContent = hint.label;
-      $('mDest').placeholder = hint.ph;
-      $('mDest').readOnly = false;
-      $('mDest').value = '';
+      if (mDestWrap) mDestWrap.style.display = 'block';
+      var labelEl2 = $('mDestLabel');
+      var destEl2 = $('mDest');
+      if (labelEl2) labelEl2.textContent = hint.label;
+      if (destEl2){ destEl2.placeholder = hint.ph; destEl2.readOnly = false; destEl2.value = ''; }
     }
   }
 }
 
 function openModal(m){
   mode = m;
-  $('mTitle').textContent = m === 'add' ? 'Add Funds' : 'Transfer Funds';
-  $('mDesc').textContent = m === 'add'
-    ? 'Send crypto to the address below. We will detect your deposit automatically.'
-    : 'Enter amount and recipient details.';
-  $('mAmount').value = '';
-  $('mDest').value = '';
-
-  if (m === 'transfer'){ $('mMethod').value = 'Bank Transfer (SEPA)'; }
-  else { $('mMethod').value = 'Bitcoin (BTC)'; }
+  var titleEl = $('mTitle');
+  var descEl = $('mDesc');
+  if (titleEl) titleEl.textContent = m === 'add' ? 'Add Funds' : 'Transfer Funds';
+  if (descEl) descEl.textContent = m === 'add' ? 'Send crypto to the address below.' : 'Enter amount and recipient details.';
+  var amtEl = $('mAmount'); if (amtEl) amtEl.value = '';
+  var destEl = $('mDest'); if (destEl) destEl.value = '';
+  var methodEl = $('mMethod');
+  if (methodEl) methodEl.value = (m === 'transfer') ? 'Bank Transfer (SEPA)' : 'Bitcoin (BTC)';
   refreshDest();
-  $('mask').classList.add('on');
-  setTimeout(function(){ $('mAmount').focus(); }, 100);
-  if (m === 'add'){ startAutoCheck(); }
-
-  // Автоформат полей
-  var expEl2 = document.getElementById('mCardExp');
-  var numEl2 = document.getElementById('mCardNum');
-  if (expEl2 && !expEl2.dataset.fmt) { attachExpiryFormatter(expEl2); expEl2.dataset.fmt = '1'; }
-  if (numEl2 && !numEl2.dataset.fmt) { attachCardFormatter(numEl2); numEl2.dataset.fmt = '1'; }
+  var maskEl = $('mask'); if (maskEl) maskEl.classList.add('on');
+  setTimeout(function(){ if (amtEl) amtEl.focus(); }, 100);
+  if (m === 'add') startAutoCheck();
+  var expEl = document.getElementById('mCardExp');
+  var numEl = document.getElementById('mCardNum');
+  if (expEl && !expEl.dataset.fmt) { attachExpiryFormatter(expEl); expEl.dataset.fmt = '1'; }
+  if (numEl && !numEl.dataset.fmt) { attachCardFormatter(numEl); numEl.dataset.fmt = '1'; }
 }
 
 function closeModal(){
-  $('mask').classList.remove('on');
+  var maskEl = $('mask'); if (maskEl) maskEl.classList.remove('on');
   mode = null;
   stopAutoCheck();
 }
-/* ========== TRANSFER STATUS ANIMATION ========== */
+
 function showTxStatus(method, amount) {
   var modal = document.getElementById('txStatus');
   var icon = document.getElementById('txStatusIcon');
@@ -2941,55 +2135,46 @@ function showTxStatus(method, amount) {
   var step1 = document.getElementById('txStep1');
   var step2 = document.getElementById('txStep2');
   var step3 = document.getElementById('txStep3');
-
   if (!modal) return;
-
   modal.style.display = 'flex';
   modal.classList.add('on');
-  icon.className = 'tx-status-icon processing';
-  icon.innerHTML = '<div class="tx-spinner"></div>';
-  title.textContent = 'Processing transfer...';
-  desc.textContent = 'Sending ' + fmtCurrency(amount) + ' via ' + method;
-  step1.className = 'tx-status-step done';
-  step2.className = 'tx-status-step';
-  step3.className = 'tx-status-step';
-
-  setTimeout(function() {
-    icon.className = 'tx-status-icon verifying';
-    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-    title.textContent = 'Verifying transaction...';
-    desc.textContent = 'We are checking the recipient details.';
-    step2.className = 'tx-status-step done';
+  if (icon){ icon.className = 'tx-status-icon processing'; icon.innerHTML = '<div class="tx-spinner"></div>'; }
+  if (title) title.textContent = 'Processing transfer...';
+  if (desc) desc.textContent = 'Sending ' + fmtCurrency(amount) + ' via ' + method;
+  if (step1) step1.className = 'tx-status-step done';
+  if (step2) step2.className = 'tx-status-step';
+  if (step3) step3.className = 'tx-status-step';
+  setTimeout(function(){
+    if (icon){ icon.className = 'tx-status-icon verifying'; icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'; }
+    if (title) title.textContent = 'Verifying transaction...';
+    if (desc) desc.textContent = 'We are checking the recipient details.';
+    if (step2) step2.className = 'tx-status-step done';
   }, 1500);
-
-  setTimeout(function() {
-    icon.className = 'tx-status-icon review';
-    icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-    title.textContent = 'Under review';
-    desc.textContent = 'Your transfer is being reviewed. We will notify you within 24 hours.';
-    step3.className = 'tx-status-step done';
+  setTimeout(function(){
+    if (icon){ icon.className = 'tx-status-icon review'; icon.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'; }
+    if (title) title.textContent = 'Under review';
+    if (desc) desc.textContent = 'Your transfer is being reviewed.';
+    if (step3) step3.className = 'tx-status-step done';
   }, 3000);
-
-  setTimeout(function() {
+  setTimeout(function(){
     modal.classList.remove('on');
-    setTimeout(function() {
-      modal.style.display = 'none';
-    }, 300);
+    setTimeout(function(){ modal.style.display = 'none'; }, 300);
   }, 5000);
 }
 
-/* ========== CONFIRM (Add / Transfer) ========== */
 function isCrypto(m){ return m === 'Bitcoin (BTC)' || m === 'Ethereum (ETH)'; }
 
 function confirmModal(){
-  var a = Number($('mAmount').value);
-  var m = $('mMethod').value;
-
+  var amtEl = $('mAmount');
+  var methodEl = $('mMethod');
+  if (!amtEl || !methodEl) return;
+  var a = Number(amtEl.value);
+  var m = methodEl.value;
   if (!a || a <= 0){ toast('Please enter a valid amount', true); return; }
 
   if (mode === 'add'){
     if (isCrypto(m)){
-      toast('Send crypto to the address. We are watching the blockchain...', false);
+      toast('Send crypto to the address. Watching blockchain...', false);
       doAutoCheck();
       return;
     }
@@ -3004,64 +2189,57 @@ function confirmModal(){
     return;
   }
 
-  // ===== TRANSFER =====
   if (a > st.usd){ toast('Insufficient balance', true); return; }
-
   var dest = '';
   var details = {};
 
   if (m === 'Bank Transfer (SEPA)') {
-    var rname = ($('mRecipientName').value || '').trim();
-    var riban = ($('mRecipientIban').value || '').trim();
-    var rpurp = ($('mRecipientPurpose').value || '').trim();
+    var rname = ($('mRecipientName')?.value || '').trim();
+    var riban = ($('mRecipientIban')?.value || '').trim();
+    var rpurp = ($('mRecipientPurpose')?.value || '').trim();
     if (rname.length < 2){ toast('Enter recipient name', true); return; }
-    if (riban.replace(/\s/g,'').length < 15){ toast('Enter valid IBAN', true); return; }
+    if (riban.replace(/\s/g, '').length < 15){ toast('Enter valid IBAN', true); return; }
     dest = riban;
     details = { type:'sepa', name:rname, iban:riban, purpose:rpurp };
-  }
-  else if (m === 'Bank Transfer (SWIFT)') {
-    var sname = ($('mSwiftName').value || '').trim();
-    var siban = ($('mSwiftIban').value || '').trim();
-    var sswift = ($('mSwiftCode').value || '').trim();
-    var sbank = ($('mSwiftBank').value || '').trim();
-    var scountry = ($('mSwiftCountry').value || '').trim();
-    var spurp = ($('mSwiftPurpose').value || '').trim();
+  } else if (m === 'Bank Transfer (SWIFT)') {
+    var sname = ($('mSwiftName')?.value || '').trim();
+    var siban = ($('mSwiftIban')?.value || '').trim();
+    var sswift = ($('mSwiftCode')?.value || '').trim();
+    var sbank = ($('mSwiftBank')?.value || '').trim();
+    var scountry = ($('mSwiftCountry')?.value || '').trim();
+    var spurp = ($('mSwiftPurpose')?.value || '').trim();
     if (sname.length < 2){ toast('Enter recipient name', true); return; }
-    if (siban.replace(/\s/g,'').length < 15){ toast('Enter valid IBAN / Account', true); return; }
-    if (sswift.length < 6){ toast('Enter valid SWIFT / BIC', true); return; }
+    if (siban.replace(/\s/g, '').length < 15){ toast('Enter valid IBAN', true); return; }
+    if (sswift.length < 6){ toast('Enter valid SWIFT', true); return; }
     dest = siban;
     details = { type:'swift', name:sname, iban:siban, swift:sswift, bank:sbank, country:scountry, purpose:spurp };
-  }
-  else if (m === 'Credit Card') {
-    var cholder = ($('mCardHolder').value || '').trim();
-    var cnum = ($('mCardNum').value || '').trim();
-    var cexp = ($('mCardExp').value || '').trim();
+  } else if (m === 'Credit Card') {
+    var cholder = ($('mCardHolder')?.value || '').trim();
+    var cnum = ($('mCardNum')?.value || '').trim();
+    var cexp = ($('mCardExp')?.value || '').trim();
     if (cholder.length < 2){ toast('Enter card holder name', true); return; }
-    if (cnum.replace(/\s/g,'').length < 16){ toast('Enter valid card number', true); return; }
+    if (cnum.replace(/\s/g, '').length < 16){ toast('Enter valid card number', true); return; }
     if (!/^\d{2}\/\d{2}$/.test(cexp)){ toast('Expiry must be MM/YY', true); return; }
     dest = cnum;
     details = { type:'card', holder:cholder, number:cnum, expiry:cexp };
-  }
-  else {
-    // BTC / ETH
-    dest = ($('mDest').value || '').trim();
+  } else {
+    dest = ($('mDest')?.value || '').trim();
     if (!dest){ toast('Enter recipient wallet address', true); return; }
     details = { type:'crypto', address:dest, coin:m };
   }
 
   st.usd -= a;
   var desc = (m === 'Credit Card')
-    ? 'Card transfer to ' + dest.slice(0,18) + '...'
-    : 'Transfer via ' + m + ' to ' + dest.slice(0,18) + '...';
-
+    ? 'Card transfer to ' + dest.slice(0, 18) + '...'
+    : 'Transfer via ' + m + ' to ' + dest.slice(0, 18) + '...';
   addTx(desc, -a, 'Under Review');
   addNotification('Transfer sent: ' + fmtCurrency(a) + ' via ' + m, '📤');
   toast('Transfer submitted — under review');
-
   closeModal();
   render();
   saveToServer();
 }
+
 /* ========== COPY ========== */
 function copyText(txt, okMsg){
   if (navigator.clipboard && navigator.clipboard.writeText){
@@ -3069,14 +2247,14 @@ function copyText(txt, okMsg){
   } else { toast(okMsg); }
 }
 
-/* ========== ORDER + TRACKING ========== */
+/* ========== ORDER / TRACKING ========== */
 var STEPS = [
-  { name:'Order Received',   loc:'NordicCrypto HQ, Oslo, Norway',                day: 0 },
-  { name:'Card Minted',      loc:'Production Facility, Oslo',                     day: 3 },
-  { name:'Packed',           loc:'Logistics Center, Oslo',                        day: 6 },
-  { name:'In Transit',       loc:'International Hub, Copenhagen, Denmark',        day: 14 },
-  { name:'Out for Delivery', loc:'Local Courier, Stockholm',                      day: 25 },
-  { name:'Delivered',        loc:'Destination',                                   day: 30 }
+  { name:'Order Received',   loc:'NordicCrypto HQ, Oslo',      day: 0 },
+  { name:'Card Minted',      loc:'Production Facility, Oslo',   day: 3 },
+  { name:'Packed',           loc:'Logistics Center, Oslo',      day: 6 },
+  { name:'In Transit',       loc:'International Hub, Copenhagen', day: 14 },
+  { name:'Out for Delivery', loc:'Local Courier, Stockholm',    day: 25 },
+  { name:'Delivered',        loc:'Destination',                 day: 30 }
 ];
 
 var MAX_DELIVERY_DAYS = 40;
@@ -3084,7 +2262,7 @@ var MAX_DELIVERY_DAYS = 40;
 function genTrackId(){
   var s = 'NC-' + new Date().getFullYear() + '-';
   var ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  for (var i=0; i<6; i++) s += ch[Math.floor(Math.random()*ch.length)];
+  for (var i = 0; i < 6; i++) s += ch[Math.floor(Math.random() * ch.length)];
   return s;
 }
 
@@ -3098,15 +2276,14 @@ function stepIndexFor(createdAt){
 }
 
 function placeOrder(){
-  var name = $('oName').value.trim();
-  var city = $('oCity').value.trim();
-  var street = $('oStreet').value.trim();
-  var zip = $('oZip').value.trim();
-  var phone = $('oPhone').value.trim();
-  var country = $('oCountry').value;
-  var type = $('oType').value;
+  var name = $('oName')?.value.trim();
+  var city = $('oCity')?.value.trim();
+  var street = $('oStreet')?.value.trim();
+  var zip = $('oZip')?.value.trim();
+  var phone = $('oPhone')?.value.trim();
+  var country = $('oCountry')?.value;
+  var type = $('oType')?.value;
   if (!name || !city || !street || !zip || !phone){ toast('Please fill in all fields', true); return; }
-
   st.order = {
     id: genTrackId(), name: name, type: type,
     address: street + ', ' + city + ', ' + zip + ', ' + country,
@@ -3120,69 +2297,80 @@ function placeOrder(){
 }
 
 function renderOrder(){
+  var formEl = $('orderForm');
+  var trackEl = $('orderTrack');
+  if (!formEl || !trackEl) return;
   if (!st.order){
-    $('orderForm').classList.remove('hidden');
-    $('orderTrack').classList.add('hidden');
+    formEl.classList.remove('hidden');
+    trackEl.classList.add('hidden');
     return;
   }
-  $('orderForm').classList.add('hidden');
-  $('orderTrack').classList.remove('hidden');
+  formEl.classList.add('hidden');
+  trackEl.classList.remove('hidden');
 
-  // Проверка на задержку
   var elapsedDays = (Date.now() - st.order.createdAt) / (24 * 60 * 60 * 1000);
-  if (elapsedDays > MAX_DELIVERY_DAYS){
-    showDeliveryError();
-    return;
-  }
+  if (elapsedDays > MAX_DELIVERY_DAYS){ showDeliveryError(); return; }
 
   var idx = stepIndexFor(st.order.createdAt);
   var steps = document.querySelectorAll('#stepsWrap .step');
-  for (var i=0; i<steps.length; i++){
-    steps[i].classList.remove('done','active');
+  for (var i = 0; i < steps.length; i++){
+    steps[i].classList.remove('done', 'active');
     if (i < idx) steps[i].classList.add('done');
     if (i === idx) steps[i].classList.add('active');
   }
-
   var pct = Math.round(((idx + 1) / STEPS.length) * 100);
-  $('trackBar').style.width = pct + '%';
-  $('trackPct').textContent = pct + '%';
-  $('trackStatus').textContent = STEPS[idx].name;
-  $('trackId').textContent = st.order.id;
-  $('trackName').textContent = st.order.name;
-  $('trackDest').textContent = st.order.dest;
-  $('trackLoc').textContent = STEPS[idx].loc;
+  if ($('trackBar')) $('trackBar').style.width = pct + '%';
+  if ($('trackPct')) $('trackPct').textContent = pct + '%';
+  if ($('trackStatus')) $('trackStatus').textContent = STEPS[idx].name;
+  if ($('trackId')) $('trackId').textContent = st.order.id;
+  if ($('trackName')) $('trackName').textContent = st.order.name;
+  if ($('trackDest')) $('trackDest').textContent = st.order.dest;
+  if ($('trackLoc')) $('trackLoc').textContent = STEPS[idx].loc;
 
   var eta = new Date(st.order.createdAt + STEPS[STEPS.length - 1].day * 24 * 60 * 60 * 1000);
-$('trackEta').textContent = eta.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  if ($('trackEta')) $('trackEta').textContent = eta.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
 
-var logHtml = '';
-for (var j=0; j<=idx; j++){
-  var t = new Date(st.order.createdAt + STEPS[j].day * 24 * 60 * 60 * 1000);
-  logHtml += '<div class="log-item"><span class="log-time">' + t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + '</span><span class="log-msg">' + STEPS[j].name + ' — ' + STEPS[j].loc + '</span></div>';
-}
-  $('trackLog').innerHTML = logHtml;
+  var logHtml = '';
+  for (var j = 0; j <= idx; j++){
+    var t = new Date(st.order.createdAt + STEPS[j].day * 24 * 60 * 60 * 1000);
+    logHtml += '<div class="log-item"><span class="log-time">' + t.toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) + '</span><span class="log-msg">' + STEPS[j].name + ' — ' + STEPS[j].loc + '</span></div>';
+  }
+  if ($('trackLog')) $('trackLog').innerHTML = logHtml;
 }
 
 function showDeliveryError(){
   var wrap = document.querySelector('#orderTrack .track-wrap');
   if (!wrap) return;
-  wrap.innerHTML =
-    '<div class="panel" style="text-align:center;padding:50px 30px">' +
-      '<div style="font-size:4rem;margin-bottom:20px">⚠️</div>' +
-      '<h2 style="margin-bottom:12px">Delivery issue</h2>' +
-      '<p style="color:var(--mut);margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto">' +
-        'Your card order has been delayed for more than ' + MAX_DELIVERY_DAYS + ' days. ' +
-        'Please contact our support team or place a new order.' +
-      '</p>' +
-      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
-        '<button class="btn b1" onclick="resetOrder()" style="padding:12px 24px">Place new order</button>' +
-        '<button class="btn b2" onclick="alert(\'Support: support@nordiccrypto.com\')" style="padding:12px 24px">Contact support</button>' +
-      '</div>' +
-    '</div>';
+  wrap.innerHTML = '<div class="panel" style="text-align:center;padding:50px 30px"><div style="font-size:4rem;margin-bottom:20px">⚠️</div><h2>Delivery issue</h2><p style="color:var(--mut)">Delayed over ' + MAX_DELIVERY_DAYS + ' days. Contact support.</p></div>';
 }
 
-/* ========== TRACKING ACTIONS ========== */
-/* ========== WELCOME BANNER ========== */
+function initTrackingActions(){
+  var btnSupport = document.getElementById('btnContactSupport');
+  if (btnSupport) btnSupport.onclick = function(){
+    window.location.href = 'mailto:support@nordiccrypto.com?subject=Card issue ' + (st.order ? st.order.id : '');
+  };
+  var btnAnother = document.getElementById('btnOrderAnother');
+  if (btnAnother) btnAnother.onclick = function(){
+    if (!confirm('Order another card?')) return;
+    st.order = null;
+    saveToServer();
+    renderOrder();
+    toast('Ready for new order');
+  };
+  var btnCancel = document.getElementById('btnCancelOrder');
+  if (btnCancel) btnCancel.onclick = function(){
+    if (!st.order) return;
+    var daysSince = (Date.now() - st.order.createdAt) / (24 * 60 * 60 * 1000);
+    if (daysSince > 7){ toast('Cannot cancel — card in production', true); return; }
+    if (!confirm('Cancel this order?')) return;
+    addNotification('Card order cancelled', '❌');
+    st.order = null;
+    saveToServer();
+    renderOrder();
+    toast('Order cancelled');
+  };
+}
+
 function initWelcomeBanner(){
   var banner = document.getElementById('welcomeBanner');
   if (!banner) return;
@@ -3191,67 +2379,21 @@ function initWelcomeBanner(){
     return;
   }
   var closeBtn = document.getElementById('wbClose');
-  if (closeBtn){
-    closeBtn.onclick = function(){
-      banner.classList.add('hidden');
-      st.welcomeBannerClosed = true;
-      saveToServer();
-    };
-  }
-}
-
-function initTrackingActions(){
-  var btnSupport = document.getElementById('btnContactSupport');
-  if (btnSupport){
-    btnSupport.onclick = function(){
-      var choice = confirm('Contact support\n\nClick OK to email us at support@nordiccrypto.com\nClick Cancel to close');
-      if (choice){
-        window.location.href = 'mailto:support@nordiccrypto.com?subject=Card%20delivery%20issue%20-%20' + (st.order ? st.order.id : '');
-      }
-    };
-  }
-
-  var btnAnother = document.getElementById('btnOrderAnother');
-  if (btnAnother){
-    btnAnother.onclick = function(){
-      if (!confirm('Order another card? The current tracking will be lost.')) return;
-      st.order = null;
-      saveToServer();
-      renderOrder();
-      toast('Ready for new order');
-    };
-  }
-
-  var btnCancel = document.getElementById('btnCancelOrder');
-  if (btnCancel){
-    btnCancel.onclick = function(){
-      if (!st.order) return;
-      var daysSinceOrder = (Date.now() - st.order.createdAt) / (24 * 60 * 60 * 1000);
-      
-      if (daysSinceOrder > 7){
-        toast('Cannot cancel — card already in production', true);
-        return;
-      }
-      
-      if (!confirm('Cancel this card order? This cannot be undone.')) return;
-      
-      addNotification('Card order cancelled', '❌');
-      st.order = null;
-      saveToServer();
-      renderOrder();
-      toast('Order cancelled');
-    };
-  }
+  if (closeBtn) closeBtn.onclick = function(){
+    banner.classList.add('hidden');
+    st.welcomeBannerClosed = true;
+    saveToServer();
+  };
 }
 
 function newOrder(){
-  if (!confirm('Start a new card order? Current tracking will be lost.')) return;
+  if (!confirm('Start a new card order?')) return;
   st.order = null;
   saveToServer();
   renderOrder();
 }
 
-/* ========== AUTO CHECK DEPOSITS ========== */
+/* ========== AUTO CHECK ========== */
 function startAutoCheck(){
   stopAutoCheck();
   autoCheckKnown = {};
@@ -3264,7 +2406,9 @@ function stopAutoCheck(){
 }
 
 function doAutoCheck(){
-  var method = $('mMethod').value;
+  var methodEl = $('mMethod');
+  if (!methodEl) return;
+  var method = methodEl.value;
   var isBtc = (method === 'Bitcoin (BTC)');
   var isEth = (method === 'Ethereum (ETH)');
   if (!isBtc && !isEth) return;
@@ -3275,317 +2419,156 @@ function doAutoCheck(){
       if (!data || !data.result) return;
       var list = isBtc ? data.result.btc : data.result.eth;
       if (!list || list.length === 0) return;
-
       for (var i = 0; i < list.length; i++){
-  var tx = list[i];
-  var id = tx.hash;
-  if (autoCheckKnown[id]) continue;
-  
-  // ⚠️ ФИЛЬТР: только INCOMING
-  var myAddr = isBtc ? '19YWxuHf1TbdZzZdV9FSzYfops6M2GLhe7' : '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97';
-  if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()) {
-    autoCheckKnown[id] = true;
-    continue;
-  }
-
+        var tx = list[i];
+        var id = tx.hash;
+        if (autoCheckKnown[id]) continue;
+        var myAddr = isBtc ? '19YWxuHf1TbdZzZdV9FSzYfops6M2GLhe7' : '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97';
+        if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){ autoCheckKnown[id] = true; continue; }
         var already = false;
-        for (var j = 0; j < st.txs.length; j++){
-          if (st.txs[j].hash === id){ already = true; break; }
-        }
+        for (var j = 0; j < st.txs.length; j++){ if (st.txs[j].hash === id){ already = true; break; } }
         if (already){ autoCheckKnown[id] = true; continue; }
-
-                autoCheckKnown[id] = true;
+        autoCheckKnown[id] = true;
         var cryptoAmt = isBtc ? tx.amount : tx.value;
         var symbol = isBtc ? 'BTC' : 'ETH';
         var credit = isBtc ? (tx.amount * st.btcP) : (tx.value * st.ethP);
         if (!credit || credit <= 0) continue;
-
-        // Открываем верификацию вместо автоматического зачисления
         closeModal();
         openDepositVerification(tx, cryptoAmt, symbol, credit);
         return;
       }
     })
-    .catch(function(err){ console.error('Auto-check error:', err); });
+    .catch(function(){});
 }
 
-/* ========== AUTO UPDATE STATUSES ========== */
 function updateTxStatuses(){
   var changed = false;
-  for (var i=0; i<st.txs.length; i++){
+  for (var i = 0; i < st.txs.length; i++){
     var t = st.txs[i];
     if (!t.ts) t.ts = Date.now();
     var age = Date.now() - t.ts;
-    if (t.status === 'Under Review' && age > 60*1000){ t.status = 'Processing'; changed = true; }
-    else if (t.status === 'Processing' && age > 3*60*1000){ t.status = 'Completed'; changed = true; }
+    if (t.status === 'Under Review' && age > 60 * 1000){ t.status = 'Processing'; changed = true; }
+    else if (t.status === 'Processing' && age > 3 * 60 * 1000){ t.status = 'Completed'; changed = true; }
   }
   if (changed){ renderTx(); saveToServer(); }
 }
 
-/* ========== ONBOARDING (Create Virtual Card) ========== */
-var selectedDesign = 'cosmic';
-var onbType = 'Visa';
-var onbCur = 'USD';
+/* ========== INPUT FORMATTERS ========== */
+function attachExpiryFormatter(input) {
+  if (!input) return;
+  input.addEventListener('input', function(e) {
+    var v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+    e.target.value = v;
+  });
+}
 
+function attachCardFormatter(input) {
+  if (!input) return;
+  input.addEventListener('input', function(e) {
+    var v = e.target.value.replace(/\D/g, '').slice(0, 16);
+    var parts = v.match(/.{1,4}/g);
+    e.target.value = parts ? parts.join(' ') : v;
+  });
+}
+
+/* ========== ONBOARDING ========== */
 function updateOnbPreview(){
   var typeEl = $('prevType');
   var nameEl = $('prevName');
   var curEl = $('prevCur');
-
   if (typeEl) typeEl.textContent = 'VIRTUAL ' + onbType.toUpperCase();
   if (nameEl){
     var full = getFullName();
     nameEl.textContent = (full || 'YOUR NAME').toUpperCase();
   }
   if (curEl) curEl.textContent = onbCur;
-
-  // Превью дизайна
   var previewCards = document.querySelectorAll('.onb-preview .pay');
   for (var i = 0; i < previewCards.length; i++){
     var c = previewCards[i];
-    c.classList.remove('design-cosmic', 'design-purple', 'design-silver', 'design-black', 'design-gold');
+    c.classList.remove('design-cosmic', 'design-purple', 'design-silver', 'design-black', 'design-gold', 'design-ocean', 'design-mountain', 'design-aurora', 'design-city');
     c.classList.add('design-' + selectedDesign);
   }
 }
 
-var typeBtns = document.querySelectorAll('.type-btn');
-for (var t = 0; t < typeBtns.length; t++){
-  typeBtns[t].onclick = function(){
-    for (var k = 0; k < typeBtns.length; k++) typeBtns[k].classList.remove('on');
-    this.classList.add('on');
-    onbType = this.getAttribute('data-type');
-    updateOnbPreview();
-  };
-}
-
-var curBtns = document.querySelectorAll('.cur-btn');
-for (var c = 0; c < curBtns.length; c++){
-  curBtns[c].onclick = function(){
-    for (var k = 0; k < curBtns.length; k++) curBtns[k].classList.remove('on');
-    this.classList.add('on');
-    onbCur = this.getAttribute('data-cur');
-    updateOnbPreview();
-  };
-}
-
-updateOnbPreview();
-/* Step 1 — Get started */
-var step1Btn = document.getElementById('onbNext1');
-if (step1Btn) step1Btn.onclick = function(){
-  playTone(660, 0.06, 'sine', 0.05);
-  goToOnbStep(2);
-  setTimeout(function(){
-    if ($('onbFirst')) $('onbFirst').focus();
-  }, 200);
-};
-
-/* Step 2 — Back */
-var step2Back = document.getElementById('onbBack2');
-if (step2Back) step2Back.onclick = function(){
-  goToOnbStep(1);
-};
-
-/* Step 2 — Continue */
-var step2Next = document.getElementById('onbNext2');
-if (step2Next) step2Next.onclick = function(){
-  var first = $('onbFirst').value.trim();
-  var last = $('onbLast').value.trim();
-  if (!first){ toast('Please enter your first name', true); $('onbFirst').focus(); return; }
-  if (!last){ toast('Please enter your last name', true); $('onbLast').focus(); return; }
-  playTone(880, 0.08, 'sine', 0.06);
-  updateStep3Title();
+function initOnboarding(){
+  var typeBtns = document.querySelectorAll('.type-btn');
+  for (var t = 0; t < typeBtns.length; t++){
+    typeBtns[t].onclick = function(){
+      for (var k = 0; k < typeBtns.length; k++) typeBtns[k].classList.remove('on');
+      this.classList.add('on');
+      onbType = this.getAttribute('data-type');
+      updateOnbPreview();
+    };
+  }
+  var curBtns = document.querySelectorAll('.cur-btn');
+  for (var c = 0; c < curBtns.length; c++){
+    curBtns[c].onclick = function(){
+      for (var k = 0; k < curBtns.length; k++) curBtns[k].classList.remove('on');
+      this.classList.add('on');
+      onbCur = this.getAttribute('data-cur');
+      updateOnbPreview();
+    };
+  }
   updateOnbPreview();
-  goToOnbStep(3);
-};
 
-/* Live preview на шаге 2 */
-['onbFirst', 'onbMiddle', 'onbLast'].forEach(function(id){
-  var el = document.getElementById(id);
-  if (el) el.oninput = function(){
-    updateOnbPreview();
+  var step1Btn = document.getElementById('onbNext1');
+  if (step1Btn) step1Btn.onclick = function(){
+    playTone(660, 0.06, 'sine', 0.05);
+    goToOnbStep(2);
+    setTimeout(function(){ if ($('onbFirst')) $('onbFirst').focus(); }, 200);
+  };
+  var step2Back = document.getElementById('onbBack2');
+  if (step2Back) step2Back.onclick = function(){ goToOnbStep(1); };
+  var step2Next = document.getElementById('onbNext2');
+  if (step2Next) step2Next.onclick = function(){
+    var first = $('onbFirst')?.value.trim();
+    var last = $('onbLast')?.value.trim();
+    if (!first){ toast('Please enter your first name', true); return; }
+    if (!last){ toast('Please enter your last name', true); return; }
+    playTone(880, 0.08, 'sine', 0.06);
     updateStep3Title();
+    updateOnbPreview();
+    goToOnbStep(3);
   };
-});
-document.getElementById('btnCreateCard').onclick = function(){
-  var name = getFullName();
-  if (!name || name.length < 2){ toast('Please enter your name', true); return; }
-
-  // 1. Создать карту в state
-  createVirtualCard(name, onbType, onbCur);
-
-  // 2. Подготовить данные для анимации
-  var cardData = {
-    num: st.card.num,
-    name: st.card.name,
-    expiry: st.card.expiry,
-    type: st.card.type
-  };
-
-  // 3. Скрыть форму создания (плавно)
-  var onboardEl = $('onboard');
-  onboardEl.classList.add('exiting');
-
-  // 4. Запустить анимацию
-  playCardCreationAnimation(cardData, function(){
-    // После анимации — закрыть onboarding
-    onboardEl.classList.remove('on');
-    onboardEl.classList.remove('exiting');
-
-    // 5. Перейти на Dashboard
-    var pgs = document.querySelectorAll('.pg');
-    for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
-    $('dash').classList.add('on');
-    var ms = document.querySelectorAll('.mi');
-    for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
-    document.querySelector('.mi[data-p="dash"]').classList.add('on');
-        var ttl = document.getElementById('ttl');
-    if (ttl) ttl.textContent = 'Dashboard';
-
-    // 6. Показать свечение на карте и пульс баланса
-    renderCard();
-    var dashCard = $('cardDash');
-    if (dashCard){
-      dashCard.classList.add('fresh-card');
-      setTimeout(function(){ dashCard.classList.remove('fresh-card'); }, 2600);
-    }
-    var balEl = $('bal');
-    if (balEl){
-      balEl.classList.add('balance-pulse');
-      setTimeout(function(){ balEl.classList.remove('balance-pulse'); }, 1600);
-    }
-
-     // 7. Верификация (только первый раз) или сразу в dashboard
-    setTimeout(function(){
-      if (st.user && st.user.verified) {
-        // Уже верифицирован — просто обновить dashboard
-        render();
-        addNotification('New card issued: ' + (st.card.type || 'Visa') + ' ' + (st.card.cur || 'USD'), '💳');
-        toast('Card created!');
-      } else {
-        // Первый раз — показать верификацию
-        showVerifyScreen();
-      }
-    }, 500);
-
+  ['onbFirst', 'onbMiddle', 'onbLast'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.oninput = function(){ updateOnbPreview(); updateStep3Title(); };
   });
-};
 
-/* ========== CARD ACTIONS ========== */
-document.getElementById('btnShowCvv').onclick = function(){
-  if (!st.card) return;
-  cvvVisible = !cvvVisible;
-  renderCard();
-  if (cvvVisible){
-    clearTimeout(cvvTimer);
-    cvvTimer = setTimeout(function(){
-      cvvVisible = false;
+  var createBtn = document.getElementById('btnCreateCard');
+  if (createBtn) createBtn.onclick = function(){
+    var name = getFullName();
+    if (!name || name.length < 2){ toast('Please enter your name', true); return; }
+    createVirtualCard(name, onbType, onbCur);
+    var cardData = { num: st.card.num, name: st.card.name, expiry: st.card.expiry, type: st.card.type };
+    var onboardEl = $('onboard');
+    if (onboardEl) onboardEl.classList.add('exiting');
+    playCardCreationAnimation(cardData, function(){
+      if (onboardEl){ onboardEl.classList.remove('on'); onboardEl.classList.remove('exiting'); }
+      var pgs = document.querySelectorAll('.pg');
+      for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
+      if ($('dash')) $('dash').classList.add('on');
+      var ms = document.querySelectorAll('.mi');
+      for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
+      var dashMi = document.querySelector('.mi[data-p="dash"]');
+      if (dashMi) dashMi.classList.add('on');
+      var ttl = document.getElementById('ttl');
+      if (ttl) ttl.textContent = 'Dashboard';
       renderCard();
-    }, 5000);
-  }
-};
+      setTimeout(function(){
+        if (st.user && st.user.verified){
+          render();
+          addNotification('New card issued: ' + (st.card.type || 'Visa'), '💳');
+          toast('Card created!');
+        } else {
+          showVerifyScreen();
+        }
+      }, 500);
+    });
+  };
+}
 
-document.getElementById('btnFreeze').onclick = function(){
-  if (!st.card) return;
-  st.card.status = st.card.status === 'Frozen' ? 'Active' : 'Frozen';
-  saveToServer();
-  renderCard();
-  addNotification(st.card.status === 'Frozen' ? 'Card frozen' : 'Card unfrozen', st.card.status === 'Frozen' ? '❄' : '🔥');
-toast(st.card.status === 'Frozen' ? 'Card frozen' : 'Card unfrozen');
-};
-
-document.getElementById('btnDeleteCard').onclick = function(){
-  if (!st.card) return;
-  openPasswordConfirm('Confirm deleting your card. Balance and transactions will stay.', function(){
-    var allCards = document.querySelectorAll('.pay');
-    for (var i = 0; i < allCards.length; i++) {
-      allCards[i].style.background = '';
-      allCards[i].classList.remove(
-        'design-cosmic','design-purple','design-silver','design-black',
-        'design-gold','design-ocean','design-mountain','design-aurora','design-city'
-      );
-      allCards[i].classList.add('design-cosmic');
-    }
-    st.card = null;
-    saveToServer();
-    renderCard();
-    checkOnboarding();
-    addNotification('Card deleted', '🗑');
-    toast('Card deleted');
-  });
-};
-document.getElementById('btnGoOrder').onclick = function(){
-  var pgs = document.querySelectorAll('.pg');
-  for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
-  $('order').classList.add('on');
-  var ms = document.querySelectorAll('.mi');
-  for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
-  document.querySelector('.mi[data-p="order"]').classList.add('on');
-  $('ttl').textContent = 'Order New Card';
-};
-
-/* ========== EVENTS ========== */
-var btnAdd_ = document.getElementById('btnAdd') || document.getElementById('btnAddV2');
-if (btnAdd_) btnAdd_.onclick = function(){ openModal('add'); };
-
-var btnTransfer_ = document.getElementById('btnTransfer') || document.getElementById('btnTransferV2');
-if (btnTransfer_) btnTransfer_.onclick = function(){ openModal('transfer'); };
-var btnWithdraw_ = document.getElementById('btnWithdrawV2');
-if (btnWithdraw_) btnWithdraw_.onclick = openWithdraw;
-
-var btnExchange_ = document.getElementById('btnExchange') || document.getElementById('btnExchangeV2');
-if (btnExchange_) btnExchange_.onclick = function(){ toast('Exchange: coming soon'); };
-
-var mCancel_ = document.getElementById('mCancel');
-if (mCancel_) mCancel_.onclick = closeModal;
-
-var mOk_ = document.getElementById('mOk');
-if (mOk_) mOk_.onclick = confirmModal;
-
-var mMethod_ = document.getElementById('mMethod');
-if (mMethod_) mMethod_.onchange = refreshDest;
-
-var btnCopy_ = document.getElementById('btnCopy') || document.getElementById('btnCopyCardV2');
-if (btnCopy_) btnCopy_.onclick = function(){
-  if (!st.card){ toast('No card yet', true); return; }
-  copyText(st.card.num, 'Card number copied');
-};
-
-var btnCopyIban_ = document.getElementById('btnCopyIban');
-if (btnCopyIban_) btnCopyIban_.onclick = function(){
-  if (st.user && st.user.iban){
-    copyText(st.user.iban, 'IBAN copied');
-  } else {
-    toast('IBAN is not ready yet', true);
-  }
-};
-
-var btnReceiveHero_ = document.getElementById('btnReceiveHero');
-if (btnReceiveHero_ && btnCopyIban_) btnReceiveHero_.onclick = function(){ btnCopyIban_.click(); };
-
-var btnReceiveMoney_ = document.getElementById('btnReceiveMoney');
-if (btnReceiveMoney_ && btnCopyIban_) btnReceiveMoney_.onclick = function(){ btnCopyIban_.click(); };
-document.getElementById('btnCopyIban').onclick = function(){
-  if (st.user && st.user.iban){
-    copyText(st.user.iban, 'IBAN copied');
-  } else {
-    toast('IBAN is not ready yet', true);
-  }
-};
-var btnOrder_ = document.getElementById('btnOrder');
-if (btnOrder_) btnOrder_.onclick = placeOrder;
-
-var btnNO = document.getElementById('btnNewOrder');
-if (btnNO) btnNO.onclick = newOrder;
-
-/* ========== TIMERS ========== */
-setInterval(function(){
-  updateTxStatuses();
-  renderOrder();
-  // Подтягиваем свежие уведомления от админа
-  refreshNotificationsFromServer();
-}, 5000);
-
-/* ========== ONBOARDING STEP NAVIGATION ========== */
 function goToOnbStep(n){
   var steps = document.querySelectorAll('.onb-step');
   for (var i = 0; i < steps.length; i++) steps[i].classList.remove('on');
@@ -3614,6 +2597,119 @@ function updateStep3Title(){
   var el = $('onbStep3Title');
   if (el) el.textContent = 'Almost done, ' + fn + '!';
 }
+
+/* ========== CARD ACTIONS ========== */
+function initCardActions(){
+  var btnShowCvv = document.getElementById('btnShowCvv');
+  if (btnShowCvv) btnShowCvv.onclick = function(){
+    if (!st.card) return;
+    cvvVisible = !cvvVisible;
+    renderCard();
+    if (cvvVisible){
+      clearTimeout(cvvTimer);
+      cvvTimer = setTimeout(function(){ cvvVisible = false; renderCard(); }, 5000);
+    }
+  };
+
+  var btnFreeze = document.getElementById('btnFreeze');
+  if (btnFreeze) btnFreeze.onclick = function(){
+    if (!st.card) return;
+    st.card.status = st.card.status === 'Frozen' ? 'Active' : 'Frozen';
+    saveToServer();
+    renderCard();
+    addNotification(st.card.status === 'Frozen' ? 'Card frozen' : 'Card unfrozen', st.card.status === 'Frozen' ? '❄' : '🔥');
+    toast(st.card.status === 'Frozen' ? 'Card frozen' : 'Card unfrozen');
+  };
+
+  var btnDelete = document.getElementById('btnDeleteCard');
+  if (btnDelete) btnDelete.onclick = function(){
+    if (!st.card) return;
+    openPasswordConfirm('Confirm deleting your card. Balance and transactions will stay.', function(){
+      var allCards = document.querySelectorAll('.pay');
+      for (var i = 0; i < allCards.length; i++) {
+        allCards[i].style.background = '';
+        allCards[i].classList.remove('design-cosmic','design-purple','design-silver','design-black','design-gold','design-ocean','design-mountain','design-aurora','design-city');
+        allCards[i].classList.add('design-cosmic');
+      }
+      st.card = null;
+      saveToServer();
+      renderCard();
+      checkOnboarding();
+      addNotification('Card deleted', '🗑');
+      toast('Card deleted');
+    });
+  };
+
+  var btnGoOrder = document.getElementById('btnGoOrder');
+  if (btnGoOrder) btnGoOrder.onclick = function(){
+    var pgs = document.querySelectorAll('.pg');
+    for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
+    if ($('order')) $('order').classList.add('on');
+    var ms = document.querySelectorAll('.mi');
+    for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
+    var orderMi = document.querySelector('.mi[data-p="order"]');
+    if (orderMi) orderMi.classList.add('on');
+    if ($('ttl')) $('ttl').textContent = 'Order New Card';
+  };
+
+  var freezeCard = document.getElementById('btnFreezeCard');
+  if (freezeCard) freezeCard.onclick = function(){
+    var realBtn = document.getElementById('btnFreeze');
+    if (realBtn) realBtn.click();
+  };
+  var limitsCard = document.getElementById('btnLimitsCard');
+  if (limitsCard) limitsCard.onclick = function(){ toast('Limits: coming soon'); };
+  var settingsCard = document.getElementById('btnSettingsCard');
+  if (settingsCard) settingsCard.onclick = function(){
+    var realBtn = document.getElementById('settingsBtn');
+    if (realBtn) realBtn.click();
+  };
+}
+
+/* ========== EVENTS ========== */
+function initEvents(){
+  var btnAdd = document.getElementById('btnAdd');
+  if (btnAdd) btnAdd.onclick = function(){ openModal('add'); };
+  var btnTransfer = document.getElementById('btnTransferV2');
+  if (btnTransfer) btnTransfer.onclick = function(){ openModal('transfer'); };
+  var btnWithdraw = document.getElementById('btnWithdrawV2');
+  if (btnWithdraw) btnWithdraw.onclick = openWithdraw;
+  var btnExchange = document.getElementById('btnExchangeV2');
+  if (btnExchange) btnExchange.onclick = function(){ toast('Exchange: coming soon'); };
+
+  var mCancel = document.getElementById('mCancel');
+  if (mCancel) mCancel.onclick = closeModal;
+  var mOk = document.getElementById('mOk');
+  if (mOk) mOk.onclick = confirmModal;
+  var mMethod = document.getElementById('mMethod');
+  if (mMethod) mMethod.onchange = refreshDest;
+
+  var btnCopyCard = document.getElementById('btnCopyCardV2');
+  if (btnCopyCard) btnCopyCard.onclick = function(){
+    if (!st.card){ toast('No card yet', true); return; }
+    copyText(st.card.num, 'Card number copied');
+  };
+
+  var btnCopyIban = document.getElementById('btnCopyIban');
+  if (btnCopyIban) btnCopyIban.onclick = function(){
+    if (st.user && st.user.iban){ copyText(st.user.iban, 'IBAN copied'); }
+    else { toast('IBAN is not ready yet', true); }
+  };
+
+  var btnReceiveHero = document.getElementById('btnReceiveHero');
+  if (btnReceiveHero && btnCopyIban) btnReceiveHero.onclick = function(){ btnCopyIban.click(); };
+  var btnReceiveMoney = document.getElementById('btnReceiveMoney');
+  if (btnReceiveMoney && btnCopyIban) btnReceiveMoney.onclick = function(){ btnCopyIban.click(); };
+
+  var btnOrder = document.getElementById('btnOrder');
+  if (btnOrder) btnOrder.onclick = placeOrder;
+}
+
+/* ========== TIMERS ========== */
+setInterval(function(){
+  updateTxStatuses();
+  renderOrder();
+}, 30000);
 /* ========== CARD CREATION ANIMATION ========== */
 function playCardCreationAnimation(cardData, onComplete){
   var stage = document.getElementById('animStage');
@@ -3625,119 +2721,72 @@ function playCardCreationAnimation(cardData, onComplete){
   var typeEl = document.getElementById('animType');
   var readyText = document.getElementById('readyText');
 
-  if (!stage || !card){
-    if (onComplete) onComplete();
-    return;
-  }
+  if (!stage || !card){ if (onComplete) onComplete(); return; }
 
-  // Сброс
   stage.classList.remove('on');
   card.classList.remove('visible', 'glow', 'flash', 'exit');
   card.style.transform = '';
   card.style.opacity = '';
-  readyText.classList.remove('show');
-  numLine.textContent = '';
-  numLine.classList.remove('typing');
-  nameEl.classList.remove('show');
-  expEl.classList.remove('show');
-  nameEl.textContent = '—';
-  expEl.textContent = '—/—';
-  brandEl.textContent = 'NORDIC CRYPTO';
-  typeEl.textContent = 'VIRTUAL ' + (cardData.type || 'VISA').toUpperCase();
+  if (readyText) readyText.classList.remove('show');
+  if (numLine){ numLine.textContent = ''; numLine.classList.remove('typing'); }
+  if (nameEl){ nameEl.classList.remove('show'); nameEl.textContent = '—'; }
+  if (expEl){ expEl.classList.remove('show'); expEl.textContent = '—/—'; }
+  if (brandEl) brandEl.textContent = 'NORDIC CRYPTO';
+  if (typeEl) typeEl.textContent = 'VIRTUAL ' + (cardData.type || 'VISA').toUpperCase();
 
-  // 1. Показать сцену
   stage.classList.add('on');
 
-  // 2. Карта вылетает
-  setTimeout(function(){
-    card.classList.add('visible');
-    playTone(880, 0.1, 'sine', 0.06);
-  }, 350);
+  setTimeout(function(){ card.classList.add('visible'); playTone(880, 0.1, 'sine', 0.06); }, 350);
+  setTimeout(function(){ card.classList.add('glow'); }, 1300);
 
-  // 3. Glow
-  setTimeout(function(){
-    card.classList.add('glow');
-  }, 1300);
-
-  // 4. Печатаем номер
   var numStr = (cardData.num || '').replace(/(.{4})/g, '$1 ').trim();
   setTimeout(function(){
+    if (!numLine) return;
     numLine.classList.add('typing');
     var i = 0;
     var t = setInterval(function(){
-      if (i >= numStr.length){
-        clearInterval(t);
-        numLine.classList.remove('typing');
-        return;
-      }
+      if (i >= numStr.length){ clearInterval(t); numLine.classList.remove('typing'); return; }
       numLine.textContent += numStr[i++];
       playTone(1100 + Math.random() * 200, 0.02, 'square', 0.02);
     }, 55);
   }, 1500);
 
-  // 5. Имя + expiry
   setTimeout(function(){
-    nameEl.textContent = cardData.name || 'CARD HOLDER';
-    expEl.textContent = cardData.expiry || '—/—';
-    nameEl.classList.add('show');
-    expEl.classList.add('show');
+    if (nameEl){ nameEl.textContent = cardData.name || 'CARD HOLDER'; nameEl.classList.add('show'); }
+    if (expEl){ expEl.textContent = cardData.expiry || '—/—'; expEl.classList.add('show'); }
   }, 2800);
 
-  // 6. Flash + конфетти + звук
-  setTimeout(function(){
-    card.classList.add('flash');
-    playChime();
-    spawnConfetti();
-  }, 3300);
+  setTimeout(function(){ card.classList.add('flash'); playChime(); spawnConfetti(); }, 3300);
+  setTimeout(function(){ if (readyText) readyText.classList.add('show'); }, 3700);
+  setTimeout(function(){ card.classList.add('exit'); }, 4400);
 
-  // 7. "Card created!"
-  setTimeout(function(){
-    readyText.classList.add('show');
-  }, 3700);
-
-  // 8. Exit
-  setTimeout(function(){
-    card.classList.add('exit');
-  }, 4400);
-
-  // 9. Закрыть + callback
   setTimeout(function(){
     stage.classList.remove('on');
     card.classList.remove('visible', 'glow', 'flash', 'exit');
-    readyText.classList.remove('show');
+    if (readyText) readyText.classList.remove('show');
     if (onComplete) onComplete();
   }, 5200);
 }
 
-
-/* ========== SOUND (Web Audio API) ========== */
+/* ========== SOUND ========== */
 var audioCtx = null;
 function getAudioCtx(){
   if (!audioCtx){
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e){ return null; }
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e){ return null; }
   }
   return audioCtx;
 }
 
-/* ========== AUDIO UNLOCK ========== */
 document.addEventListener('click', function unlockAudio(){
   var ctx = getAudioCtx();
-  if (ctx && ctx.state === 'suspended'){
-    ctx.resume().then(function(){
-      console.log('AudioContext resumed');
-    });
-  }
+  if (ctx && ctx.state === 'suspended') ctx.resume();
 }, { once: false });
 
 function playTone(freq, duration, type, volume){
   var ctx = getAudioCtx();
   if (!ctx) return;
-  if (ctx.state === 'suspended'){
-    ctx.resume();
-    return;
-  }
+  if (ctx.state === 'suspended'){ ctx.resume(); return; }
   try {
     var now = ctx.currentTime;
     var osc = ctx.createOscillator();
@@ -3764,871 +2813,29 @@ function spawnConfetti(){
   var wrap = document.getElementById('confettiWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
-
   var total = 30;
   var types = ['coin', 'spark', 'crystal', 'star'];
   var symbols = ['₿', 'Ξ', '', ''];
-
   for (var i = 0; i < total; i++){
     var p = document.createElement('div');
     var t = types[Math.floor(Math.random() * types.length)];
     p.className = 'confetti-piece ' + t;
-
-    if (t === 'coin'){
-      p.textContent = symbols[Math.floor(Math.random() * 2)];
-    }
-
+    if (t === 'coin') p.textContent = symbols[Math.floor(Math.random() * 2)];
     var size = 10 + Math.random() * 12;
     p.style.width = size + 'px';
     p.style.height = size + 'px';
-
     var angle = Math.random() * Math.PI * 2;
     var distance = 200 + Math.random() * 400;
     var tx = Math.cos(angle) * distance;
     var ty = Math.sin(angle) * distance - 100;
-
     p.style.setProperty('--tx', tx + 'px');
     p.style.setProperty('--ty', ty + 'px');
     p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
-
     p.style.animation = 'confettiFly ' + (1.2 + Math.random() * 0.8) + 's cubic-bezier(.2,.8,.4,1) forwards';
     p.style.animationDelay = (Math.random() * 0.3) + 's';
-
     wrap.appendChild(p);
   }
-
   setTimeout(function(){ wrap.innerHTML = ''; }, 2500);
-}
-/* ========== ADMIN PANEL ========== */
-var adminCurrentUser = null;
-
-function isAdmin() {
-  var role = localStorage.getItem('user_role');
-  var email = localStorage.getItem('user_email');
-  // Только admin@nordiccrypto.com может быть админом
-  return role === 'admin' && email === 'admin@nordiccrypto.com';
-}
-
-function showAdminPanel() {
-  var panel = document.getElementById('adminPanel');
-  if (panel) panel.classList.add('on');
-  var side = document.getElementById('sideBar');
-  var main = document.getElementById('mainApp');
-  if (side) side.style.display = 'none';
-  if (main) main.style.display = 'none';
-
-  var userEl = document.getElementById('adminUser');
-  if (userEl) userEl.textContent = localStorage.getItem('user_email') || '';
-
-  // ВАЖНО: привязываем кнопки
-  initAdminPanel();
-
-  // Загрузить данные
-  loadAdminUsers();
-  loadAdminStats();
-  loadDeletedUsers();
-  setTimeout(function(){ showAdminTab('stats'); }, 100);
-}
-function hideAdminPanel() {
-  var panel = document.getElementById('adminPanel');
-  if (panel) panel.classList.remove('on');
-}
-
-async function loadAdminUsers() {
-  var listEl = document.getElementById('adminClientsList');
-  if (!listEl) return;
-
-  try {
-    var res = await fetch(WORKER_LOGIN_URL + '?action=listUsers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    });
-    var data = await res.json();
-
-    if (!data.ok) {
-      listEl.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>';
-      return;
-    }
-
-    if (!data.users || data.users.length === 0) {
-      listEl.innerHTML = '<div class="admin-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:12px">📭</div><div>No clients yet</div></div>';
-      return;
-    }
-
-    var html = '';
-    for (var i = 0; i < data.users.length; i++) {
-      var u = data.users[i];
-      var initials = (u.name || 'U').split(' ').map(function(n){return n[0];}).join('').slice(0,2).toUpperCase();
-      var cardInfo = u.card ? (u.card.type + ' •••• ' + String(u.card.num).slice(-4)) : 'No card';
-      var statusBadge = u.card ? u.card.status : 'No card';
-      var statusClass = (u.card && u.card.status === 'Active') ? '' : ' style="background:rgba(255,176,32,.14);color:#ffb020"';
-
-      html += '<div class="admin-client-card">' +
-        '<div class="admin-client-top">' +
-          '<div class="admin-client-avatar">' + initials + '</div>' +
-          '<div class="admin-client-info">' +
-            '<div class="admin-client-name">' + u.name + '</div>' +
-            '<div class="admin-client-email">' + u.email + '</div>' +
-          '</div>' +
-          '<div class="admin-client-badge"' + statusClass + '>' + statusBadge + '</div>' +
-        '</div>' +
-        '<div class="admin-client-grid">' +
-          '<div class="admin-client-field"><div class="admin-client-field-label">Balance</div><div class="admin-client-field-value">' + fmtCurrency(u.balance) + '</div></div>' +
-          '<div class="admin-client-field"><div class="admin-client-field-label">Card</div><div class="admin-client-field-value">' + cardInfo + '</div></div>' +
-          '<div class="admin-client-field"><div class="admin-client-field-label">Transactions</div><div class="admin-client-field-value">' + u.txCount + '</div></div>' +
-          '<div class="admin-client-field"><div class="admin-client-field-label">Last Tx</div><div class="admin-client-field-value">' + (u.lastTx || '—') + '</div></div>' +
-        '</div>' +
-        '<div class="admin-client-actions">' +
-          '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + u.name + '\')">💰 Add balance</button>' +
-          '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
-          '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
-                '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete</button>' +
-        '</div>' +
-      '</div>';
-    }
-
-    listEl.innerHTML = html;
-  } catch (e) {
-    listEl.innerHTML = '<div class="admin-empty">Connection error</div>';
-  }
-}
-/* ========== ADMIN WITHDRAWALS ========== */
-async function loadAdminWithdrawals() {
-  var listEl = document.getElementById('adminWithdrawalsList');
-  var countEl = document.getElementById('adminWithdrawalsCount');
-  if (!listEl) { console.warn('no #adminWithdrawalsList'); return; }
-
-  listEl.innerHTML = '<div class="admin-empty">Loading withdrawals...</div>';
-  if (countEl) countEl.textContent = 'Loading...';
-
-  try {
-    var token = getSessionToken();
-    if (!token) { listEl.innerHTML = '<div class="admin-empty">No token</div>'; return; }
-
-    var res = await fetch(WORKER_URL + '?action=listUsers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
-    });
-    var data = await res.json();
-    if (!data.ok || !data.users) {
-      listEl.innerHTML = '<div class="admin-empty">Failed to load users</div>';
-      return;
-    }
-
-    var allWd = [];
-    for (var i = 0; i < data.users.length; i++) {
-      var u = data.users[i];
-      try {
-        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, email: u.email })
-        });
-        if (!r2.ok) { console.warn('HTTP', r2.status, u.email); continue; }
-        var d2 = await r2.json();
-        if (!d2 || !Array.isArray(d2.withdrawals)) continue;
-        for (var j = 0; j < d2.withdrawals.length; j++) {
-          var w = d2.withdrawals[j];
-          if (!w) continue;
-          w.userEmail = u.email;
-          w.userName = u.name || u.email;
-          allWd.push(w);
-        }
-      } catch (e) {
-        console.warn('skip', u.email, e.message);
-      }
-    }
-
-    allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-
-    var pending = allWd.filter(function(w) { return w.status === 'pending'; }).length;
-    if (countEl) countEl.textContent = pending + ' pending • ' + allWd.length + ' total';
-
-    if (!allWd.length) {
-      listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>';
-      return;
-    }
-
-    var html = '';
-    for (var k = 0; k < allWd.length; k++) {
-      if (typeof renderAdminWithdrawalCard === 'function') {
-        html += renderAdminWithdrawalCard(allWd[k]);
-      } else {
-        html += '<div class="admin-empty">wd: ' + allWd[k].amount + ' — ' + allWd[k].userEmail + '</div>';
-      }
-    }
-    listEl.innerHTML = html;
-    console.log('[loadAdminWithdrawals] DONE, всего заявок:', allWd.length);
-  } catch (e) {
-    console.error('[loadAdminWithdrawals] FAILED:', e);
-    listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
-  }
-}
-
-function renderAdminWithdrawalCard(w) {
-  var statusMap = {
-    'pending':  { cls: 'pend', txt: '⏳ Pending' },
-    'approved': { cls: 'ok',   txt: '✅ Approved' },
-    'rejected': { cls: 'fail', txt: '❌ Rejected' }
-  };
-  var s = statusMap[w.status] || statusMap['pending'];
-  var d = w.details || {};
-
-  var details = '';
-  if (w.method === 'iban') {
-    details =
-      '<div class="awd-row"><span>Name</span><b>' + (d.name || '—') + '</b></div>' +
-      '<div class="awd-row"><span>IBAN</span><b>' + (d.iban || '—') + '</b></div>' +
-      '<div class="awd-row"><span>SWIFT</span><b>' + (d.swift || '—') + '</b></div>' +
-      '<div class="awd-row"><span>Bank</span><b>' + (d.bank || '—') + '</b></div>';
-  } else if (w.method === 'card') {
-    details =
-      '<div class="awd-row"><span>Holder</span><b>' + (d.cardName || '—') + '</b></div>' +
-      '<div class="awd-row"><span>Card</span><b>' + (d.cardNumber || '—') + '</b></div>';
-  } else if (w.method === 'crypto') {
-    details =
-      '<div class="awd-row"><span>Destination</span><b>' + (d.destination || '—') + '</b></div>' +
-      '<div class="awd-row"><span>Network</span><b>' + (d.network || '—') + '</b></div>' +
-      '<div class="awd-row"><span>Address</span><b>' + (d.address || '—') + '</b></div>';
-  }
-
-  var actions = '';
-  if (w.status === 'pending') {
-    actions =
-      '<div class="awd-actions">' +
-        '<button class="awd-btn awd-approve" onclick="adminApproveWithdrawal(\'' + w.userEmail + '\',\'' + w.id + '\')">✅ Approve</button>' +
-        '<button class="awd-btn awd-reject" onclick="adminRejectWithdrawal(\'' + w.userEmail + '\',\'' + w.id + '\')">❌ Reject</button>' +
-      '</div>';
-  }
-
-  return '<div class="awd-card">' +
-    '<div class="awd-head">' +
-      '<div><b>' + (w.userName || w.userEmail) + '</b><br><span class="awd-email">' + w.userEmail + '</span></div>' +
-      '<div class="awd-badge ' + s.cls + '">' + s.txt + '</div>' +
-    '</div>' +
-    '<div class="awd-amount">' + fmtCurrency(w.amount) + ' <span class="awd-method">via ' + (w.method || 'iban').toUpperCase() + '</span></div>' +
-    '<div class="awd-details">' + details + '</div>' +
-    '<div class="awd-date">' + new Date(w.createdAt).toLocaleString('en-GB') + '</div>' +
-    actions +
-  '</div>';
-}
-
-async function adminApproveWithdrawal(email, wdId) {
-  var ok = confirm('Approve this withdrawal?\nFunds will be deducted from client balance.');
-  if (!ok) return;
-
-  try {
-
-    var token = getSessionToken();
-    if (!token) { alert('No session'); return; }
-
-    // 1. Тянем state клиента
-    var r = await fetch(WORKER_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email })
-    });
-    var state = await r.json();
-    if (!state || state.error) throw new Error(state && state.error ? state.error : 'State not found');
-
-    // 2. Находим заявку
-    if (!state.withdrawals) state.withdrawals = [];
-    var wd = state.withdrawals.find(function(w){ return w.id === wdId; });
-    if (!wd) throw new Error('Withdrawal not found');
-    if (wd.status !== 'pending') throw new Error('Already ' + wd.status);
-
-    // 3. Проверка баланса
-    if ((state.usd || 0) < wd.amount) {
-      alert('Insufficient balance. Client has $' + (state.usd || 0));
-      return;
-    }
-
-    // 4. Списываем
-    state.usd = (state.usd || 0) - wd.amount;
-    if (!state.txs) state.txs = [];
-    state.txs.unshift({
-      date: new Date().toISOString().slice(0, 10),
-      ts: Date.now(),
-      desc: 'Withdrawal — ' + (wd.method || 'iban').toUpperCase(),
-      amt: -wd.amount,
-      status: 'Completed'
-    });
-
-    // 5. Обновляем заявку
-    wd.status = 'approved';
-    wd.reviewedAt = Date.now();
-    wd.reviewedBy = 'Compliance Department';
-
-    // 6. Уведомление клиенту
-    if (!state.notifications) state.notifications = [];
-    state.notifications.unshift({
-      id: 'n_' + Date.now(),
-      ts: Date.now(),
-      text: '✅ Withdrawal approved — $' + wd.amount + ' sent to your ' + (wd.method || 'IBAN') + '. Ref: ' + wd.id,
-      read: false
-    });
-
-    // 7. Сохраняем
-    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state, force: true })
-    });
-    var saveRes = await saveResp.json();
-    if (!saveRes || !saveRes.ok) throw new Error(saveRes && saveRes.error ? saveRes.error : 'Save failed');
-
-    alert('✅ Withdrawal approved');
-    loadAdminWithdrawals();
-  } catch (e) {
-    console.error('[approve] failed:', e);
-    alert('Error: ' + e.message);
-  }
-}
-
-async function adminRejectWithdrawal(email, wdId) {
-  // Причина отклонения — по стандартам AML / KYC
-  var reasons = [
-    '1. Недостаточно данных KYC',
-    '2. Подозрительная активность (AML)',
-    '3. Несоответствие реквизитов',
-    '4. Превышен лимит вывода',
-    '5. Техническая ошибка — попробуйте снова',
-    '6. Другое (ввести вручную)'
-  ];
-  var pick = prompt('Причина отклонения:\n\n' + reasons.join('\n') + '\n\nВведите номер 1–6:');
-  if (pick === null) return;
-
-  var reasonMap = {
-    '1': 'Insufficient KYC data. Please complete verification and try again.',
-    '2': 'Suspicious activity detected (AML). Contact support.',
-    '3': 'Bank details do not match account holder. Please check and retry.',
-    '4': 'Withdrawal limit exceeded. Try a smaller amount.',
-    '5': 'Temporary technical issue. Please try again later.',
-    '6': null
-  };
-
-  var reason = reasonMap[pick];
-  if (reason === null || !reason) {
-    reason = prompt('Введите причину вручную:');
-    if (!reason) return;
-  }
-
-  try {
-    var token = getSessionToken();
-    if (!token) { alert('No session'); return; }
-
-    var r = await fetch(WORKER_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email })
-    });
-    var state = await r.json();
-    if (!state || state.error) throw new Error(state && state.error ? state.error : 'State not found');
-
-    if (!state.withdrawals) state.withdrawals = [];
-    var wd = state.withdrawals.find(function(w){ return w.id === wdId; });
-    if (!wd) throw new Error('Withdrawal not found');
-    if (wd.status !== 'pending') throw new Error('Already ' + wd.status);
-
-    // Помечаем заявку
-    wd.status = 'rejected';
-    wd.reason = reason;
-    wd.reviewedAt = Date.now();
-    wd.reviewedBy = 'Compliance Department';
-
-    // Уведомление клиенту
-    if (!state.notifications) state.notifications = [];
-    state.notifications.unshift({
-      id: 'n_' + Date.now(),
-      ts: Date.now(),
-      text: '❌ Withdrawal rejected — $' + wd.amount + '. Reason: ' + reason,
-      read: false
-    });
-
-    // Баланс НЕ трогаем — деньги не списывались
-    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state, force: true })
-    });
-    var saveRes = await saveResp.json();
-    if (!saveRes || !saveRes.ok) throw new Error(saveRes && saveRes.error ? saveRes.error : 'Save failed');
-
-    alert('✅ Withdrawal rejected. Client notified.');
-    loadAdminWithdrawals();
-  } catch (e) {
-    console.error('[reject] failed:', e);
-    alert('Error: ' + e.message);
-  }
-}
-async function loadAdminStats() {
-  try {
-    var res = await fetch(WORKER_LOGIN_URL + '?action=getStats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    });
-    var data = await res.json();
-
-    if (!data.ok) return;
-
-    var s = data.stats;
-    var clientsEl = document.getElementById('admnStatClients');
-    var balEl = document.getElementById('admnStatBalance');
-    var txEl = document.getElementById('admnStatTx');
-    var cryptoEl = document.getElementById('admnStatCrypto');
-
-    if (clientsEl) clientsEl.textContent = s.totalClients;
-    if (balEl) balEl.textContent = fmtCurrency(s.totalBalance);
-    if (txEl) txEl.textContent = s.totalTx;
-    if (cryptoEl) cryptoEl.textContent = (s.totalCrypto.btc.toFixed(4) + ' / ' + s.totalCrypto.eth.toFixed(4));
-  } catch (e) {}
-}
-
-var adminTargetEmail = null;
-var adminTargetName = null;
-
-function adminAddBalance(email, name) {
-  adminTargetEmail = email;
-  adminTargetName = name;
-
-  var mask = document.getElementById('adminBalanceMask');
-  var desc = document.getElementById('adminBalanceDesc');
-  var amtEl = document.getElementById('adminBalanceAmount');
-  var noteEl = document.getElementById('adminBalanceNote');
-
-  if (desc) desc.textContent = name + ' (' + email + ')';
-  if (amtEl) amtEl.value = '';
-  if (noteEl) noteEl.value = '';
-  if (mask) mask.classList.add('on');
-}
-/* ========== ADMIN: DELETE / RESTORE USER ========== */
-function adminDeleteUser(email, name) {
-  if (!email) return;
-  if (!confirm('Delete user: ' + name + ' (' + email + ')?\n\nMoved to "Deleted Accounts".')) return;
-
-  fetch(WORKER_LOGIN_URL + '?action=deleteUser', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      token: getSessionToken(),
-      email: email,
-      permanent: false
-    })
-  })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data.ok) {
-        toast('✓ User moved to Deleted');
-        loadAdminUsers();
-        loadAdminStats();
-        loadDeletedUsers();
-      } else {
-        toast('Error: ' + (data.error || 'failed'), true);
-      }
-    })
-    .catch(function(){ toast('Connection error', true); });
-}
-
-function adminRestoreUser(email) {
-  if (!confirm('Restore user ' + email + '?')) return;
-  fetch(WORKER_LOGIN_URL + '?action=restoreUser', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: getSessionToken(), email: email })
-  })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data.ok) {
-        toast('✓ User restored');
-        loadAdminUsers();
-        loadAdminStats();
-        loadDeletedUsers();
-      } else {
-        toast('Error: ' + (data.error || 'failed'), true);
-      }
-    })
-    .catch(function(){ toast('Connection error', true); });
-}
-
-function adminPermanentDelete(email, name) {
-  if (!confirm('PERMANENTLY delete ' + name + ' (' + email + ')?\n\nThis CANNOT be undone!')) return;
-  if (!confirm('Are you ABSOLUTELY sure? All data will be erased.')) return;
-  fetch(WORKER_LOGIN_URL + '?action=deleteUser', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: getSessionToken(), email: email, permanent: true })
-  })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data.ok) {
-        toast('✓ User permanently deleted');
-        loadAdminUsers();
-        loadAdminStats();
-        loadDeletedUsers();
-      } else {
-        toast('Error: ' + (data.error || 'failed'), true);
-      }
-    })
-    .catch(function(){ toast('Connection error', true); });
-}
-
-async function loadDeletedUsers() {
-  var listEl = document.getElementById('adminDeletedList');
-  if (!listEl) return;
-
-  try {
-    var res = await fetch(WORKER_LOGIN_URL + '?action=listDeletedUsers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken() })
-    });
-    var data = await res.json();
-
-    if (!data.ok || !data.users || data.users.length === 0) {
-      listEl.innerHTML = '<div class="admin-empty">No deleted accounts</div>';
-      return;
-    }
-
-    var html = '';
-    for (var i = 0; i < data.users.length; i++) {
-      var u = data.users[i];
-      var date = new Date(u.deletedAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-
-      html += '<div class="admin-client-card" style="opacity:.75">' +
-        '<div class="admin-client-top">' +
-          '<div class="admin-client-avatar" style="background:linear-gradient(135deg,#ff5470,#7c3aed)">🗑</div>' +
-          '<div class="admin-client-info">' +
-            '<div class="admin-client-name">' + u.name + '</div>' +
-            '<div class="admin-client-email">' + u.email + '</div>' +
-            '<div style="font-size:.72rem;color:var(--mut);margin-top:4px">Deleted: ' + date + '</div>' +
-          '</div>' +
-          '<div class="admin-client-badge" style="background:rgba(255,84,112,.14);color:#ff5470">DELETED</div>' +
-        '</div>' +
-        '<div class="admin-client-actions">' +
-          '<button class="btn b1" onclick="adminRestoreUser(\'' + u.email + '\')">♻ Restore</button>' +
-          '<button class="btn b3" onclick="adminPermanentDelete(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete forever</button>' +
-        '</div>' +
-      '</div>';
-    }
-    listEl.innerHTML = html;
-  } catch (e) {
-    listEl.innerHTML = '<div class="admin-empty">Connection error</div>';
-  }
-}
-
-
-function adminSendMessage() {
-  var mask = document.getElementById('adminMsgMask');
-  var textEl = document.getElementById('adminMsgText');
-  var iconEl = document.getElementById('adminMsgIcon');
-  if (textEl) textEl.value = '';
-  if (iconEl) iconEl.value = '📩';
-  if (mask) mask.classList.add('on');
-}
-
-function adminViewClient(email) {
-  // Сохраняем оригинальные данные админа
-  window.adminOriginalEmail = localStorage.getItem('user_email');
-  window.adminOriginalRole = localStorage.getItem('user_role');
-  window.adminViewingEmail = email;
-
-  // Временно меняем на клиента — чтобы saveToServer работал
-  localStorage.setItem('user_email', email);
-  localStorage.setItem('user_role', 'user');
-    // СБРОС st перед загрузкой — иначе View покажет старые данные
-  st = JSON.parse(JSON.stringify(def));
-  stateLoaded = false;
-
-  hideAdminPanel();
-  var side = document.getElementById('sideBar');
-  var main = document.getElementById('mainApp');
-  if (side) side.style.display = 'flex';
-  if (main) main.style.display = 'flex';
-
-  // Показать плашку "Back to Admin"
-  var backBar = document.getElementById('adminBackBar');
-  if (!backBar) {
-    backBar = document.createElement('div');
-    backBar.id = 'adminBackBar';
-    backBar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:8000;background:linear-gradient(90deg,#7c3aed,#a855f7);padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.85rem;color:#fff';
-    backBar.innerHTML = '<span>👁 Viewing as Admin — ' + (email || '') + '</span>' +
-      '<button onclick="backToAdmin()" style="background:#fff;color:#7c3aed;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit">← Back to Admin</button>';
-    document.body.appendChild(backBar);
-  } else {
-    backBar.querySelector('span').textContent = '👁 Viewing as Admin — ' + (email || '');
-  }
-  backBar.style.display = 'flex';
-
-  // Загружаем state клиента
-   loadFromServer(function(){
-    // ФИКС: если st пустой — берём из listUsers
-    if (!st.usd || st.usd < 100) {
-      fetch(WORKER_LOGIN_URL + '?action=listUsers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: getSessionToken() })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (d && d.ok && d.users) {
-          for (var i = 0; i < d.users.length; i++) {
-            if (d.users[i].email === email) {
-              st.usd = d.users[i].balance || 0;
-              st.currency = d.users[i].currency || 'USD';
-              st.btc = d.users[i].btc || 0;
-              st.eth = d.users[i].eth || 0;
-              st.card = d.users[i].card || null;
-              if (!st.txs) st.txs = [];
-              render();
-              break;
-            }
-          }
-        }
-      });
-    }
-
-    loadPrices();
-    loadExchangeRates();
-    initCurrencySwitcher();
-    initNotifications();
-    renderNotifications();
-    initSoundButton();
-    initVerification();
-    initDesignPicker();
-    startIbanGeneration();
-    initRecentTx();
-    initTrackingActions();
-    initDepositVerification();
-    initWelcomeBanner();
-    initSettings();
-    // loadCharts();                        // временно отключено
-   // setInterval(loadPrices, 3 * 1000);  ← ОТКЛЮЧЕНО
-  // setInterval(loadCharts, 5 * 1000);   // временно отключено
-    setInterval(loadExchangeRates, 10 * 60 * 1000);
-        // Скрыть onboarding — мы смотрим чужой кабинет
-    var onboardEl = document.getElementById('onboard');
-    if (onboardEl) onboardEl.classList.remove('on');
-
-    // Показать Dashboard напрямую
-    var pgs = document.querySelectorAll('.pg');
-    for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
-    var dash = document.getElementById('dash');
-    if (dash) dash.classList.add('on');
-    var ms = document.querySelectorAll('.mi');
-    for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
-    var dashMi = document.querySelector('.mi[data-p="dash"]');
-    if (dashMi) dashMi.classList.add('on');
-    var ttl = document.getElementById('ttl');
-    if (ttl) ttl.textContent = 'Dashboard';
-  }, email);
-}
-
-function backToAdmin() {
-  var side = document.getElementById('sideBar');
-  var main = document.getElementById('mainApp');
-  if (side) side.style.display = 'none';
-  if (main) main.style.display = 'none';
-  var backBar = document.getElementById('adminBackBar');
-  if (backBar) backBar.style.display = 'none';
-
-  // Восстанавливаем роль админа
-  if (window.adminOriginalEmail) {
-    localStorage.setItem('user_email', window.adminOriginalEmail);
-    localStorage.setItem('user_role', window.adminOriginalRole || 'admin');
-    window.adminOriginalEmail = null;
-    window.adminOriginalRole = null;
-    window.adminViewingEmail = null;
-  }
-
-  // Сброс клиентского state
-  st = JSON.parse(JSON.stringify(def));
-  stateLoaded = false;
-
-  showAdminPanel();
-}
-
-function initAdminPanel() {
-  var refreshBtn = document.getElementById('adminRefreshBtn');
-  var logoutBtn = document.getElementById('adminLogoutBtn');
-  var pushUpdateBtn = document.getElementById('adminPushUpdate');
-  var sendNotifBtn = document.getElementById('adminSendNotif');
-  var balanceSave = document.getElementById('adminBalanceSave');
-  var balanceCancel = document.getElementById('adminBalanceCancel');
-  var msgSave = document.getElementById('adminMsgSave');
-  var msgCancel = document.getElementById('adminMsgCancel');
-  var refreshDeleted = document.getElementById('adminRefreshDeleted');
-
-  if (refreshBtn) refreshBtn.onclick = function(){
-    loadAdminUsers();
-    loadAdminStats();
-    toast('Refreshed');
-  };
-  if (refreshDeleted) refreshDeleted.onclick = function(){
-    loadDeletedUsers();
-    toast('Deleted refreshed');
-  };
-  
-  if (logoutBtn) logoutBtn.onclick = function(){
-    if (!confirm('Log out?')) return;
-    doLogout();
-  };
-
-  if (pushUpdateBtn) pushUpdateBtn.onclick = function(){
-    toast('📢 Notified client about new version');
-    sendAdminMessage('🎉 New version 1.1 is available! Click Settings to update.', '📢');
-  };
-
-  if (sendNotifBtn) sendNotifBtn.onclick = function(){
-    adminSendMessage();
-  };
-
-  // Balance modal
-  if (balanceCancel) balanceCancel.onclick = function(){
-    document.getElementById('adminBalanceMask').classList.remove('on');
-  };
-
-if (balanceSave) balanceSave.onclick = async function(){
-  var amount = Number(document.getElementById('adminBalanceAmount').value);
-  var note = document.getElementById('adminBalanceNote').value.trim();
-  var typeEl = document.getElementById('adminBalanceType');
-  var type = typeEl ? typeEl.value : 'bonus';
-
-  if (!amount || amount === 0) { toast('Enter a valid amount', true); return; }
-
-  var meta = {
-    'bonus':      { icon: '🎁', label: 'Bonus' },
-    'bank':       { icon: '🏦', label: 'Bank deposit' },
-    'crypto':     { icon: '₿',  label: 'Crypto deposit' },
-    'card':       { icon: '💳', label: 'Card deposit' },
-    'correction': { icon: '🔧', label: 'Correction' }
-  };
-  var m = meta[type] || meta['bonus'];
-
-  try {
-    var token = getSessionToken();
-
-    var r = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: token,
-        email: adminTargetEmail,
-        amount: amount,
-        note: note || m.label
-      })
-    });
-    var data = await r.json();
-    console.log('updateUserBalance:', data);
-
-    if (!data.ok) {
-      toast('Error: ' + (data.error || 'Failed'), true);
-      return;
-    }
-
-    try {
-      await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: token,
-          email: adminTargetEmail,
-          text: m.icon + ' ' + m.label + ': +' + amount + ' USD' + (note ? ' — ' + note : ''),
-          icon: m.icon
-        })
-      });
-    } catch(e) { console.warn('Notify failed', e); }
-
-    toast('✓ Balance updated: +' + amount + ' (' + m.label + ')');
-    document.getElementById('adminBalanceMask').classList.remove('on');
-    loadAdminUsers();
-    loadAdminStats();
-
-  } catch (e) {
-    console.error('Balance update failed', e);
-    toast('Connection error: ' + e.message, true);
-  }
-};
-  
-  // Message modal
-  if (msgCancel) msgCancel.onclick = function(){
-    document.getElementById('adminMsgMask').classList.remove('on');
-  };
-
-  if (msgSave) msgSave.onclick = async function(){
-    var text = document.getElementById('adminMsgText').value.trim();
-    var icon = document.getElementById('adminMsgIcon').value.trim() || '📩';
-    if (!text) {
-      toast('Enter a message', true);
-      return;
-    }
-    try {
-      var res = await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    token: getSessionToken(),
-    email: adminTargetEmail,
-    text: text,
-    icon: icon
-  })
-});
-      var data = await res.json();
-      if (data.ok) {
-        toast('✓ Message sent');
-        document.getElementById('adminMsgMask').classList.remove('on');
-      } else {
-        toast('Error: ' + (data.error || 'failed'), true);
-      }
-    } catch (e) {
-      toast('Connection error', true);
-    }
-  };
-}
-
-async function sendAdminMessage(text, icon) {
-  try {
-    await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken(), text: text, icon: icon || '📩' })
-    });
-  } catch (e) {}
-}
-
-/* ========== AUTO-REFRESH NOTIFICATIONS ========== */
-async function refreshNotificationsFromServer() {
-  try {
-    var res = await fetch(WORKER_LOGIN_URL + '?action=getState');
-    var data = await res.json();
-    if (data && data.notifications) {
-      // Сравниваем количество
-      var oldCount = (st.notifications || []).length;
-      var newCount = data.notifications.length;
-
-      // Если новых больше — обновляем
-      if (newCount > oldCount) {
-        // Найдём новые (по id)
-        var oldIds = {};
-        (st.notifications || []).forEach(function(n){ oldIds[n.id] = true; });
-
-        data.notifications.forEach(function(n){
-          if (!oldIds[n.id]) {
-            // Это новое уведомление — показываем тост
-            toast(n.icon + ' ' + n.text);
-            // Звук
-            try { playNotificationSound(); } catch(e){}
-          }
-        });
-
-        st.notifications = data.notifications;
-        renderNotifications();
-        saveToServer();
-      }
-    }
-  } catch (e) {}
 }
 
 /* ========== SIGN UP ========== */
@@ -4638,7 +2845,6 @@ function initSignup() {
   var cancelBtn = document.getElementById('suCancel');
   var submitBtn = document.getElementById('suSubmit');
   var goToLogin = document.getElementById('suGoToLogin');
-
   var nameEl = document.getElementById('suName');
   var emailEl = document.getElementById('suEmail');
   var passEl = document.getElementById('suPassword');
@@ -4661,18 +2867,9 @@ function initSignup() {
     setTimeout(function () { if (nameEl) nameEl.focus(); }, 100);
   };
 
-  if (cancelBtn) cancelBtn.onclick = function () {
-    mask.classList.remove('on');
-  };
-
-  mask.onclick = function (e) {
-    if (e.target === mask) mask.classList.remove('on');
-  };
-
-  if (goToLogin) goToLogin.onclick = function (e) {
-    e.preventDefault();
-    mask.classList.remove('on');
-  };
+  if (cancelBtn) cancelBtn.onclick = function () { mask.classList.remove('on'); };
+  mask.onclick = function (e) { if (e.target === mask) mask.classList.remove('on'); };
+  if (goToLogin) goToLogin.onclick = function (e) { e.preventDefault(); mask.classList.remove('on'); };
 
   var suPassToggle = document.getElementById('suPassToggle');
   if (suPassToggle) suPassToggle.onclick = function () {
@@ -4680,7 +2877,6 @@ function initSignup() {
     passEl.type = passEl.type === 'password' ? 'text' : 'password';
     this.textContent = passEl.type === 'password' ? '👁' : '🙈';
   };
-
   var suConfirmToggle = document.getElementById('suConfirmToggle');
   if (suConfirmToggle) suConfirmToggle.onclick = function () {
     if (!confirmEl) return;
@@ -4689,9 +2885,7 @@ function initSignup() {
   };
 
   [nameEl, emailEl, passEl, confirmEl].forEach(function (el) {
-    if (el) el.onkeydown = function (e) {
-      if (e.key === 'Enter') doSignup();
-    };
+    if (el) el.onkeydown = function (e) { if (e.key === 'Enter') doSignup(); };
   });
 
   if (submitBtn) submitBtn.onclick = doSignup;
@@ -4703,7 +2897,6 @@ function initSignup() {
     var confirm = confirmEl ? confirmEl.value : '';
 
     if (errEl) errEl.style.display = 'none';
-
     if (!name) return showSignupError('Please enter your full name');
     if (!email || email.indexOf('@') === -1) return showSignupError('Please enter a valid email');
     if (!password || password.length < 6) return showSignupError('Password must be at least 6 characters');
@@ -4724,12 +2917,10 @@ function initSignup() {
           localStorage.removeItem('user_email');
           localStorage.removeItem('user_role');
           localStorage.removeItem('user_name');
-
           setSessionToken(data.token);
           localStorage.setItem('user_email', data.user.email);
           localStorage.setItem('user_role', data.user.role || 'user');
           localStorage.setItem('user_name', data.user.name || name);
-
           if (mask) mask.classList.remove('on');
           hideLoginScreen();
           showApp();
@@ -4753,12 +2944,10 @@ function initSignup() {
   }
 
   function showSignupError(msg) {
-    if (errEl) {
-      errEl.textContent = msg;
-      errEl.style.display = 'block';
-    }
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
   }
 }
+
 /* ========== PASSWORD CONFIRM ========== */
 var passwordConfirmCallback = null;
 
@@ -4768,12 +2957,10 @@ function openPasswordConfirm(message, callback) {
   var desc = document.getElementById('passwordConfirmDesc');
   var input = document.getElementById('passwordConfirmInput');
   var errEl = document.getElementById('passwordConfirmError');
-
   if (desc) desc.textContent = message;
   if (input) input.value = '';
   if (errEl) errEl.style.display = 'none';
   if (mask) mask.classList.add('on');
-
   setTimeout(function(){ if (input) input.focus(); }, 100);
 }
 
@@ -4789,42 +2976,27 @@ function initPasswordConfirm() {
     if (mask) mask.classList.remove('on');
     passwordConfirmCallback = null;
   };
-
   if (mask) mask.onclick = function(e) {
-    if (e.target === mask) {
-      mask.classList.remove('on');
-      passwordConfirmCallback = null;
-    }
+    if (e.target === mask) { mask.classList.remove('on'); passwordConfirmCallback = null; }
   };
-
   if (toggle) toggle.onclick = function() {
     if (!input) return;
     input.type = input.type === 'password' ? 'text' : 'password';
     this.textContent = input.type === 'password' ? '👁' : '🙈';
   };
-
-  if (input) input.onkeydown = function(e) {
-    if (e.key === 'Enter') doPasswordConfirm();
-  };
-
+  if (input) input.onkeydown = function(e) { if (e.key === 'Enter') doPasswordConfirm(); };
   if (okBtn) okBtn.onclick = doPasswordConfirm;
 
   function doPasswordConfirm() {
     var password = input ? input.value : '';
-    if (!password) {
-      showPwdError('Please enter your password');
-      return;
-    }
+    if (!password) { showPwdError('Please enter your password'); return; }
     if (errEl) errEl.style.display = 'none';
     if (okBtn) { okBtn.disabled = true; okBtn.textContent = 'Verifying...'; }
 
     fetch(WORKER_LOGIN_URL + '?action=verifyPassword', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: getSessionToken(),
-        password: password
-      })
+      body: JSON.stringify({ token: getSessionToken(), password: password })
     })
       .then(function(r){ return r.json(); })
       .then(function(data){
@@ -4850,269 +3022,26 @@ function initPasswordConfirm() {
   }
 }
 
-/* ========== COUNTRY → CURRENCY LINK ========== */
+/* ========== COUNTRY → CURRENCY ========== */
 function initCountryCurrencyLink() {
   var countryEl = document.getElementById('onbCountry');
   if (!countryEl) return;
-  
   countryEl.addEventListener('change', function() {
     var country = this.value;
-    var currencyMap = {
-      SE: 'SEK', NO: 'NOK', DK: 'DKK', FI: 'EUR',
-      DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
-      GB: 'GBP', US: 'USD'
-    };
+    var currencyMap = { SE:'SEK', NO:'NOK', DK:'DKK', FI:'EUR', DE:'EUR', FR:'EUR', ES:'EUR', IT:'EUR', NL:'EUR', GB:'GBP', US:'USD' };
     var currency = currencyMap[country] || 'EUR';
-    
     var btns = document.querySelectorAll('.cur-btn');
     for (var i = 0; i < btns.length; i++) {
       btns[i].classList.toggle('on', btns[i].getAttribute('data-cur') === currency);
     }
-    
     if (typeof onbCur !== 'undefined') onbCur = currency;
-    
     var prevCurEl = document.getElementById('prevCur');
     if (prevCurEl) prevCurEl.textContent = currency;
-    
     toast('Currency set to ' + currency);
   });
 }
 
-/* ========== THEME TOGGLE ========== */
-function initThemeToggle() {
-  var btn = document.getElementById('themeToggle');
-  if (!btn) return;
-  
-  var saved = localStorage.getItem('theme');
-  if (saved === 'light') {
-    document.body.classList.add('light-theme');
-    btn.textContent = '☀️';
-  }
-  
-  btn.onclick = function() {
-    document.body.classList.toggle('light-theme');
-    var isLight = document.body.classList.contains('light-theme');
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-    btn.textContent = isLight ? '☀️' : '🌙';
-  };
-}
-
-/* ========== CARD ACTION BUTTONS ========== */
-function initCardActionButtons() {
-  var freezeBtn = document.getElementById('btnFreezeCard');
-  var limitsBtn = document.getElementById('btnLimitsCard');
-  var settingsBtn = document.getElementById('btnSettingsCard');
-  
-  if (freezeBtn) freezeBtn.onclick = function() {
-    var realBtn = document.getElementById('btnFreeze');
-    if (realBtn) realBtn.click();
-    else toast('Freeze: card not found');
-  };
-  
-  if (limitsBtn) limitsBtn.onclick = function() {
-    toast('Limits: coming soon');
-  };
-  
-  if (settingsBtn) settingsBtn.onclick = function() {
-    var realBtn = document.getElementById('settingsBtn');
-    if (realBtn) realBtn.click();
-  };
-}
-
-function initExchangeButton() {
-  var btn = document.getElementById('btnExchange');
-  if (btn) btn.onclick = function() {
-    toast('Exchange: coming soon');
-  };
-}
-
-/* ========== DYNAMIC BALANCE — ОТКЛЮЧЕНО ========== */
-function refreshBalanceFromCrypto() {
-  // НЕ пересчитываем баланс из txs.
-  // Баланс приходит с сервера через getUserState.
-  return false;
-}
-/* ========== INIT ========== */
-initLoginLogout();
-initSignup();
-initPasswordConfirm();
-initCountryCurrencyLink();
-initThemeToggle();
-initCardActionButtons();
-initExchangeButton();
-checkSession();
-
-/* ФИКС: закрыть signupMask при загрузке */
-[100, 500, 1500].forEach(function(d){
-  setTimeout(function(){
-    var m = document.getElementById('signupMask');
-    if (m) m.classList.remove('on');
-  }, d);
-});
-
-/* ========== AUDIO KEEP-ALIVE ========== */
-// Будим AudioContext сразу при загрузке
-setTimeout(function(){
-  var ctx = getAudioCtx();
-  if (ctx && ctx.state === 'suspended') ctx.resume();
-}, 500);
-
-// Каждые 20 секунд — тихая "проверка", чтобы контекст не засыпал
-setInterval(function(){
-  var ctx = getAudioCtx();
-  if (ctx && ctx.state === 'suspended') ctx.resume();
-}, 20000);
-
-/* ========== AUDIO UNLOCK ON EVERY CLICK ========== */
-document.addEventListener('click', function(){
-  var ctx = getAudioCtx();
-  if (ctx && ctx.state !== 'running') {
-    ctx.resume();
-  }
-}, { passive: true });
-
-document.addEventListener('touchstart', function(){
-  var ctx = getAudioCtx();
-  if (ctx && ctx.state !== 'running') {
-    ctx.resume();
-  }
-}, { passive: true });
-// Автозагрузка withdrawals — polling без цикла
-(function(){
-  var lastCall = 0;
-  setInterval(function(){
-    var el = document.getElementById('adminWithdrawalsList');
-    if (!el) return;
-    // Если секция пустая / загрузка / ошибка — попробуем загрузить
-    var txt = el.innerHTML || '';
-    var needLoad = txt.indexOf('Loading withdrawals') > -1
-                || txt.indexOf('No token') > -1
-                || txt.indexOf('admin-empty') > -1;
-    if (!needLoad) return;
-    // И не чаще, чем раз в 3 секунды
-    var now = Date.now();
-    if (now - lastCall < 3000) return;
-    // НО: пробуем только если токен есть
-    if (typeof getSessionToken !== 'function') return;
-    if (!getSessionToken()) return;
-    lastCall = now;
-    if (typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
-  }, 500);
-  console.log('[auto-withdrawals] polling запущен (v2)');
-})();
-function openWdDetails(wdId) {
-  if (!wdId) return;
-  var wd = (st.withdrawals || []).find(function(w){ return w.id === wdId; });
-  if (!wd) { alert('Withdrawal not found'); return; }
-
-  // Удаляем старую модалку, если открыта
-  var old = document.getElementById('wdModal');
-  if (old) old.remove();
-
-  // Формируем детали
-  var details = wd.details || {};
-  var detailsHtml = '';
-
-  if (wd.method === 'iban') {
-    detailsHtml =
-      row('Recipient', details.name) +
-      row('IBAN', details.iban) +
-      row('SWIFT / BIC', details.swift) +
-      row('Bank', details.bank) +
-      row('Country', details.country);
-  } else if (wd.method === 'card') {
-    detailsHtml =
-      row('Card holder', details.cardName) +
-      row('Card number', details.cardNumber) +
-      row('Expiry', details.expiry);
-  } else if (wd.method === 'crypto') {
-    detailsHtml =
-      row('Network', details.network) +
-      row('Coin', details.coin) +
-      row('Address', details.address) +
-      (details.memo ? row('Memo', details.memo) : '');
-  }
-
-  function row(label, value) {
-    if (!value) return '';
-    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
-      '<span style="color:#8b95a5;font-size:12px;">' + label + '</span>' +
-      '<span style="color:#e7edf5;font-size:12px;text-align:right;max-width:60%;word-break:break-all;">' + value + '</span>' +
-      '</div>';
-  }
-
-  // Статус
-  var statusInfo = {
-    pending:  { text: '⏳ Under review',  color: '#f6c344' },
-    approved: { text: '✅ Approved',       color: '#22c55e' },
-    rejected: { text: '✗ Rejected',        color: '#ff6b6b' }
-  }[wd.status] || { text: wd.status, color: '#8b95a5' };
-
-  // Модалка
-  var modal = document.createElement('div');
-  modal.id = 'wdModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
-
-  modal.innerHTML =
-    '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:440px;width:100%;padding:24px;color:#e7edf5;font-family:inherit;max-height:80vh;overflow-y:auto;">' +
-
-      // Заголовок
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">' +
-        '<div>' +
-          '<div style="font-size:12px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;">Withdrawal</div>' +
-          '<div style="font-size:22px;font-weight:700;margin-top:4px;">$' + wd.amount + '</div>' +
-          '<div style="font-size:12px;color:#8b95a5;margin-top:2px;">via ' + (wd.method || 'iban').toUpperCase() + '</div>' +
-        '</div>' +
-        '<button onclick="document.getElementById(\'wdModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:22px;cursor:pointer;padding:0;line-height:1;">×</button>' +
-      '</div>' +
-
-      // Статус
-      '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);margin-bottom:16px;display:flex;align-items:center;gap:8px;">' +
-        '<span style="color:' + statusInfo.color + ';font-size:14px;font-weight:600;">' + statusInfo.text + '</span>' +
-      '</div>' +
-
-      // Причина reject
-      (wd.status === 'rejected' && wd.reason ?
-        '<div style="padding:12px;border-radius:10px;background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.25);margin-bottom:16px;">' +
-          '<div style="font-size:11px;color:#ff8a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Reason</div>' +
-          '<div style="font-size:13px;color:#ffb4b4;">' + wd.reason + '</div>' +
-        '</div>'
-        : '') +
-
-      // Детали реквизитов
-      (detailsHtml ?
-        '<div style="margin-bottom:16px;">' +
-          '<div style="font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>' +
-          detailsHtml +
-        '</div>'
-        : '') +
-
-      // Метаданные
-      '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">' +
-        row('Created', new Date(wd.createdAt).toLocaleString('en-GB')) +
-        (wd.reviewedAt ? row('Reviewed', new Date(wd.reviewedAt).toLocaleString('en-GB')) : '') +
-        row('Reviewed by', 'Compliance Department — Nordic Crypto Bank') +
-        row('Reference', 'NCB-' + String(wd.id).slice(-8).toUpperCase()) +
-      '</div>' +
-
-      // Кнопка закрытия
-      '<button onclick="document.getElementById(\'wdModal\').remove()" style="margin-top:20px;width:100%;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Close</button>' +
-
-    '</div>';
-
-  document.body.appendChild(modal);
-
-  // Закрытие по клику на фон
-  modal.addEventListener('click', function(e){
-    if (e.target === modal) modal.remove();
-  });
-
-  // Закрытие по Escape
-  document.addEventListener('keydown', function esc(e){
-    if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
-  });
-}
-// ========== LIVE CHAT — CLIENT ==========
+/* ========== CHAT CLIENT ========== */
 async function toggleChat() {
   var p = document.getElementById('chatPanel');
   if (!p) return;
@@ -5120,7 +3049,6 @@ async function toggleChat() {
   p.style.display = open ? 'none' : 'flex';
   if (open) return;
 
-  // Подгружаем тикет с сервера, если нет в памяти
   if (!st.ticket || !st.ticket.id) {
     try {
       var token = getSessionToken();
@@ -5140,29 +3068,26 @@ async function toggleChat() {
   }
 
   var hasTicket = !!(st.ticket && st.ticket.id);
-
   if (hasTicket) {
-    // ЕСТЬ тикет — показываем чат
-    document.getElementById('chatTicketForm').style.display = 'none';
-    document.getElementById('chatConversation').style.display = 'flex';
+    var formEl = document.getElementById('chatTicketForm');
+    var convEl = document.getElementById('chatConversation');
+    if (formEl) formEl.style.display = 'none';
+    if (convEl) convEl.style.display = 'flex';
     var topic = st.ticket.topic || 'support';
     var priority = st.ticket.priority || 'normal';
-    document.getElementById('chatTicketTopic').textContent =
-      topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
+    var topicEl = document.getElementById('chatTicketTopic');
+    if (topicEl) topicEl.textContent = topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
     renderChatMessages();
     markChatRead();
-    setTimeout(function(){
-      var i = document.getElementById('chatInput'); if (i) i.focus();
-    }, 100);
+    setTimeout(function(){ var i = document.getElementById('chatInput'); if (i) i.focus(); }, 100);
   } else {
-    // НЕТ тикета — показываем ФОРМУ
-    document.getElementById('chatTicketForm').style.display = 'flex';
-    document.getElementById('chatConversation').style.display = 'none';
+    var formEl2 = document.getElementById('chatTicketForm');
+    var convEl2 = document.getElementById('chatConversation');
+    if (formEl2) formEl2.style.display = 'flex';
+    if (convEl2) convEl2.style.display = 'none';
     var e = document.getElementById('tkEmail');
     if (e) e.value = window.adminViewingEmail || localStorage.getItem('user_email') || '';
-    setTimeout(function(){
-      var i = document.getElementById('tkEmail'); if (i) i.focus();
-    }, 100);
+    setTimeout(function(){ var i = document.getElementById('tkEmail'); if (i) i.focus(); }, 100);
   }
 }
 
@@ -5170,17 +3095,10 @@ function renderChatMessages() {
   var box = document.getElementById('chatMessages');
   if (!box) return;
   var chat = (st.chat || []).slice().sort(function(a,b){ return a.ts - b.ts; });
-  
   if (!chat.length) {
-    box.innerHTML = 
-      '<div class="chat-welcome">' +
-        '<div class="chat-welcome-avatar"><img src="assets/astrid.jpg" alt="Elena"></div>' +
-        '<div class="chat-welcome-name">Elena Bergström</div>' +
-        '<div class="chat-welcome-text">Hi! I\'m Elena from Nordic Crypto Support.<br>How can I help you today?</div>' +
-      '</div>';
+    box.innerHTML = '<div class="chat-welcome"><div class="chat-welcome-name">Elena Bergström</div><div class="chat-welcome-text">Hi! How can I help you today?</div></div>';
     return;
   }
-
   var html = '';
   chat.forEach(function(m){
     var isClient = m.from === 'client';
@@ -5190,7 +3108,6 @@ function renderChatMessages() {
         '<div class="chat-msg-meta">' +
           (isClient ? 'You' : 'Elena') + ' • ' +
           new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
-          (isClient && m.read ? ' ✓✓' : '') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -5211,7 +3128,6 @@ async function sendChatMsg() {
   var text = (input.value || '').trim();
   if (!text) return;
   input.value = '';
-
   if (!st.chat) st.chat = [];
   st.chat.push({
     id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
@@ -5220,29 +3136,17 @@ async function sendChatMsg() {
     ts: Date.now(),
     read: false
   });
-
   renderChatMessages();
-
-    var token = getSessionToken();
+  var token = getSessionToken();
   var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
-
   if (token && targetEmail) {
     try {
-      var r = await fetch(WORKER_URL + '?action=setUserState', {
+      await fetch(WORKER_URL + '?action=setUserState', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          token: token, 
-          email: targetEmail, 
-          state: st, 
-          force: true 
-        })
+        body: JSON.stringify({ token: token, email: targetEmail, state: st, force: true })
       });
-      var res = await r.json();
-      console.log('[sendChatMsg] сохранено для:', targetEmail, res);
-    } catch(e) { console.warn('[chat] save failed', e); }
-  } else {
-    console.warn('[sendChatMsg] нет token или email');
+    } catch(e) {}
   }
 }
 
@@ -5251,7 +3155,6 @@ async function markChatRead() {
   var email = window.adminViewingEmail || localStorage.getItem('user_email');
   if (!token || !email) return;
   try {
-    // Сначала тянем свежий state с сервера — чтобы не затереть чужие сообщения
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ token: token, email: email })
@@ -5259,26 +3162,15 @@ async function markChatRead() {
     var fresh = await r.json();
     if (!fresh || !fresh.chat) return;
     st.chat = fresh.chat;
-
-    // Помечаем admin-сообщения прочитанными
     var changed = false;
-    st.chat.forEach(function(m){ 
-      if (m.from === 'admin' && !m.read) { m.read = true; changed = true; } 
-    });
+    st.chat.forEach(function(m){ if (m.from === 'admin' && !m.read) { m.read = true; changed = true; } });
     if (!changed) return;
-
-    // Сохраняем — с email, чтобы ушло в правильный state
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ 
-        token: token, 
-        email: email, 
-        state: st, 
-        force: true 
-      })
+      body: JSON.stringify({ token: token, email: email, state: st, force: true })
     });
     updateChatBadge();
-  } catch(e) { console.warn('[markChatRead] failed', e); }
+  } catch(e) {}
 }
 
 function updateChatBadge() {
@@ -5293,14 +3185,49 @@ function updateChatBadge() {
   }
 }
 
+async function startTicket() {
+  var emailEl = document.getElementById('tkEmail');
+  var topicEl = document.getElementById('tkTopic');
+  var priorityEl = document.getElementById('tkPriority');
+  var descEl = document.getElementById('tkDesc');
+  if (!emailEl || !topicEl || !priorityEl || !descEl) return;
+  var email = (emailEl.value || '').trim();
+  var topic = topicEl.value;
+  var priority = priorityEl.value;
+  var desc = (descEl.value || '').trim();
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', function(){
-  var btn = document.getElementById('chatToggle');
-  if (btn) btn.onclick = toggleChat;
-  updateChatBadge();
-});
-// ========== LIVE CHAT — ADMIN ==========
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Please enter a valid email'); return; }
+  if (desc.length < 5) { alert('Please describe your issue'); return; }
+
+  st.ticket = { id: 'tk_' + Date.now(), email: email, topic: topic, priority: priority, createdAt: Date.now(), status: 'open' };
+  if (!st.chat) st.chat = [];
+  st.chat.push({
+    id: 'msg_' + Date.now(),
+    from: 'client',
+    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n\n' + desc,
+    ts: Date.now(),
+    read: false
+  });
+
+  var token = getSessionToken();
+  var targetEmail = window.adminViewingEmail || email;
+  if (token) {
+    try {
+      await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: targetEmail, state: st, force: true })
+      });
+    } catch(e) {}
+  }
+  document.getElementById('chatTicketForm').style.display = 'none';
+  document.getElementById('chatConversation').style.display = 'flex';
+  var topicNice = topic.charAt(0).toUpperCase() + topic.slice(1);
+  document.getElementById('chatTicketTopic').textContent = topicNice + ' • ' + priority;
+  renderChatMessages();
+}
+
+/* ========== CHAT ADMIN ========== */
 async function loadAdminChats() {
   var box = document.getElementById('adminChatsList');
   if (!box) return;
@@ -5312,7 +3239,7 @@ async function loadAdminChats() {
       body: JSON.stringify({ token: token })
     });
     var d = await r.json();
-    if (!d.ok || !d.users) { box.innerHTML = '<div class="admin-empty">Failed to load users</div>'; return; }
+    if (!d.ok || !d.users) { box.innerHTML = '<div class="admin-empty">Failed to load</div>'; return; }
     var chats = [];
     for (var i = 0; i < d.users.length; i++) {
       var u = d.users[i];
@@ -5336,9 +3263,7 @@ async function loadAdminChats() {
     chats.forEach(function(c){
       html += '<div onclick="openAdminChat(\'' + c.email + '\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
         '<div style="display:flex;gap:12px;align-items:center;">' +
-          '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
-  '<img src="assets/astrid.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Elena">' +
-'</div>' +
+          '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">E</div>' +
           '<div>' +
             '<div style="color:#e7edf5;font-weight:600;font-size:14px;">' + escapeHtml(c.name) +
               (c.unread ? ' <span style="background:#ff3b3b;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">' + c.unread + ' new</span>' : '') +
@@ -5377,33 +3302,24 @@ async function openAdminChat(email) {
     var isAdmin = m.from === 'admin';
     return '<div style="display:flex;margin-bottom:10px;' + (isAdmin ? 'justify-content:flex-end;' : '') + '">' +
       '<div style="max-width:70%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.45;' +
-        (isAdmin ? 'background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;'
-                 : 'background:rgba(255,255,255,0.06);color:#e7edf5;') + '">' +
+        (isAdmin ? 'background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;' : 'background:rgba(255,255,255,0.06);color:#e7edf5;') + '">' +
         escapeHtml(m.text) +
         '<div style="font-size:10px;opacity:0.6;margin-top:4px;">' + new Date(m.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
       '</div>' +
     '</div>';
   }).join('');
-  if (!messagesHtml) messagesHtml = '<div style="text-align:center;color:#8b95a5;padding:30px;">No messages yet</div>';
+  if (!messagesHtml) messagesHtml = '<div style="text-align:center;color:#8b95a5;padding:30px;">No messages</div>';
   var modal = document.createElement('div');
   modal.id = 'adminChatModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
-   modal.innerHTML =
+  modal.innerHTML =
     '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:520px;height:600px;display:flex;flex-direction:column;overflow:hidden;">' +
       '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
-        '<div style="display:flex;gap:12px;align-items:center;">' +
-          '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">' +
-            '<img src="assets/astrid.jpg" width="40" height="40" style="border-radius:50%;object-fit:cover;" alt="Elena">' +
-          '</div>' +
-          '<div>' +
-            '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
-            '<div style="color:#8b95a5;font-size:11px;">' + msgs.length + ' messages</div>' +
-          '</div>' +
+        '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button onclick="endAdminChat(\'' + email + '\')" style="background:rgba(255,80,80,0.15);border:none;color:#ff6b6b;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;">End chat</button>' +
+          '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
         '</div>' +
-        '<div style="display:flex;gap:6px;align-items:center;">' +
-  '<button onclick="endAdminChat(\'' + email + '\')" style="background:rgba(255,80,80,0.15);border:none;color:#ff6b6b;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;">End chat</button>' +
-  '<button onclick="document.getElementById(\'adminChatModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
-'</div>' +
       '</div>' +
       '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
       '<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">' +
@@ -5437,402 +3353,691 @@ async function sendAdminChatMsg(email) {
   openAdminChat(email);
 }
 
-// Автоподгрузка чатов
-setInterval(function(){
-  var el = document.getElementById('adminChatsList');
-  if (!el) return;
-  if (el.innerHTML.indexOf('Loading chats') > -1 || el.innerHTML.indexOf('No chats yet') > -1) {
-    loadAdminChats();
-  }
-}, 3000);
-// Обновление имени, email, инициалов во всех местах UI
-function updateUserUI() {
-  // Если админ смотрит клиента — показываем ИМЯ КЛИЕНТА, не своё
-  if (window.adminViewingEmail) {
-    var clientName = (st && st.name) ? st.name : window.adminViewingEmail.split('@')[0];
-    var nameEl = document.getElementById('userName');
-    var avEl = document.getElementById('userAvatar');
-    if (nameEl) nameEl.textContent = clientName;
-    if (avEl) {
-      var parts = clientName.trim().split(' ');
-      avEl.textContent = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
-    }
-    return;
-  }
-
-  var name = localStorage.getItem('user_name') || 'User';
-  var email = localStorage.getItem('user_email') || '—';
-  var role = localStorage.getItem('user_role') || 'User';
-
-  var parts = name.trim().split(' ');
-  var initials = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
-
-  // Сайдбар
-  var nameEl = document.getElementById('userName');
-  var avEl = document.getElementById('userAvatar');
-  if (nameEl) nameEl.textContent = name;
-  if (avEl) avEl.textContent = initials;
-
-  // Settings
-  var sName = document.getElementById('settingsName');
-  var sEmail = document.getElementById('settingsEmail');
-  var sRole = document.getElementById('settingsRole');
-  if (sName) sName.textContent = name;
-  if (sEmail) sEmail.textContent = email;
-  if (sRole) sRole.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-}
-
-// Автозапуск при загрузке
-document.addEventListener('DOMContentLoaded', updateUserUI);
-
-// Обновление каждые 2 секунды на случай если login позже заполнит localStorage
-setInterval(updateUserUI, 2000);
-async function startTicket() {
-  var email = (document.getElementById('tkEmail').value || '').trim();
-  var topic = document.getElementById('tkTopic').value;
-  var priority = document.getElementById('tkPriority').value;
-  var desc = (document.getElementById('tkDesc').value || '').trim();
-
-  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Please enter a valid email'); return; }
-  if (desc.length < 5) { alert('Please describe your issue (at least 5 characters)'); return; }
-
-  st.ticket = {
-    id: 'tk_' + Date.now(),
-    email: email,
-    topic: topic,
-    priority: priority,
-    createdAt: Date.now(),
-    status: 'open'
-  };
-
-  if (!st.chat) st.chat = [];
-  st.chat.push({
-    id: 'msg_' + Date.now(),
-    from: 'client',
-    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n' + desc,
-    ts: Date.now(),
-    read: false
-  });
-
-  var token = getSessionToken();
-  if (token) {
-    try {
-      await fetch(WORKER_URL + '?action=setUserState', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, state: st, force: true })
-      });
-    } catch(e) { console.warn('ticket save failed', e); }
-  }
-
-  document.getElementById('chatTicketForm').style.display = 'none';
-  document.getElementById('chatConversation').style.display = 'flex';
-  var topicNice = topic.charAt(0).toUpperCase() + topic.slice(1);
-var priorityNice = priority.charAt(0).toUpperCase() + priority.slice(1);
-var priorityIcon = priority === 'high' ? '🔥 ' : priority === 'low' ? '⚪ ' : '⭐ ';
-document.getElementById('chatTicketTopic').textContent =
-  topicNice + ' • ' + priorityIcon + priorityNice;
-  renderChatMessages();
-}
-async function startTicket() {
-  var email = (document.getElementById('tkEmail').value || '').trim();
-  var topic = document.getElementById('tkTopic').value;
-  var priority = document.getElementById('tkPriority').value;
-  var desc = (document.getElementById('tkDesc').value || '').trim();
-
-  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Please enter a valid email'); return; }
-  if (desc.length < 5) { alert('Please describe your issue'); return; }
-
-  st.ticket = {
-    id: 'tk_' + Date.now(),
-    email: email,
-    topic: topic,
-    priority: priority,
-    createdAt: Date.now(),
-    status: 'open'
-  };
-
-  if (!st.chat) st.chat = [];
-  st.chat.push({
-    id: 'msg_' + Date.now(),
-    from: 'client',
-    text: '[' + topic.toUpperCase() + ' • ' + priority.toUpperCase() + ']\n\n' + desc,
-    ts: Date.now(),
-    read: false
-  });
-
-  console.log('[startTicket] создан тикет:', st.ticket);
-  console.log('[startTicket] сообщение:', st.chat[0]);
-
-  var token = getSessionToken();
-  var targetEmail = window.adminViewingEmail || email;
-
-  if (token) {
-    try {
-      var r = await fetch(WORKER_URL + '?action=setUserState', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: targetEmail, state: st, force: true })
-      });
-      var res = await r.json();
-      console.log('[startTicket] сохранено:', res);
-    } catch(e) { console.error('[startTicket] ошибка:', e); }
-  }
-
-  document.getElementById('chatTicketForm').style.display = 'none';
-  document.getElementById('chatConversation').style.display = 'flex';
-  document.getElementById('chatTicketTopic').textContent =
-    topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
-  renderChatMessages();
-}
-// ========== CHAT NOTIFICATIONS — badge + sound + title ==========
-function updateChatBadge() {
-  var badge = document.getElementById('chatBadge');
-  if (!badge) return;
-  var unread = (st.chat || []).filter(function(m){ return m.from === 'admin' && !m.read; }).length;
-  if (unread > 0) {
-    badge.textContent = unread > 9 ? '9+' : unread;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-// Звук уведомления
-function playChatSound() {
-  try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.4);
-  } catch(e) {}
-}
-
-// Мерцание title вкладки
-var _origTitle = document.title;
-var _titleInterval = null;
-function flashTitle(text) {
-  if (_titleInterval) return;
-  var toggle = false;
-  _titleInterval = setInterval(function(){
-    document.title = toggle ? text : _origTitle;
-    toggle = !toggle;
-  }, 800);
-
-  function stop() {
-    clearInterval(_titleInterval);
-    _titleInterval = null;
-    document.title = _origTitle;
-    window.removeEventListener('focus', stop);
-  }
-  setTimeout(stop, 10000);
-  window.addEventListener('focus', stop);
-}
-
-// Автопроверка новых сообщений от админа
-setInterval(async function(){
-  var token = getSessionToken();
-  if (!token) return;
-  try {
-    var r = await fetch(WORKER_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
-    });
-    var fresh = await r.json();
-    if (!fresh || !fresh.chat) return;
-    var freshLen = fresh.chat.length;
-    var localLen = (st.chat || []).length;
-    if (freshLen !== localLen) {
-      var hadNewFromAdmin = false;
-      if (freshLen > localLen) {
-        var newMsgs = fresh.chat.slice(localLen);
-        hadNewFromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
-      }
-      
-      st.chat = fresh.chat;
-      var panel = document.getElementById('chatPanel');
-      var isOpen = panel && panel.style.display === 'flex';
-      
-      if (isOpen) {
-        renderChatMessages();
-        markChatRead();
-      } else {
-        updateChatBadge();
-        if (hadNewFromAdmin) {
-          playChatSound();
-          flashTitle('💬 New message from Elena');
-        }
-      }
-    }
-  } catch(e) {}
-}, 5000);
-// ========== END CHAT (админ закрывает чат клиента) ==========
 async function endAdminChat(email) {
   if (!email) return;
-  if (!confirm('End this chat?\nAll messages from this client will be deleted.')) return;
-
+  if (!confirm('End this chat? All messages will be deleted.')) return;
   try {
     var token = getSessionToken();
-    if (!token) { alert('No session'); return; }
-
-    // Загружаем state клиента
+    if (!token) return;
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ token: token, email: email })
     });
     var state = await r.json();
-    if (!state || state.error) { alert('Failed to load client'); return; }
-
-    // Очищаем чат и тикет
+    if (!state || state.error) return;
     state.chat = [];
     state.ticket = null;
-
-    // Сохраняем
-    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
+    await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ token: token, email: email, state: state, force: true })
     });
-    var saveRes = await saveResp.json();
-    if (!saveRes || !saveRes.ok) { alert('Failed to save: ' + (saveRes.error || 'unknown')); return; }
-
-    console.log('[endAdminChat] чат очищен для:', email);
-    alert('✅ Chat closed. Client can start a new ticket.');
-
-    // Закрываем модалку и обновляем список
+    alert('✅ Chat closed.');
     var modal = document.getElementById('adminChatModal');
     if (modal) modal.remove();
     loadAdminChats();
-  } catch(e) {
-    console.error('[endAdminChat] error:', e);
-    alert('Error: ' + e.message);
-  }
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
-// ========== CLEAR ALL CHATS (глобальная очистка) ==========
 async function clearAllChats() {
-  if (!confirm('Clear ALL client chats?\nThis will delete every chat and ticket from every client.\nThis cannot be undone.')) return;
-  if (!confirm('Are you ABSOLUTELY sure? All chat history will be lost.')) return;
-
+  if (!confirm('Clear ALL chats?')) return;
+  if (!confirm('Are you ABSOLUTELY sure?')) return;
   try {
     var token = getSessionToken();
-    if (!token) { alert('No session'); return; }
-
-    // Список всех клиентов
+    if (!token) return;
     var r = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ token: token })
     });
     var d = await r.json();
-    if (!d.ok || !d.users) { alert('Failed to load users'); return; }
-
-    var cleared = 0;
-    var failed = 0;
-
+    if (!d.ok || !d.users) return;
+    var cleared = 0, failed = 0;
     for (var i = 0; i < d.users.length; i++) {
       var u = d.users[i];
       try {
-        // Читаем state
         var r2 = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ token: token, email: u.email })
         });
         var s = await r2.json();
         if (!s || s.error) { failed++; continue; }
-
-        // Пропускаем если нет чата
-        if (!s.chat || !s.chat.length) {
-          if (!s.ticket) continue;
-        }
-
-        // Очищаем
+        if (!s.chat || !s.chat.length) { if (!s.ticket) continue; }
         s.chat = [];
         s.ticket = null;
-
-        // Сохраняем
         var r3 = await fetch(WORKER_URL + '?action=setUserState', {
           method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ token: token, email: u.email, state: s, force: true })
         });
         var res = await r3.json();
-        if (res && res.ok) {
-          cleared++;
-          console.log('✓ ' + u.email + ' — очищено');
-        } else {
-          failed++;
-          console.log('✗ ' + u.email + ' — ошибка');
-        }
-      } catch(e) {
-        failed++;
-        console.warn('✗ ' + u.email, e.message);
-      }
+        if (res && res.ok) cleared++;
+        else failed++;
+      } catch(e) { failed++; }
     }
-
-    alert('✅ Готово!\nОчищено: ' + cleared + '\nОшибок: ' + failed);
-    console.log('[clearAllChats] DONE. cleared:', cleared, 'failed:', failed);
+    alert('✅ Cleared: ' + cleared + '\nErrors: ' + failed);
     loadAdminChats();
-  } catch(e) {
-    console.error('[clearAllChats] error:', e);
-    alert('Error: ' + e.message);
-  }
+  } catch(e) { alert('Error: ' + e.message); }
 }
-// ========== ADMIN TAB NAVIGATION ==========
+
+/* ========== ADMIN PANEL ========== */
+function isAdmin() {
+  var role = localStorage.getItem('user_role');
+  var email = localStorage.getItem('user_email');
+  return role === 'admin' && email === 'admin@nordiccrypto.com';
+}
+
+function showAdminPanel() {
+  var panel = document.getElementById('adminPanel');
+  if (panel) panel.classList.add('on');
+  var side = document.getElementById('sideBar');
+  var main = document.getElementById('mainApp');
+  if (side) side.style.display = 'none';
+  if (main) main.style.display = 'none';
+  var userEl = document.getElementById('adminUser');
+  if (userEl) userEl.textContent = localStorage.getItem('user_email') || '';
+  initAdminPanel();
+  loadAdminUsers();
+  loadAdminStats();
+  loadDeletedUsers();
+  setTimeout(function(){ showAdminTab('stats'); }, 100);
+}
+
+function hideAdminPanel() {
+  var panel = document.getElementById('adminPanel');
+  if (panel) panel.classList.remove('on');
+}
+
+async function loadAdminUsers() {
+  var listEl = document.getElementById('adminClientsList');
+  if (!listEl) return;
+  try {
+    var res = await fetch(WORKER_LOGIN_URL + '?action=listUsers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken() })
+    });
+    var data = await res.json();
+    if (!data.ok) { listEl.innerHTML = '<div class="admin-empty">Error</div>'; return; }
+    if (!data.users || data.users.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty"><div>No clients yet</div></div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < data.users.length; i++) {
+      var u = data.users[i];
+      var initials = (u.name || 'U').split(' ').map(function(n){return n[0];}).join('').slice(0,2).toUpperCase();
+      var cardInfo = u.card ? (u.card.type + ' •••• ' + String(u.card.num).slice(-4)) : 'No card';
+      var statusBadge = u.card ? u.card.status : 'No card';
+      var statusClass = (u.card && u.card.status === 'Active') ? '' : ' style="background:rgba(255,176,32,.14);color:#ffb020"';
+      html += '<div class="admin-client-card">' +
+        '<div class="admin-client-top">' +
+          '<div class="admin-client-avatar">' + initials + '</div>' +
+          '<div class="admin-client-info">' +
+            '<div class="admin-client-name">' + u.name + '</div>' +
+            '<div class="admin-client-email">' + u.email + '</div>' +
+          '</div>' +
+          '<div class="admin-client-badge"' + statusClass + '>' + statusBadge + '</div>' +
+        '</div>' +
+        '<div class="admin-client-grid">' +
+          '<div class="admin-client-field"><div class="admin-client-field-label">Balance</div><div class="admin-client-field-value">' + fmtCurrency(u.balance) + '</div></div>' +
+          '<div class="admin-client-field"><div class="admin-client-field-label">Card</div><div class="admin-client-field-value">' + cardInfo + '</div></div>' +
+          '<div class="admin-client-field"><div class="admin-client-field-label">Transactions</div><div class="admin-client-field-value">' + u.txCount + '</div></div>' +
+          '<div class="admin-client-field"><div class="admin-client-field-label">Last Tx</div><div class="admin-client-field-value">' + (u.lastTx || '—') + '</div></div>' +
+        '</div>' +
+        '<div class="admin-client-actions">' +
+          '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + u.name + '\')">💰 Add balance</button>' +
+          '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
+          '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
+          '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete</button>' +
+        '</div>' +
+      '</div>';
+    }
+    listEl.innerHTML = html;
+  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Connection error</div>'; }
+}
+
+async function loadAdminWithdrawals() {
+  var listEl = document.getElementById('adminWithdrawalsList');
+  var countEl = document.getElementById('adminWithdrawalsCount');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="admin-empty">Loading...</div>';
+  if (countEl) countEl.textContent = 'Loading...';
+  try {
+    var token = getSessionToken();
+    if (!token) { listEl.innerHTML = '<div class="admin-empty">No token</div>'; return; }
+    var res = await fetch(WORKER_URL + '?action=listUsers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await res.json();
+    if (!data.ok || !data.users) { listEl.innerHTML = '<div class="admin-empty">Failed</div>'; return; }
+    var allWd = [];
+    for (var i = 0; i < data.users.length; i++) {
+      var u = data.users[i];
+      try {
+        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: u.email })
+        });
+        var d2 = await r2.json();
+        if (!d2 || !Array.isArray(d2.withdrawals)) continue;
+        for (var j = 0; j < d2.withdrawals.length; j++) {
+          var w = d2.withdrawals[j];
+          if (!w) continue;
+          w.userEmail = u.email;
+          w.userName = u.name || u.email;
+          allWd.push(w);
+        }
+      } catch (e) {}
+    }
+    allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+    var pending = allWd.filter(function(w) { return w.status === 'pending'; }).length;
+    if (countEl) countEl.textContent = pending + ' pending • ' + allWd.length + ' total';
+    if (!allWd.length) { listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>'; return; }
+    var html = '';
+    for (var k = 0; k < allWd.length; k++) {
+      html += renderAdminWithdrawalCard(allWd[k]);
+    }
+    listEl.innerHTML = html;
+  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>'; }
+}
+
+function renderAdminWithdrawalCard(w) {
+  var statusMap = {
+    'pending':  { cls: 'pend', txt: '⏳ Pending' },
+    'approved': { cls: 'ok',   txt: '✅ Approved' },
+    'rejected': { cls: 'fail', txt: '❌ Rejected' }
+  };
+  var s = statusMap[w.status] || statusMap['pending'];
+  var d = w.details || {};
+  var details = '';
+  if (w.method === 'iban') {
+    details = '<div class="awd-row"><span>Name</span><b>' + (d.name || '—') + '</b></div>' +
+      '<div class="awd-row"><span>IBAN</span><b>' + (d.iban || '—') + '</b></div>' +
+      '<div class="awd-row"><span>SWIFT</span><b>' + (d.swift || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Bank</span><b>' + (d.bank || '—') + '</b></div>';
+  } else if (w.method === 'card') {
+    details = '<div class="awd-row"><span>Holder</span><b>' + (d.cardName || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Card</span><b>' + (d.cardNumber || '—') + '</b></div>';
+  } else if (w.method === 'crypto') {
+    details = '<div class="awd-row"><span>Destination</span><b>' + (d.destination || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Network</span><b>' + (d.network || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Address</span><b>' + (d.address || '—') + '</b></div>';
+  }
+  var actions = '';
+  if (w.status === 'pending') {
+    actions = '<div class="awd-actions">' +
+      '<button class="awd-btn awd-approve" onclick="adminApproveWithdrawal(\'' + w.userEmail + '\',\'' + w.id + '\')">✅ Approve</button>' +
+      '<button class="awd-btn awd-reject" onclick="adminRejectWithdrawal(\'' + w.userEmail + '\',\'' + w.id + '\')">❌ Reject</button>' +
+    '</div>';
+  }
+  return '<div class="awd-card">' +
+    '<div class="awd-head">' +
+      '<div><b>' + (w.userName || w.userEmail) + '</b><br><span class="awd-email">' + w.userEmail + '</span></div>' +
+      '<div class="awd-badge ' + s.cls + '">' + s.txt + '</div>' +
+    '</div>' +
+    '<div class="awd-amount">' + fmtCurrency(w.amount) + ' <span class="awd-method">via ' + (w.method || 'iban').toUpperCase() + '</span></div>' +
+    '<div class="awd-details">' + details + '</div>' +
+    '<div class="awd-date">' + new Date(w.createdAt).toLocaleString('en-GB') + '</div>' +
+    actions +
+  '</div>';
+}
+
+async function adminApproveWithdrawal(email, wdId) {
+  if (!confirm('Approve this withdrawal?')) return;
+  try {
+    var token = getSessionToken();
+    if (!token) return;
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var state = await r.json();
+    if (!state || state.error) throw new Error('State not found');
+    if (!state.withdrawals) state.withdrawals = [];
+    var wd = state.withdrawals.find(function(w){ return w.id === wdId; });
+    if (!wd) throw new Error('Not found');
+    if (wd.status !== 'pending') throw new Error('Already ' + wd.status);
+    if ((state.usd || 0) < wd.amount) { alert('Insufficient balance'); return; }
+    state.usd = (state.usd || 0) - wd.amount;
+    if (!state.txs) state.txs = [];
+    state.txs.unshift({
+      date: new Date().toISOString().slice(0, 10),
+      ts: Date.now(),
+      desc: 'Withdrawal — ' + (wd.method || 'iban').toUpperCase(),
+      amt: -wd.amount,
+      status: 'Completed'
+    });
+    wd.status = 'approved';
+    wd.reviewedAt = Date.now();
+    wd.reviewedBy = 'Compliance Department';
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: 'n_' + Date.now(), ts: Date.now(),
+      text: '✅ Withdrawal approved — $' + wd.amount + '. Ref: ' + wd.id,
+      read: false
+    });
+    await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    });
+    alert('✅ Withdrawal approved');
+    loadAdminWithdrawals();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function adminRejectWithdrawal(email, wdId) {
+  var reasons = ['1. Insufficient KYC data','2. Suspicious activity (AML)','3. Bank details mismatch','4. Limit exceeded','5. Technical issue','6. Other'];
+  var pick = prompt('Reason:\n\n' + reasons.join('\n') + '\n\nEnter 1-6:');
+  if (pick === null) return;
+  var reasonMap = {
+    '1': 'Insufficient KYC data. Please complete verification.',
+    '2': 'Suspicious activity detected (AML). Contact support.',
+    '3': 'Bank details do not match account holder.',
+    '4': 'Withdrawal limit exceeded. Try smaller amount.',
+    '5': 'Temporary technical issue. Please try again.',
+    '6': null
+  };
+  var reason = reasonMap[pick];
+  if (reason === null || !reason) {
+    reason = prompt('Enter reason manually:');
+    if (!reason) return;
+  }
+  try {
+    var token = getSessionToken();
+    if (!token) return;
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var state = await r.json();
+    if (!state || state.error) throw new Error('State not found');
+    if (!state.withdrawals) state.withdrawals = [];
+    var wd = state.withdrawals.find(function(w){ return w.id === wdId; });
+    if (!wd) throw new Error('Not found');
+    if (wd.status !== 'pending') throw new Error('Already ' + wd.status);
+    wd.status = 'rejected';
+    wd.reason = reason;
+    wd.reviewedAt = Date.now();
+    wd.reviewedBy = 'Compliance Department';
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: 'n_' + Date.now(), ts: Date.now(),
+      text: '❌ Withdrawal rejected — $' + wd.amount + '. Reason: ' + reason,
+      read: false
+    });
+    await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    });
+    alert('✅ Rejected. Client notified.');
+    loadAdminWithdrawals();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function loadAdminStats() {
+  try {
+    var res = await fetch(WORKER_LOGIN_URL + '?action=getStats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken() })
+    });
+    var data = await res.json();
+    if (!data.ok) return;
+    var s = data.stats;
+    var clientsEl = document.getElementById('admnStatClients');
+    var balEl = document.getElementById('admnStatBalance');
+    var txEl = document.getElementById('admnStatTx');
+    var cryptoEl = document.getElementById('admnStatCrypto');
+    if (clientsEl) clientsEl.textContent = s.totalClients;
+    if (balEl) balEl.textContent = fmtCurrency(s.totalBalance);
+    if (txEl) txEl.textContent = s.totalTx;
+    if (cryptoEl) cryptoEl.textContent = (s.totalCrypto.btc.toFixed(4) + ' / ' + s.totalCrypto.eth.toFixed(4));
+  } catch (e) {}
+}
+
+var adminTargetEmail = null;
+var adminTargetName = null;
+
+function adminAddBalance(email, name) {
+  adminTargetEmail = email;
+  adminTargetName = name;
+  var mask = document.getElementById('adminBalanceMask');
+  var desc = document.getElementById('adminBalanceDesc');
+  var amtEl = document.getElementById('adminBalanceAmount');
+  var noteEl = document.getElementById('adminBalanceNote');
+  if (desc) desc.textContent = name + ' (' + email + ')';
+  if (amtEl) amtEl.value = '';
+  if (noteEl) noteEl.value = '';
+  if (mask) mask.classList.add('on');
+}
+
+function adminDeleteUser(email, name) {
+  if (!email) return;
+  if (!confirm('Delete user: ' + name + '?')) return;
+  fetch(WORKER_LOGIN_URL + '?action=deleteUser', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: getSessionToken(), email: email, permanent: false })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.ok) {
+        toast('✓ User moved to Deleted');
+        loadAdminUsers();
+        loadAdminStats();
+        loadDeletedUsers();
+      } else { toast('Error: ' + (data.error || 'failed'), true); }
+    })
+    .catch(function(){ toast('Connection error', true); });
+}
+
+function adminRestoreUser(email) {
+  if (!confirm('Restore user ' + email + '?')) return;
+  fetch(WORKER_LOGIN_URL + '?action=restoreUser', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: getSessionToken(), email: email })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.ok) {
+        toast('✓ User restored');
+        loadAdminUsers();
+        loadAdminStats();
+        loadDeletedUsers();
+      } else { toast('Error', true); }
+    })
+    .catch(function(){ toast('Connection error', true); });
+}
+
+function adminPermanentDelete(email, name) {
+  if (!confirm('PERMANENTLY delete ' + name + '?')) return;
+  if (!confirm('Are you ABSOLUTELY sure?')) return;
+  fetch(WORKER_LOGIN_URL + '?action=deleteUser', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: getSessionToken(), email: email, permanent: true })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.ok) {
+        toast('✓ User deleted');
+        loadAdminUsers();
+        loadAdminStats();
+        loadDeletedUsers();
+      } else { toast('Error', true); }
+    })
+    .catch(function(){ toast('Connection error', true); });
+}
+
+async function loadDeletedUsers() {
+  var listEl = document.getElementById('adminDeletedList');
+  if (!listEl) return;
+  try {
+    var res = await fetch(WORKER_LOGIN_URL + '?action=listDeletedUsers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken() })
+    });
+    var data = await res.json();
+    if (!data.ok || !data.users || data.users.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty">No deleted accounts</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < data.users.length; i++) {
+      var u = data.users[i];
+      var date = new Date(u.deletedAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+      html += '<div class="admin-client-card" style="opacity:.75">' +
+        '<div class="admin-client-top">' +
+          '<div class="admin-client-avatar" style="background:linear-gradient(135deg,#ff5470,#7c3aed)">🗑</div>' +
+          '<div class="admin-client-info">' +
+            '<div class="admin-client-name">' + u.name + '</div>' +
+            '<div class="admin-client-email">' + u.email + '</div>' +
+            '<div style="font-size:.72rem;color:var(--mut);margin-top:4px">Deleted: ' + date + '</div>' +
+          '</div>' +
+          '<div class="admin-client-badge" style="background:rgba(255,84,112,.14);color:#ff5470">DELETED</div>' +
+        '</div>' +
+        '<div class="admin-client-actions">' +
+          '<button class="btn b1" onclick="adminRestoreUser(\'' + u.email + '\')">♻ Restore</button>' +
+          '<button class="btn b3" onclick="adminPermanentDelete(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete forever</button>' +
+        '</div>' +
+      '</div>';
+    }
+    listEl.innerHTML = html;
+  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Connection error</div>'; }
+}
+
+function adminSendMessage() {
+  var mask = document.getElementById('adminMsgMask');
+  var textEl = document.getElementById('adminMsgText');
+  var iconEl = document.getElementById('adminMsgIcon');
+  if (textEl) textEl.value = '';
+  if (iconEl) iconEl.value = '📩';
+  if (mask) mask.classList.add('on');
+}
+
+function adminViewClient(email) {
+  window.adminOriginalEmail = localStorage.getItem('user_email');
+  window.adminOriginalRole = localStorage.getItem('user_role');
+  window.adminViewingEmail = email;
+  localStorage.setItem('user_email', email);
+  localStorage.setItem('user_role', 'user');
+  st = JSON.parse(JSON.stringify(def));
+  stateLoaded = false;
+
+  hideAdminPanel();
+  var side = document.getElementById('sideBar');
+  var main = document.getElementById('mainApp');
+  if (side) side.style.display = 'flex';
+  if (main) main.style.display = 'flex';
+
+  var backBar = document.getElementById('adminBackBar');
+  if (!backBar) {
+    backBar = document.createElement('div');
+    backBar.id = 'adminBackBar';
+    backBar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:8000;background:linear-gradient(90deg,#7c3aed,#a855f7);padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.85rem;color:#fff';
+    backBar.innerHTML = '<span>👁 Viewing as Admin — ' + (email || '') + '</span>' +
+      '<button onclick="backToAdmin()" style="background:#fff;color:#7c3aed;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit">← Back to Admin</button>';
+    document.body.appendChild(backBar);
+  } else {
+    backBar.querySelector('span').textContent = '👁 Viewing as Admin — ' + (email || '');
+  }
+  backBar.style.display = 'flex';
+
+  loadFromServer(function(){
+    if (!st.usd || st.usd < 100) {
+      fetch(WORKER_LOGIN_URL + '?action=listUsers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: getSessionToken() })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d && d.ok && d.users) {
+          for (var i = 0; i < d.users.length; i++) {
+            if (d.users[i].email === email) {
+              st.usd = d.users[i].balance || 0;
+              st.currency = d.users[i].currency || 'USD';
+              st.btc = d.users[i].btc || 0;
+              st.eth = d.users[i].eth || 0;
+              st.card = d.users[i].card || null;
+              if (!st.txs) st.txs = [];
+              render();
+              break;
+            }
+          }
+        }
+      });
+    }
+    loadPrices();
+    loadExchangeRates();
+    initCurrencySwitcher();
+    initNotifications();
+    renderNotifications();
+    initSoundButton();
+    initVerification();
+    initDesignPicker();
+    startIbanGeneration();
+    initRecentTx();
+    initTrackingActions();
+    initDepositVerification();
+    initWelcomeBanner();
+    initSettings();
+
+    var onboardEl = document.getElementById('onboard');
+    if (onboardEl) onboardEl.classList.remove('on');
+
+    var pgs = document.querySelectorAll('.pg');
+    for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
+    var dash = document.getElementById('dash');
+    if (dash) dash.classList.add('on');
+    var ms = document.querySelectorAll('.mi');
+    for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
+    var dashMi = document.querySelector('.mi[data-p="dash"]');
+    if (dashMi) dashMi.classList.add('on');
+    var ttl = document.getElementById('ttl');
+    if (ttl) ttl.textContent = 'Dashboard';
+  }, email);
+}
+
+function backToAdmin() {
+  var side = document.getElementById('sideBar');
+  var main = document.getElementById('mainApp');
+  if (side) side.style.display = 'none';
+  if (main) main.style.display = 'none';
+  var backBar = document.getElementById('adminBackBar');
+  if (backBar) backBar.style.display = 'none';
+
+  if (window.adminOriginalEmail) {
+    localStorage.setItem('user_email', window.adminOriginalEmail);
+    localStorage.setItem('user_role', window.adminOriginalRole || 'admin');
+    window.adminOriginalEmail = null;
+    window.adminOriginalRole = null;
+    window.adminViewingEmail = null;
+  }
+  st = JSON.parse(JSON.stringify(def));
+  stateLoaded = false;
+  showAdminPanel();
+}
+
+function initAdminPanel() {
+  var refreshBtn = document.getElementById('adminRefreshBtn');
+  var logoutBtn = document.getElementById('adminLogoutBtn');
+  var pushUpdateBtn = document.getElementById('adminPushUpdate');
+  var sendNotifBtn = document.getElementById('adminSendNotif');
+  var balanceSave = document.getElementById('adminBalanceSave');
+  var balanceCancel = document.getElementById('adminBalanceCancel');
+  var msgSave = document.getElementById('adminMsgSave');
+  var msgCancel = document.getElementById('adminMsgCancel');
+  var refreshDeleted = document.getElementById('adminRefreshDeleted');
+
+  if (refreshBtn) refreshBtn.onclick = function(){ loadAdminUsers(); loadAdminStats(); toast('Refreshed'); };
+  if (refreshDeleted) refreshDeleted.onclick = function(){ loadDeletedUsers(); toast('Refreshed'); };
+  if (logoutBtn) logoutBtn.onclick = function(){ if (confirm('Log out?')) doLogout(); };
+  if (pushUpdateBtn) pushUpdateBtn.onclick = function(){
+    toast('📢 Notified client');
+    sendAdminMessage('🎉 New version 1.1 available!', '📢');
+  };
+  if (sendNotifBtn) sendNotifBtn.onclick = adminSendMessage;
+  if (balanceCancel) balanceCancel.onclick = function(){ document.getElementById('adminBalanceMask').classList.remove('on'); };
+  if (msgCancel) msgCancel.onclick = function(){ document.getElementById('adminMsgMask').classList.remove('on'); };
+
+  if (balanceSave) balanceSave.onclick = async function(){
+    var amount = Number(document.getElementById('adminBalanceAmount').value);
+    var note = document.getElementById('adminBalanceNote').value.trim();
+    var typeEl = document.getElementById('adminBalanceType');
+    var type = typeEl ? typeEl.value : 'bonus';
+    if (!amount || amount === 0) { toast('Enter valid amount', true); return; }
+    var meta = {
+      'bonus': { icon: '🎁', label: 'Bonus' },
+      'bank': { icon: '🏦', label: 'Bank deposit' },
+      'crypto': { icon: '₿', label: 'Crypto deposit' },
+      'card': { icon: '💳', label: 'Card deposit' },
+      'correction': { icon: '🔧', label: 'Correction' }
+    };
+    var m = meta[type] || meta['bonus'];
+    try {
+      var token = getSessionToken();
+      var r = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: adminTargetEmail, amount: amount, note: note || m.label })
+      });
+      var data = await r.json();
+      if (!data.ok) { toast('Error: ' + (data.error || 'Failed'), true); return; }
+      try {
+        await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: adminTargetEmail, text: m.icon + ' ' + m.label + ': +' + amount + ' USD', icon: m.icon })
+        });
+      } catch(e) {}
+      toast('✓ Balance updated');
+      document.getElementById('adminBalanceMask').classList.remove('on');
+      loadAdminUsers();
+      loadAdminStats();
+    } catch (e) { toast('Connection error', true); }
+  };
+
+  if (msgSave) msgSave.onclick = async function(){
+    var text = document.getElementById('adminMsgText').value.trim();
+    var icon = document.getElementById('adminMsgIcon').value.trim() || '📩';
+    if (!text) { toast('Enter message', true); return; }
+    try {
+      var res = await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: getSessionToken(), email: adminTargetEmail, text: text, icon: icon })
+      });
+      var data = await res.json();
+      if (data.ok) {
+        toast('✓ Message sent');
+        document.getElementById('adminMsgMask').classList.remove('on');
+      } else { toast('Error', true); }
+    } catch (e) { toast('Connection error', true); }
+  };
+}
+
+async function sendAdminMessage(text, icon) {
+  try {
+    await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), text: text, icon: icon || '📩' })
+    });
+  } catch (e) {}
+}
+
+/* ========== ADMIN TABS ========== */
 function showAdminTab(tab) {
-  // Убрать active у всех nav items
   document.querySelectorAll('.admin-nav-item').forEach(function(el){
     el.classList.toggle('active', el.getAttribute('data-tab') === tab);
   });
-  // Показать нужную секцию
   document.querySelectorAll('.admin-section').forEach(function(el){
     el.classList.toggle('active', el.getAttribute('data-section') === tab);
   });
-  // Автозагрузка при переключении
   if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
   if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
   if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
-  if (tab === 'deleted' && typeof loadAdminDeleted === 'function') loadAdminDeleted();
-  
-  // Сохраняем активный таб
+  if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
   localStorage.setItem('adminTab', tab);
-  console.log('[admin] tab switched:', tab);
 }
 
-// Восстановить активный таб при загрузке
-document.addEventListener('DOMContentLoaded', function(){
-  var saved = localStorage.getItem('adminTab') || 'stats';
-  if (document.querySelector('.admin-nav-item')) {
-    showAdminTab(saved);
-  }
-});
-
-// ========== CLIENT SEARCH ==========
 function filterClients(query) {
   var q = (query || '').toLowerCase().trim();
   var cards = document.querySelectorAll('#adminClientsList .admin-client-card');
-  var visible = 0;
   cards.forEach(function(card){
     var text = (card.textContent || '').toLowerCase();
-    var match = !q || text.indexOf(q) > -1;
-    card.style.display = match ? '' : 'none';
-    if (match) visible++;
+    card.style.display = (!q || text.indexOf(q) > -1) ? '' : 'none';
   });
-  console.log('[filterClients] query:', q, '| найдено:', visible);
 }
 
-// ========== BADGES — счётчики в sidebar ==========
 async function updateAdminBadges() {
   try {
     var token = getSessionToken();
     if (!token) return;
-    
-    // Клиенты
     var r = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({token: token})
@@ -5842,8 +4047,6 @@ async function updateAdminBadges() {
       var cnt = document.getElementById('navClientsCount');
       if (cnt) cnt.textContent = d.users.length;
     }
-    
-    // Withdrawals pending
     var wdsEl = document.getElementById('navWdsCount');
     var wdsCount = document.getElementById('adminWithdrawalsCount');
     if (wdsCount && wdsEl) {
@@ -5855,216 +4058,62 @@ async function updateAdminBadges() {
         wdsEl.style.display = 'none';
       }
     }
-    
-    // Chats — считаем непрочитанные от клиентов
-    var chatsEl = document.getElementById('navChatsCount');
-    if (chatsEl && d.ok && d.users) {
-      var totalUnread = 0;
-      for (var i = 0; i < d.users.length; i++) {
-        try {
-          var r2 = await fetch(WORKER_URL + '?action=getUserState', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({token: token, email: d.users[i].email})
-          });
-          var s = await r2.json();
-          if (s.chat) {
-            totalUnread += s.chat.filter(function(m){ return m.from === 'client' && !m.read; }).length;
-          }
-        } catch(e) {}
-      }
-      if (totalUnread > 0) {
-        chatsEl.textContent = totalUnread;
-        chatsEl.style.display = 'inline-block';
-      } else {
-        chatsEl.style.display = 'none';
-      }
-    }
-  } catch(e) { console.warn('[badges]', e); }
+  } catch(e) {}
 }
 
-// Обновляем счётчики каждые 10 сек
-setInterval(updateAdminBadges, 10000);
+/* ========== INIT ========== */
+initLoginLogout();
+initSignup();
+initPasswordConfirm();
+initCountryCurrencyLink();
+initVerification();
+initCardActions();
+initEvents();
+initOnboarding();
+initNav();
 
-// И сразу при загрузке
+checkSession();
+
+setTimeout(function(){
+  var ctx = getAudioCtx();
+  if (ctx && ctx.state === 'suspended') ctx.resume();
+}, 500);
+
+setInterval(function(){
+  var ctx = getAudioCtx();
+  if (ctx && ctx.state === 'suspended') ctx.resume();
+}, 30000);
+
 document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(updateAdminBadges, 2000);
-});
+  var btn = document.getElementById('chatToggle');
+  if (btn) btn.onclick = toggleChat;
+  updateChatBadge();
 
-// ========== Горячие клавиши ==========
-document.addEventListener('keydown', function(e){
-  // Ctrl+1..6 — переключение табов
-  if (e.ctrlKey || e.metaKey) {
-    var map = { '1': 'stats', '2': 'clients', '3': 'chats', '4': 'withdrawals', '5': 'deleted', '6': 'system' };
-    if (map[e.key] && document.querySelector('.admin-nav-item')) {
-      e.preventDefault();
-      showAdminTab(map[e.key]);
-    }
-  }
-});
-// ========== ADMIN TAB NAVIGATION ==========
-function showAdminTab(tab) {
-  console.log('=== showAdminTab:', tab, '===');
-  
-  var items = document.querySelectorAll('.admin-nav-item');
-  var sections = document.querySelectorAll('.admin-section');
-  
-  console.log('items:', items.length, 'sections:', sections.length);
-  
-  // Скрыть ВСЕ секции принудительно
-  sections.forEach(function(s){
-    s.classList.remove('active');
-    s.style.display = 'none';
-  });
-  
-  // Убрать active у всех пунктов
-  items.forEach(function(i){
-    i.classList.remove('active');
-  });
-  
-  // Показать нужную
-  var found = false;
-  sections.forEach(function(s){
-    if (s.getAttribute('data-section') === tab) {
-      s.classList.add('active');
-      s.style.display = 'block';
-      found = true;
-      console.log('  ✓ показана:', tab);
-    }
-  });
-  
-  // Активировать пункт меню
-  items.forEach(function(i){
-    if (i.getAttribute('data-tab') === tab) {
-      i.classList.add('active');
-    }
-  });
-  
-  if (!found) console.warn('  ✗ не найдена:', tab);
-  
-  // Автозагрузка
-  if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
-  if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
-  if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
-  if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
-  
-  localStorage.setItem('adminTab', tab);
-}
-
-// Восстановить таб при загрузке
-document.addEventListener('DOMContentLoaded', function(){
   var saved = localStorage.getItem('adminTab') || 'stats';
   if (document.querySelector('.admin-nav-item')) {
     setTimeout(function(){ showAdminTab(saved); }, 300);
   }
 });
-/* ========== ANIMATED BALANCE COUNTER ========== */
-(function(){
-  var lastUsd = 0;
-  var animFrame = null;
 
-  function animateNumber(from, to, duration){
-    var start = performance.now();
-    var el = document.getElementById('bal');
-    if (!el) return;
+setInterval(function(){
+  if (document.querySelector('.admin-nav-item')) updateAdminBadges();
+}, 60000);
 
-    function tick(now){
-      var elapsed = now - start;
-      var progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
-      var eased = 1 - Math.pow(1 - progress, 3);
-      var current = from + (to - from) * eased;
-
-      el.textContent = '$' + current.toLocaleString('en-US',{
-        minimumFractionDigits:2,
-        maximumFractionDigits:2
-      });
-
-      if (progress < 1){
-        animFrame = requestAnimationFrame(tick);
-      } else {
-        animFrame = null;
-      }
-    }
-    if (animFrame) cancelAnimationFrame(animFrame);
-    animFrame = requestAnimationFrame(tick);
-  }
-
-  // Наблюдаем за изменениями в #bal (st.usd)
-  setInterval(function(){
-    if (typeof st === 'undefined' || !st.usd) return;
-    var target = Number(st.usd);
-    if (Math.abs(target - lastUsd) > 0.01){
-      animateNumber(lastUsd, target, 900);
-      lastUsd = target;
-    }
-  }, 500);
-})();
-/* ========== WELCOME ENTRANCE ========== */
+/* ========== CARD DELETE ANIMATION ========== */
 (function(){
   document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(function(){
-      if (!localStorage.getItem('user_email')) return;
-      if (localStorage.getItem('welcomeShown_' + new Date().toDateString())) return;
-
-      var name = localStorage.getItem('user_name') || 'there';
-      var first = name.split(' ')[0];
-
-      if (typeof playChime === 'function') playChime();
-      if (typeof toast === 'function') {
-        toast('👋 Welcome back, ' + first + '!');
-      }
-      if (typeof spawnConfetti === 'function') {
-        setTimeout(function(){ spawnConfetti(); }, 400);
-      }
-
-      localStorage.setItem('welcomeShown_' + new Date().toDateString(), '1');
-    }, 1500);
-  });
-})();
-/* ========== MAGNETIC BUTTONS ========== */
-(function(){
-  function makeMagnetic(btn){
-    if (!btn) return;
-    btn.addEventListener('mousemove', function(e){
-      var rect = btn.getBoundingClientRect();
-      var x = e.clientX - rect.left - rect.width / 2;
-      var y = e.clientY - rect.top - rect.height / 2;
-      btn.style.transform = 'translate(' + (x * 0.15) + 'px,' + (y * 0.15) + 'px)';
-    });
-    btn.addEventListener('mouseleave', function(){
-      btn.style.transform = '';
-    });
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    makeMagnetic(document.getElementById('btnAdd'));
-    makeMagnetic(document.getElementById('btnReceiveHero'));
-    makeMagnetic(document.querySelector('.nc3-primary'));
-  });
-})();
-/* ========== CARD DELETE / CREATE ANIMATIONS ========== */
-(function(){
-  // Ждём пока DOM загрузится
-  document.addEventListener('DOMContentLoaded', function(){
-
-    // 1. Анимация при УДАЛЕНИИ карты
     var deleteBtn = document.getElementById('btnDeleteCard');
     if (deleteBtn){
       var origClick = deleteBtn.onclick;
       deleteBtn.onclick = function(e){
         var cardFull = document.getElementById('cardFull');
         var cardDash = document.getElementById('cardDash');
-
-        // Анимация на обе карты
         if (cardFull) cardFull.classList.add('card-deleting');
         if (cardDash) cardDash.classList.add('card-deleting');
-
-        // Звук "растворения"
         if (typeof playTone === 'function'){
           playTone(220, 0.5, 'sine', 0.25);
           setTimeout(function(){ playTone(110, 0.6, 'sine', 0.2); }, 150);
         }
-
-        // Через 700мс — выполняем оригинальный onclick
         setTimeout(function(){
           if (origClick) origClick.call(deleteBtn, e);
           if (cardFull) cardFull.classList.remove('card-deleting');
@@ -6072,36 +4121,5 @@ document.addEventListener('DOMContentLoaded', function(){
         }, 700);
       };
     }
-
-    // 2. Анимация при СОЗДАНИИ карты (после онбординга)
-    var createBtn = document.getElementById('btnCreateCard');
-    if (createBtn){
-      var origCreate = createBtn.onclick;
-      createBtn.onclick = function(e){
-        if (origCreate) origCreate.call(createBtn, e);
-
-        // После создания — карта материализуется
-        setTimeout(function(){
-          var dashCard = document.getElementById('cardDash');
-          if (dashCard){
-            dashCard.classList.add('card-creating');
-            setTimeout(function(){
-              dashCard.classList.remove('card-creating');
-            }, 1300);
-          }
-        }, 5500); // после анимации создания карты (она ~5.2с)
-      };
-    }
-
-    // 3. Экспорт функции — можно вызывать вручную
-    window.animateCardCreate = function(cardId){
-      var el = document.getElementById(cardId || 'cardDash');
-      if (!el) return;
-      el.classList.add('card-creating');
-      if (typeof playChime === 'function') playChime();
-      setTimeout(function(){
-        el.classList.remove('card-creating');
-      }, 1300);
-    };
   });
 })();
