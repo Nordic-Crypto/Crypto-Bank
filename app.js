@@ -5751,3 +5751,209 @@ async function scanAllDeposits() {
 
   console.log('[patch-chat] ✅ Патч чата применён');
 })();
+/* ============================================================
+   ПАТЧ CLEAR-ALL — гарантированная очистка чата
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- FIX: clearAllChats — после очистки ставим локальный "щит" ---------- */
+  var _clearedEmails = {}; // защита от возврата чата в течение 60 сек
+
+  window.clearAllChats = async function(){
+    if (!confirm('Clear ALL chats?')) return;
+    if (!confirm('Are you ABSOLUTELY sure?')) return;
+    try {
+      var token = getSessionToken();
+      if (!token) return;
+      var r = await fetch(WORKER_URL + '?action=listUsers', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token })
+      });
+      var d = await r.json();
+      if (!d.ok || !d.users) { alert('Failed to load users'); return; }
+
+      var cleared = 0, failed = 0;
+
+      for (var i = 0; i < d.users.length; i++) {
+        var u = d.users[i];
+        try {
+          // 1) Получаем стейт
+          var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ token: token, email: u.email })
+          });
+          var s = await r2.json();
+          if (!s || s.error) { failed++; continue; }
+          if (!s.chat || !s.chat.length) { if (!s.ticket) continue; }
+
+          // 2) Чистим
+          s.chat = [];
+          s.ticket = null;
+          s.typing = {};
+
+          // 3) Сохраняем
+          var r3 = await fetch(WORKER_URL + '?action=setUserState', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ token: token, email: u.email, state: s, force: true, wipeChat: true })
+          });
+          var res = await r3.json();
+          if (res && res.ok) {
+            cleared++;
+            _clearedEmails[u.email.toLowerCase()] = Date.now();
+          } else {
+            failed++;
+          }
+        } catch(e) { failed++; }
+      }
+
+      alert('✅ Cleared: ' + cleared + '\nErrors: ' + failed);
+      if (typeof loadAdminChats === 'function') loadAdminChats();
+    } catch(e) { alert('Error: ' + e.message); }
+  };
+
+  /* ---------- FIX: endAdminChat — то же самое, но для одного ---------- */
+  window.endAdminChat = async function(email){
+    if (!email) return;
+    if (!confirm('End chat with ' + email + '?\nAll messages will be deleted.')) return;
+    try {
+      var token = getSessionToken();
+      if (!token) { alert('No session'); return; }
+
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var state = await r.json();
+      if (!state || state.error) { alert('Failed to load'); return; }
+
+      state.chat = [];
+      state.ticket = null;
+      state.typing = {};
+
+      var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email, state: state, force: true, wipeChat: true })
+      });
+      var saveRes = await saveResp.json();
+      if (!saveRes || !saveRes.ok) {
+        alert('Failed to save: ' + (saveRes.error || 'unknown'));
+        return;
+      }
+
+      _clearedEmails[email.toLowerCase()] = Date.now();
+
+      // ★ Двойной удар: повторяем через 2 сек, на случай если клиент успел перезаписать
+      setTimeout(async function(){
+        try {
+          var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ token: token, email: email })
+          });
+          var s2 = await r2.json();
+          if (s2 && s2.chat && s2.chat.length > 0) {
+            s2.chat = [];
+            s2.ticket = null;
+            await fetch(WORKER_URL + '?action=setUserState', {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ token: token, email: email, state: s2, force: true, wipeChat: true })
+            });
+            console.log('[endAdminChat] повторная очистка', email);
+          }
+        } catch(e) {}
+      }, 2000);
+
+      alert('✅ Chat closed for ' + email);
+
+      var modal = document.getElementById('adminChatModal');
+      if (modal) modal.remove();
+      if (typeof loadAdminChats === 'function') loadAdminChats();
+    } catch(e) {
+      console.error('[endAdminChat]', e);
+      alert('Error: ' + e.message);
+    }
+  };
+
+  /* ---------- FIX: клиентский polling — игнорируем возврат старого чата ---------- */
+  // Перезаписываем polling: если сервер внезапно вернул чат, который мы только что удаляли — НЕ принимаем
+  setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+    var targetEmail = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+    if (!targetEmail) return;
+
+    // Если у нас свежая метка "очищено" — не принимаем чат в течение 60 сек
+    if (_clearedEmails[targetEmail]) {
+      var age = Date.now() - _clearedEmails[targetEmail];
+      if (age < 60000) {
+        // Принудительно чистим локально
+        if (st.chat && st.chat.length > 0) {
+          st.chat = [];
+          st.ticket = null;
+          if (typeof updateChatBadge === 'function') updateChatBadge();
+        }
+        return;
+      } else {
+        delete _clearedEmails[targetEmail];
+      }
+    }
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: targetEmail })
+      });
+      var fresh = await r.json();
+      if (!fresh) return;
+
+      // ★ Если сервер вернул пустой чат — чистим локально, не сохраняем старое
+      if ((!fresh.ticket || !fresh.ticket.id) && (!fresh.chat || fresh.chat.length === 0)) {
+        if (st.chat && st.chat.length > 0) {
+          console.log('[chat-poll] сервер вернул пусто — чистим локально');
+          st.chat = [];
+          st.ticket = null;
+          if (typeof updateChatBadge === 'function') updateChatBadge();
+          var formEl = document.getElementById('chatTicketForm');
+          var convEl = document.getElementById('chatConversation');
+          if (formEl) formEl.style.display = 'flex';
+          if (convEl) convEl.style.display = 'none';
+        }
+        return;
+      }
+
+      if (fresh.chat) st.chat = fresh.chat;
+      if (fresh.ticket !== undefined) st.ticket = fresh.ticket;
+      if (typeof updateChatBadge === 'function') updateChatBadge();
+    } catch(e) {}
+  }, 3000);
+
+  /* ---------- FIX: saveToServer — НЕ сохранять пустой чат если он был очищен ---------- */
+  var _origSave = window.saveToServer;
+  window.saveToServer = function(){
+    if (!stateLoaded) return;
+    if (window.adminViewingEmail) return;
+    if (localStorage.getItem('user_role') === 'admin') return;
+    var token = getSessionToken();
+    if (!token) return;
+
+    // ★ Если чат локально пуст, а на сервере может быть непуст — НЕ пишем
+    // (чтобы не затирать, если админ его только что очистил)
+    var email = (localStorage.getItem('user_email') || '').toLowerCase();
+    var payload = JSON.parse(JSON.stringify(st));
+
+    // Если у нас "щит" очистки активен — не отправляем чат вообще
+    if (_clearedEmails[email] && (Date.now() - _clearedEmails[email]) < 60000) {
+      payload.chat = [];
+      payload.ticket = null;
+    }
+
+    fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, state: payload, email: undefined })
+    }).catch(function(){});
+  };
+
+  console.log('[patch-clear] ✅ Патч очистки чата применён');
+})();
