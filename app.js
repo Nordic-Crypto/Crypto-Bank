@@ -6093,3 +6093,38 @@ async function scanAllDeposits() {
   console.log('[patch-speed] ✅ Ускорение админ-чата применено (60s → 3s)');
 })();
      
+/* ============================================================
+   ПАТЧ: кнопка Refresh Balance — кручение иконки
+   ============================================================ */
+(function(){
+  function attachRefreshBtn(){
+    var btn = document.getElementById('btnRefreshBalance');
+    if (!btn || btn._patched) return;
+    btn._patched = true;
+    btn.onclick = function(){
+      // ★ Кручение
+      btn.style.transition = 'transform 0.6s cubic-bezier(.4,0,.2,1)';
+      btn.style.transform = 'rotate(360deg)';
+      setTimeout(function(){
+        btn.style.transform = 'rotate(0deg)';
+        setTimeout(function(){ btn.style.transition = ''; btn.style.transform = ''; }, 50);
+      }, 600);
+      // Обновление
+      if (typeof refreshBalanceFromServer === 'function') refreshBalanceFromServer();
+      // Звук клика
+      if (typeof playTone === 'function') playTone(880, 0.08, 'sine', 0.15);
+    };
+  }
+
+  // Пытаемся сразу + следим за появлением кнопки
+  document.addEventListener('DOMContentLoaded', attachRefreshBtn);
+  setTimeout(attachRefreshBtn, 500);
+  setTimeout(attachRefreshBtn, 2000);
+  setTimeout(attachRefreshBtn, 5000);
+
+  // MutationObserver — следит за появлением кнопки в DOM
+  var observer = new MutationObserver(function(){
+    attachRefreshBtn();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
