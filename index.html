@@ -5,13 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NordicCrypto</title>
 <style>
-/* ============ TOOLTIP ============ */
-.chart-tooltip{position:absolute;background:rgba(15,20,35,.95);border:1px solid rgba(71,220,255,.4);border-radius:8px;padding:6px 10px;font-size:12px;color:#e8f4ff;pointer-events:none;opacity:0;transition:opacity .15s ease;white-space:nowrap;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,.5);transform:translate(-50%,-120%)}
-.chart-tooltip .tt-date{color:#7c9cbb;font-size:10px;display:block;margin-bottom:2px}
-.chart-tooltip .tt-value{color:#47dcff;font-weight:600;font-size:13px}
-.chart-tooltip-line{position:absolute;width:1px;background:rgba(71,220,255,.4);pointer-events:none;opacity:0;transition:opacity .15s ease;z-index:5;top:0}
-.chart-tooltip-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#47dcff;box-shadow:0 0 10px #47dcff;pointer-events:none;opacity:0;transition:opacity .15s ease;z-index:6;transform:translate(-50%,-50%)}
-
 /* ============ ROOT ============ */
 :root{
   --pri:#00E5FF;--pri2:#8B5CF6;--acc:#10B981;
@@ -19,37 +12,25 @@
   --txt:#F8FAFC;--mut:#94A3B8;
   --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);
   --ok:#10B981;--bad:#EF4444;--warn:#F59E0B;
-  --radius-sm:10px;--radius-md:13px;--radius-lg:16px;
-  --nc3-bg:#070a12;--nc3-surface:#0d121d;--nc3-surface2:#111827;
-  --nc3-line:rgba(255,255,255,.075);--nc3-muted:#7e8ca3;--nc3-text:#f4f7fb;
-  --nc3-cyan:#47dcff;--nc3-violet:#8c6cff;--nc3-green:#36e2a3;--nc3-pink:#ee62b9;
+  --nc3-line:rgba(255,255,255,.075);
+  --nc3-green:#36e2a3;
   --shadow-sm:0 4px 12px rgba(0,0,0,.25);
   --shadow-md:0 12px 30px rgba(0,0,0,.35);
   --shadow-lg:0 24px 60px rgba(0,0,0,.45);
   --glow-cyan:0 0 24px rgba(71,220,255,.35);
-  --glow-violet:0 0 24px rgba(140,108,255,.35);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-html{scroll-behavior:smooth}
-body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);display:flex;overflow:hidden;color-scheme:dark;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-@media (min-width:1700px){html{font-size:17px}}
-@media (min-width:2000px){html{font-size:18px}}
-@media (min-width:2400px){html{font-size:19px}}
-@media (max-width:600px){html{font-size:14px}}
-@media (max-width:400px){html{font-size:12px}}
-
-/* Aurora — БЕЗ анимации (для производительности) */
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);display:flex;overflow:hidden;color-scheme:dark;-webkit-font-smoothing:antialiased}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:
   radial-gradient(900px 500px at 15% -10%,rgba(0,212,255,.10),transparent 60%),
   radial-gradient(800px 500px at 100% 110%,rgba(124,58,237,.12),transparent 60%)}
 
-/* Custom scrollbar — премиум */
+/* Custom scrollbar */
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:rgba(255,255,255,.02)}
-::-webkit-scrollbar-thumb{background:rgba(71,220,255,.25);border-radius:4px;transition:background .2s}
+::-webkit-scrollbar-thumb{background:rgba(71,220,255,.25);border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(71,220,255,.5)}
-*{scrollbar-width:thin;scrollbar-color:rgba(71,220,255,.25) rgba(255,255,255,.02)}
 
 /* ============ SIDEBAR ============ */
 .side{width:238px;background:rgba(7,10,18,.88);border-right:1px solid var(--nc3-line);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
@@ -59,31 +40,29 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .brand span{color:var(--pri)}
 .menu{list-style:none;flex:1;display:flex;flex-direction:column;gap:4px}
 .mi{padding:12px 14px;border-radius:12px;cursor:pointer;color:var(--mut);font-weight:500;font-size:.92rem;transition:background .2s,color .2s;display:flex;align-items:center;gap:13px;position:relative;user-select:none}
-.mi svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;transition:filter .2s}
+.mi svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .mi:hover{background:rgba(255,255,255,.045);color:var(--txt)}
 .mi.on{background:linear-gradient(100deg,rgba(71,220,255,.13),rgba(71,220,255,.025));color:var(--pri);box-shadow:inset 0 0 0 1px rgba(71,220,255,.11),0 0 20px -5px rgba(71,220,255,.3)}
 .mi.on svg{filter:drop-shadow(0 0 6px rgba(71,220,255,.7))}
 .mi.on::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;background:var(--pri);border-radius:0 3px 3px 0}
 .umi{border-top:1px solid var(--bd);padding-top:18px;display:flex;align-items:center;gap:12px}
-.av{width:42px;height:42px;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:.9rem;color:#05070a;flex-shrink:0;box-shadow:var(--shadow-sm)}
+.av{width:42px;height:42px;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:.9rem;color:#05070a;flex-shrink:0}
 .umi h4{font-size:.86rem;font-weight:600}
 .umi p{font-size:.72rem;color:var(--ok);margin-top:2px}
 
 /* ============ MAIN ============ */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1;background:transparent}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
 .top{height:70px;background:rgba(7,10,18,.88);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 30px;flex-shrink:0;gap:20px;position:relative;z-index:100}
-.top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px;transition:border-color .2s,box-shadow .2s}
-.top-search:focus-within{border-color:var(--pri);box-shadow:0 0 0 4px rgba(91,141,239,.15)}
+.top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px}
 .top-search svg{width:18px;height:18px;stroke:var(--mut);fill:none;stroke-width:2;flex-shrink:0}
 .top-search input{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-size:.92rem;font-family:inherit}
 .top-search input::placeholder{color:var(--mut)}
-.top-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);cursor:pointer;font-size:1rem;transition:background .2s,border-color .2s,transform .2s}
+.top-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
 .top-icon:hover{background:rgba(255,255,255,.08);border-color:var(--pri);transform:translateY(-2px)}
-.top-icon-refresh{position:relative;overflow:hidden}
-.top-icon-refresh svg{width:18px;height:18px;stroke:#7dd3fc;transition:transform .6s cubic-bezier(.34,1.56,.64,1),stroke .3s}
-.top-icon-refresh:hover{border-color:rgba(71,220,255,.5);background:rgba(71,220,255,.08);box-shadow:var(--glow-cyan)}
-.top-icon-refresh:hover svg{stroke:#47dcff;transform:rotate(180deg)}
-.ttl{font-size:1.25rem;font-weight:700}
+.top-icon svg{width:18px;height:18px;stroke:#7dd3fc;fill:none;stroke-width:2}
+.settings-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.settings-btn:hover{background:rgba(255,255,255,.08);border-color:var(--pri);transform:translateY(-2px)}
+.settings-btn svg{width:18px;height:18px;stroke:var(--txt);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .st{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mut);background:rgba(0,224,138,.07);border:1px solid rgba(0,224,138,.18);padding:7px 14px;border-radius:999px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
 .body{flex:1;padding:26px 30px 48px;overflow-y:auto;overflow-x:hidden;min-height:0}
@@ -91,18 +70,16 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .pg.on{display:block;animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-/* ============ PANEL / BUTTON ============ */
+/* ============ BUTTONS / PANEL ============ */
 .panel{background:var(--pan);border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:var(--shadow-md)}
 .btn{padding:12px 20px;border-radius:10px;border:none;font-weight:600;font-size:.9rem;cursor:pointer;transition:transform .15s,box-shadow .2s,filter .15s,background .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
 .btn:active{transform:scale(.97)}
 .btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.btn:hover{transform:translateY(-2px)}
 .b1{background:linear-gradient(135deg,var(--pri),#0090c9);color:#04121a;box-shadow:0 10px 24px -10px rgba(0,212,255,.8)}
-.b1:hover{filter:brightness(1.1);box-shadow:0 14px 30px -10px rgba(0,212,255,.9)}
+.b1:hover{filter:brightness(1.1)}
 .b2{background:rgba(255,255,255,.03);border:1px solid var(--bd2);color:var(--txt)}
 .b2:hover{background:rgba(255,255,255,.07)}
 .b3{background:rgba(255,84,112,.1);border:1px solid rgba(255,84,112,.3);color:#ff5470}
-.b3:hover{background:rgba(255,84,112,.2)}
 .sh{margin-bottom:14px}
 .sh h2{font-size:1.4rem;font-weight:700}
 .sh p{color:var(--mut);font-size:.88rem;margin-top:5px}
@@ -129,8 +106,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 @keyframes maskIn{from{opacity:0}to{opacity:1}}
 #signupMask{display:none}
 #signupMask.on{display:flex}
-.box{background:linear-gradient(180deg,var(--pan2),#0f151e);padding:30px;border-radius:16px;width:440px;max-width:calc(100vw - 40px);border:1px solid var(--bd2);box-shadow:var(--shadow-lg);animation:boxIn .25s cubic-bezier(.34,1.56,.64,1)}
-@keyframes boxIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.box{background:linear-gradient(180deg,var(--pan2),#0f151e);padding:30px;border-radius:16px;width:440px;max-width:calc(100vw - 40px);border:1px solid var(--bd2);box-shadow:var(--shadow-lg)}
 .box h2{margin-bottom:6px;font-size:1.25rem}
 .box .d{color:var(--mut);font-size:.86rem;margin-bottom:22px}
 .mact{display:flex;gap:10px;margin-top:24px}
@@ -139,11 +115,9 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .tbl{background:var(--pan);border:1px solid var(--bd);border-radius:16px;overflow:hidden}
 .tbl table{width:100%;border-collapse:collapse}
 .tbl th{text-align:left;color:var(--mut);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;padding:16px 22px;border-bottom:1px solid var(--bd);font-weight:600}
-.tbl td{padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.9rem;transition:background .15s}
-.tbl tr:hover td{background:rgba(71,220,255,.04)}
+.tbl td{padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.9rem}
 .tbl tr:last-child td{border-bottom:none}
 .empty{text-align:center;padding:60px 20px;color:var(--mut)}
-.empty svg{width:48px;height:48px;stroke:var(--mut);fill:none;stroke-width:1.5;margin-bottom:12px;opacity:.5}
 .badge{padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:600;display:inline-block}
 .badge.ok{background:rgba(0,224,138,.14);color:var(--ok)}
 .badge.pend{background:rgba(255,176,32,.14);color:var(--warn)}
@@ -153,7 +127,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 /* ============ LOGIN ============ */
 .login-screen{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:5000;padding:40px 20px;transition:opacity .4s ease}
 .login-screen.hidden{opacity:0;pointer-events:none}
-.login-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:42px 38px;width:100%;max-width:420px;box-shadow:var(--shadow-lg),0 0 60px rgba(0,212,255,.1);animation:boxIn .5s cubic-bezier(.34,1.4,.64,1)}
+.login-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:42px 38px;width:100%;max-width:420px;box-shadow:var(--shadow-lg)}
 .login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;font-size:1.3rem;font-weight:800}
 .login-logo .blogo{width:38px;height:38px}
 .login-logo-text span{color:var(--pri)}
@@ -172,28 +146,23 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--bd)}
 .login-btn-outline{width:100%;justify-content:center;padding:14px;font-size:.95rem}
 .pass-wrap{position:relative}
-.pass-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:1rem;padding:4px;transition:color .2s}
-.pass-toggle:hover{color:var(--txt)}
+.pass-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:1rem;padding:4px}
 
 /* ============ NOTIFICATIONS ============ */
-.notif-bell{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:background .25s,border-color .25s,transform .25s,box-shadow .25s}
-.notif-bell:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.5);box-shadow:var(--glow-cyan);transform:translateY(-2px)}
+.notif-bell{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:all .25s}
+.notif-bell:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.5);transform:translateY(-2px)}
 .notif-bell svg{width:18px;height:18px;stroke:#7dd3fc;fill:none;stroke-width:2}
-.notif-bell.has-unread svg{stroke:#ff5470;animation:bellRing .6s ease}
-@keyframes bellRing{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(10deg)}}
-.notif-badge{position:absolute;top:-4px;right:-4px;background:#ff5470;color:#fff;font-size:.68rem;font-weight:700;min-width:18px;height:18px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 12px rgba(255,84,112,.6)}
-.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:1900}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:#ff5470;color:#fff;font-size:.68rem;font-weight:700;min-width:18px;height:18px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.25s;z-index:1900}
 .notif-overlay.on{opacity:1;pointer-events:auto}
-.notif-panel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;background:linear-gradient(180deg,var(--pan2),#0a0f16);border-left:1px solid var(--bd2);box-shadow:-20px 0 60px -10px rgba(0,0,0,.8);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:1950;display:flex;flex-direction:column}
+.notif-panel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;background:linear-gradient(180deg,var(--pan2),#0a0f16);border-left:1px solid var(--bd2);transform:translateX(100%);transition:transform .3s;z-index:1950;display:flex;flex-direction:column}
 .notif-panel.on{transform:translateX(0)}
 .notif-header{padding:20px 22px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
 .notif-title{font-size:1.15rem;font-weight:700;margin-bottom:3px}
 .notif-sub{font-size:.8rem;color:var(--mut)}
-.notif-close{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s,color .2s}
-.notif-close:hover{background:rgba(255,84,112,.15);border-color:rgba(255,84,112,.4);color:#ff5470}
+.notif-close{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .notif-list{flex:1;overflow-y:auto;padding:12px}
-.notif-item{position:relative;display:flex;gap:14px;padding:14px 16px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;margin-bottom:8px;transition:background .2s,border-color .2s;cursor:pointer}
-.notif-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.2)}
+.notif-item{position:relative;display:flex;gap:14px;padding:14px 16px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;margin-bottom:8px;cursor:pointer}
 .notif-item.unread{background:rgba(0,212,255,.06);border-color:rgba(0,212,255,.25)}
 .notif-icon{width:38px;height:38px;border-radius:10px;background:rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
 .notif-body{flex:1;min-width:0}
@@ -202,29 +171,22 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .notif-empty{text-align:center;padding:60px 20px;color:var(--mut);font-size:.9rem}
 @media (max-width:600px){.notif-panel{width:100vw}}
 
-/* ============ SOUND ============ */
-.sound-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,176,32,.15);border:1px solid rgba(255,176,32,.5);border-radius:999px;color:var(--warn);cursor:pointer;font-family:inherit;font-size:.78rem;font-weight:600;transition:background .2s}
-.sound-btn:hover{background:rgba(255,176,32,.25)}
+/* ============ SOUND BTN ============ */
+.sound-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,176,32,.15);border:1px solid rgba(255,176,32,.5);border-radius:999px;color:var(--warn);cursor:pointer;font-family:inherit;font-size:.78rem;font-weight:600}
 .sound-btn.hidden{display:none}
 .sound-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
 
 /* ============ CURRENCY ============ */
 .curr-switch{position:relative}
-.curr-btn-top{display:flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:999px;color:var(--txt);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600;transition:background .2s,border-color .2s}
-.curr-btn-top:hover{background:rgba(255,255,255,.08);border-color:var(--pri)}
-.curr-menu{position:absolute;top:calc(100% + 8px);right:0;background:linear-gradient(180deg,var(--pan2),#0f151e);border:1px solid var(--bd2);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;min-width:220px;max-height:320px;overflow-y:auto;display:none;z-index:9999;animation:menuIn .15s ease}
-@keyframes menuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.curr-btn-top{display:flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:999px;color:var(--txt);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600}
+.curr-menu{position:absolute;top:calc(100% + 8px);right:0;background:linear-gradient(180deg,var(--pan2),#0f151e);border:1px solid var(--bd2);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;min-width:220px;display:none;z-index:9999}
 .curr-menu.on{display:block}
-.curr-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:.88rem;transition:background .15s}
-.curr-opt:hover{background:rgba(0,212,255,.08)}
+.curr-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:.88rem}
 .curr-opt.on{background:rgba(0,212,255,.12);color:var(--pri)}
 .curr-opt span:first-child{font-weight:600;flex:1}
 .curr-rate{color:var(--mut);font-size:.78rem;font-family:ui-monospace,monospace}
 
 /* ============ SETTINGS ============ */
-.settings-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
-.settings-btn:hover{background:rgba(255,255,255,.08);border-color:var(--pri);transform:translateY(-2px)}
-.settings-btn svg{width:18px;height:18px;stroke:var(--txt);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .settings-section{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--bd)}
 .settings-section:last-of-type{border-bottom:none;padding-bottom:0}
 .settings-label{font-size:.72rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:12px}
@@ -232,12 +194,10 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .settings-name{font-size:.92rem;font-weight:700;margin-bottom:3px}
 .settings-email{font-size:.78rem;color:var(--mut);font-family:ui-monospace,monospace}
 .settings-role{font-size:.72rem;padding:4px 10px;border-radius:6px;background:rgba(0,212,255,.12);color:var(--pri);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:inline-block;margin-top:6px}
-.settings-btn-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.9rem;font-weight:600;transition:background .2s,border-color .2s,transform .2s;margin-bottom:8px}
-.settings-btn-row:hover{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.3);transform:translateX(4px)}
+.settings-btn-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.9rem;font-weight:600;transition:.2s;margin-bottom:8px}
+.settings-btn-row:hover{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.3)}
 .settings-btn-row.danger{color:#ff5470}
-.settings-btn-row.danger:hover{background:rgba(255,84,112,.05);border-color:rgba(255,84,112,.4)}
-.back-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--txt);cursor:pointer;transition:background .2s,border-color .2s,color .2s;margin-bottom:8px}
-.back-btn:hover{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.35);color:var(--pri)}
+.back-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--txt);cursor:pointer;margin-bottom:8px}
 .back-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
 /* ============ INACTIVITY ============ */
@@ -250,11 +210,11 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .inactivity-timer{font-family:ui-monospace,Menlo,monospace;font-size:3rem;font-weight:800;color:var(--warn);margin-bottom:24px}
 .inactivity-actions{display:flex;gap:10px}
 .inactivity-actions .btn{flex:1;justify-content:center;padding:14px}
- /* ============ PREMIUM CARD ============ */
+  /* ============ PREMIUM CARD ============ */
 .pay{background:radial-gradient(500px 200px at 100% 0%,rgba(0,212,255,.18),transparent 60%),linear-gradient(135deg,#1b2533 0%,#0a0e15 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:26px;height:200px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 30px 60px -30px rgba(0,0,0,.9);position:relative;overflow:hidden;margin-bottom:24px;transition:transform .3s ease,box-shadow .3s ease,background .5s ease}
 .pay-shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(120deg,transparent 0%,transparent 30%,rgba(255,255,255,.15) 50%,transparent 70%,transparent 100%);transition:left .8s ease;pointer-events:none;z-index:3}
 .pay:hover .pay-shine{left:100%}
-.pay:hover{transform:perspective(1000px) rotateY(-4deg) rotateX(3deg) translateY(-4px);box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}
+.pay:hover{transform:perspective(1000px) rotateY(-4deg) rotateX(3deg) translateY(-4px)}
 .pay.frozen{filter:grayscale(.7) brightness(.7)}
 .pay.frozen::before{content:'FROZEN';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;letter-spacing:.3em;color:rgba(255,255,255,.2);z-index:5;pointer-events:none}
 .ptop{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
@@ -280,7 +240,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .pay.pay-large .pv{font-size:1rem}
 .pay.pay-large .pl{font-size:.68rem}
 
-/* CARD DESIGNS */
+/* ============ CARD DESIGNS ============ */
 .pay.design-cosmic{background:linear-gradient(135deg,#1a1a2e,#0f3460)}
 .pay.design-purple{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .pay.design-silver{background:linear-gradient(135deg,#c0c0c0,#808080)}
@@ -296,7 +256,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 
 /* DESIGN PICKER */
 .design-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
-.design-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.7rem;font-weight:600;transition:border-color .2s,background .2s,box-shadow .2s}
+.design-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.7rem;font-weight:600;transition:.2s}
 .design-opt:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
 .design-opt.on{border-color:var(--pri);background:rgba(0,212,255,.08);box-shadow:0 0 0 3px rgba(0,212,255,.15)}
 .design-preview{width:100%;height:34px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
@@ -321,12 +281,11 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-hero h1 span{background:linear-gradient(100deg,#fff,#aeeeff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .nc3-hero p{margin-top:7px;color:#718098;font-size:.88rem}
 .nc3-hero-actions{display:flex;gap:9px}
-.nc3-ghost,.nc3-primary{border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:11px 16px;font-weight:750;cursor:pointer;transition:transform .2s,background .2s,box-shadow .2s;display:flex;gap:7px;align-items:center;font-family:inherit;font-size:.9rem}
+.nc3-ghost,.nc3-primary{border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:11px 16px;font-weight:750;cursor:pointer;transition:.2s;display:flex;gap:7px;align-items:center;font-family:inherit;font-size:.9rem}
 .nc3-ghost{background:rgba(255,255,255,.035);color:#b6c1d1}
 .nc3-primary{background:linear-gradient(135deg,#46dfff,#238cff);color:#03111b;border:0;box-shadow:0 13px 28px rgba(36,154,255,.2)}
 .nc3-ghost:hover{background:rgba(255,255,255,.065);transform:translateY(-2px)}
 .nc3-primary:hover{transform:translateY(-2px);box-shadow:0 18px 34px rgba(36,154,255,.3)}
-
 .nc3-overview{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,480px);gap:18px}
 @media (max-width:1100px){.nc3-overview{grid-template-columns:1fr}}
 .nc3-balance-card,.nc3-card-wrap,.nc3-chart-panel,.nc3-transactions,.nc3-iban{background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid var(--nc3-line);border-radius:22px;box-shadow:var(--shadow-md)}
@@ -338,9 +297,11 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 @media (max-width:1100px){.nc3-balance{font-size:2.2rem}}
 .nc3-eur{color:#718098;font-size:.88rem;margin-top:3px}
 .nc3-balance-menu{color:#718098;letter-spacing:3px;padding:6px 2px}
-.nc3-performance{margin-top:16px;display:flex;gap:7px;align-items:center;color:#5ce6b5;font-size:.78rem}
+.nc3-performance{margin-top:16px;display:flex;gap:7px;align-items:center;color:#5ce6b5;font-size:.78rem;font-weight:700}
 .nc3-performance span:last-child{color:#68768c}
-.nc3-performance-note{font-size:.68rem;color:#657389;margin-top:5px}
+.pnl-line.positive{color:#00ffa3 !important;text-shadow:0 0 12px rgba(0,255,163,.35)}
+.pnl-line.negative{color:#ff5470 !important;text-shadow:0 0 12px rgba(255,84,112,.3)}
+.nc3-performance-note{font-size:.72rem;color:#657389;margin-top:8px;font-weight:600}
 .nc3-balance-chart{position:absolute;left:0;right:0;bottom:0;height:190px;padding:18px 25px 10px;background:linear-gradient(180deg,transparent,rgba(71,220,255,.018))}
 .nc3-chart-labels{display:flex;justify-content:space-between;color:#59677b;font-size:.64rem;margin-bottom:5px}
 .nc3-mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 0 4px}
@@ -348,34 +309,30 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-mini-label{font-size:10px;color:#7c9cbb;text-transform:uppercase;letter-spacing:.5px}
 .nc3-mini-value{font-size:16px;font-weight:600;color:#47dcff}
 
-/* CARD WRAP */
+/* ============ NC3 CARD WRAP ============ */
 .nc3-card-wrap{padding:20px;background:linear-gradient(145deg,rgba(18,23,37,.92),rgba(9,13,23,.96));display:flex;flex-direction:column;gap:14px}
 .nc3-section-label{color:#77869d;text-transform:uppercase;font-size:.62rem;letter-spacing:.12em;font-weight:800;margin:1px 3px 11px}
 .nc3-bank-card{width:100%;aspect-ratio:1.6/1;height:auto;min-height:220px;max-height:280px;border-radius:22px;padding:26px;background:radial-gradient(500px 250px at 90% -10%,rgba(255,83,190,.5),transparent 58%),radial-gradient(400px 240px at 0% 110%,rgba(95,76,255,.55),transparent 64%),linear-gradient(135deg,#2a1750 0%,#4a1a7a 50%,#751a55 100%);box-shadow:0 35px 70px rgba(0,0,0,.4),0 0 80px rgba(255,83,190,.22),0 0 100px rgba(95,76,255,.18),inset 0 1px 0 rgba(255,255,255,.22);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
 .nc3-bank-card .pn{font-size:1.13rem;letter-spacing:.16em}
 .nc3-bank-card .chip-real{transform:scale(.9);transform-origin:left center}
-.nc3-bank-card::after{content:'';position:absolute;inset:-2px;border-radius:24px;background:linear-gradient(120deg,transparent 0%,rgba(71,220,255,.4) 20%,rgba(255,83,190,.5) 40%,rgba(95,76,255,.5) 60%,transparent 80%);background-size:200% 200%;z-index:-1;animation:cardPulseBorder 4s ease-in-out infinite;filter:blur(4px);pointer-events:none}
-@keyframes cardPulseBorder{0%,100%{background-position:0% 50%;opacity:.6}50%{background-position:100% 50%;opacity:1}}
 
 .nc3-card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-.nc3-card-action{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px;background:rgba(13,19,30,.72);border:1px solid var(--nc3-line);border-radius:14px;cursor:pointer;transition:background .2s,border-color .2s,transform .15s;font-family:inherit;color:#e7edf6}
+.nc3-card-action{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px;background:rgba(13,19,30,.72);border:1px solid var(--nc3-line);border-radius:14px;cursor:pointer;transition:.2s;font-family:inherit;color:#e7edf6}
 .nc3-card-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px)}
-.nc3-card-action-icon{width:32px;height:32px;min-width:32px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.3);transition:transform .2s,box-shadow .25s}
-.nc3-card-action:hover .nc3-card-action-icon{transform:scale(1.08);box-shadow:0 5px 16px rgba(71,220,255,.35)}
+.nc3-card-action-icon{width:32px;height:32px;min-width:32px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:.2s}
 .nc3-card-action-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
 .nc3-card-action-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .nc3-card-action-icon.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .nc3-card-action-label{font-size:13px;font-weight:600}
 @media (max-width:500px){.nc3-card-actions{grid-template-columns:1fr}.nc3-card-action{justify-content:flex-start}}
 
-/* ASSETS */
+/* ============ ASSETS ============ */
 .nc3-assets,.nc3-actions-section{margin-top:27px}
 .nc3-section-head,.nc3-panel-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
 .nc3-section-head h2,.nc3-panel-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px}
-.nc3-link,.nc3-panel-head a{color:#65ddff;text-decoration:none;font-size:.72rem;font-weight:750;transition:color .2s}
-.nc3-link:hover,.nc3-panel-head a:hover{color:#fff}
+.nc3-link,.nc3-panel-head a{color:#65ddff;text-decoration:none;font-size:.72rem;font-weight:750}
 .nc3-asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.nc3-asset{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:94px;padding:16px;border:1px solid var(--nc3-line);border-radius:16px;background:rgba(13,19,30,.72);position:relative;overflow:hidden;transition:transform .2s,border-color .2s,background .2s}
+.nc3-asset{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:94px;padding:16px;border:1px solid var(--nc3-line);border-radius:16px;background:rgba(13,19,30,.72);position:relative;overflow:hidden;transition:.2s}
 .nc3-asset:hover{transform:translateY(-2px);border-color:rgba(71,220,255,.18);background:rgba(17,25,39,.9)}
 .nc3-asset-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem}
 .nc3-asset-icon.btc{background:rgba(245,158,11,.11);color:#ffbd4c}
@@ -386,17 +343,14 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-asset-value{text-align:right}
 .nc3-asset-value strong{display:block;font-size:.84rem}
 .nc3-asset-value span{font-size:.66rem;color:#57dfad}
-.nc3-asset .crypto-chart{position:absolute;right:100px;bottom:10px;width:130px;height:50px;opacity:1;pointer-events:none;filter:drop-shadow(0 0 4px currentColor)}
+.nc3-asset .crypto-chart{position:absolute;right:100px;bottom:10px;width:130px;height:50px;pointer-events:none}
 .nc3-asset .crypto-chart svg{width:100%;height:100%;display:block}
 
-/* ACTIONS */
+/* ============ ACTIONS ============ */
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:background .2s,border-color .2s,transform .15s,box-shadow .2s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit;font-size:inherit}
+.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:.2s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit;font-size:inherit}
 .nc3-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px);box-shadow:0 15px 40px -10px rgba(71,220,255,.4)}
-.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);transition:transform .2s,box-shadow .25s;flex-shrink:0}
-.nc3-action:hover .nc3-action-icon{transform:scale(1.08) translateY(-2px);box-shadow:0 8px 22px rgba(71,220,255,.35)}
-.nc3-action:hover .nc3-action-icon svg{animation:iconSpin .6s cubic-bezier(.34,1.56,.64,1)}
-@keyframes iconSpin{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.15)}100%{transform:rotate(360deg) scale(1)}}
+.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
 .nc3-action-icon svg{width:20px;height:20px;stroke:#fff}
 .nc3-action-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .nc3-action-icon.pink{background:linear-gradient(135deg,#ec4899,#f472b6)}
@@ -407,7 +361,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-action small{display:block;color:#68768b;margin-top:4px;font-size:.63rem}
 .nc3-action i{font-style:normal;color:#536177}
 
-/* LOWER */
+/* ============ LOWER / TX ============ */
 .nc3-lower{display:grid;grid-template-columns:1.25fr .9fr;gap:14px;margin-top:27px}
 .nc3-chart-panel,.nc3-transactions{padding:20px;min-height:355px}
 .nc3-panel-head{align-items:center}
@@ -415,11 +369,9 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-large-chart{height:270px;margin:3px -5px -5px}
 .nc3-transactions .recent-tx-list{max-height:285px;overflow:auto;margin-top:4px}
 .nc3-transactions .recent-tx-item{padding:11px 5px;border-bottom:1px solid rgba(255,255,255,.045)}
-
-/* RECENT TX */
 .recent-tx-list{display:flex;flex-direction:column;gap:8px}
-.recent-tx-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:10px;transition:background .2s,border-color .2s,transform .2s}
-.recent-tx-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.25);transform:translateX(4px)}
+.recent-tx-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:10px;transition:.2s}
+.recent-tx-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.25)}
 .recent-tx-icon{width:38px;height:38px;border-radius:10px;background:rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
 .recent-tx-icon.deposit{background:rgba(0,224,138,.12)}
 .recent-tx-icon.transfer{background:rgba(255,176,32,.12)}
@@ -439,28 +391,25 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .recent-tx-badge.fail{background:rgba(255,80,80,.15);color:#ff6b6b}
 .recent-tx-empty{text-align:center;padding:40px 20px;color:var(--mut);font-size:.88rem}
 
-/* BOTTOM ROW */
+/* ============ BOTTOM ROW / IBAN ============ */
 .nc3-bottom-row{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
 .nc3-iban{padding:22px;border-radius:16px;background:radial-gradient(400px 200px at 100% 0%,rgba(71,220,255,.08),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.9),rgba(9,14,23,.9));border:1px solid rgba(71,220,255,.18);position:relative;overflow:hidden}
 .nc3-iban::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(71,220,255,.12),transparent 70%);pointer-events:none}
 .nc3-iban-copy{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .nc3-iban-copy > div:last-child{display:flex;flex-direction:column;gap:4px}
-.nc3-icon-circle{width:48px;height:48px;min-width:48px;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 18px rgba(6,182,212,.35);transition:transform .2s,box-shadow .25s;flex-shrink:0}
-.nc3-iban:hover .nc3-icon-circle{transform:scale(1.05);box-shadow:0 8px 24px rgba(6,182,212,.45)}
+.nc3-icon-circle{width:48px;height:48px;min-width:48px;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:.2s;flex-shrink:0}
 .nc3-icon-circle svg{width:22px;height:22px;stroke:#fff;fill:none}
 .nc3-iban-copy h3{margin:0;font-size:16px;font-weight:700;color:#e8f4ff}
 .nc3-iban-copy p{margin:0;font-size:12px;color:#7c9cbb}
 .nc3-iban-details{display:flex;flex-direction:column;gap:10px;margin-top:16px}
-.nc3-iban-details > div{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(71,220,255,.04);border:1px solid rgba(71,220,255,.1);border-radius:10px;transition:background .2s,border-color .2s}
-.nc3-iban-details > div:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.25)}
+.nc3-iban-details > div{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(71,220,255,.04);border:1px solid rgba(71,220,255,.1);border-radius:10px}
 .nc3-iban-details span{color:#7c9cbb;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.nc3-iban-details b{color:#e8f4ff;font-size:13px;font-family:'SF Mono','Consolas',monospace;font-weight:600}
+.nc3-iban-details b{color:#e8f4ff;font-size:13px;font-family:ui-monospace,monospace;font-weight:600}
 #myIban{color:#47dcff}
 #mySwift{color:#a855f7}
 #myBank{color:#e8f4ff}
 #myCountry{color:#f59e0b}
-.nc3-copy-iban{margin-top:14px;width:100%;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(71,220,255,.08);border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#47dcff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s,border-color .2s,transform .15s}
-.nc3-copy-iban:hover{background:rgba(71,220,255,.15);border-color:rgba(71,220,255,.4);transform:translateY(-1px)}
+.nc3-copy-iban{margin-top:14px;width:100%;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(71,220,255,.08);border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#47dcff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .nc3-copy-iban svg{width:13px;height:13px;flex-shrink:0}
 .iban-pending{text-align:center;padding:20px 12px}
 .iban-spinner{width:28px;height:28px;border:3px solid rgba(0,212,255,.15);border-top-color:var(--pri);border-radius:50%;margin:0 auto 12px;animation:ibanSpin 1s linear infinite}
@@ -468,11 +417,10 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .iban-pending-text{font-size:.88rem;font-weight:600;color:var(--txt);margin-bottom:4px}
 .iban-pending-sub{font-size:.75rem;color:var(--mut)}
 
-/* STAT STRIP */
+/* ============ STAT STRIP ============ */
 .nc3-stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--nc3-line);border-radius:16px;overflow:hidden;background:var(--nc3-line)}
 .nc3-stat{padding:17px;background:rgba(13,19,30,.8);min-height:110px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px}
-.nc3-stat-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);transition:transform .2s,box-shadow .25s}
-.nc3-stat:hover .nc3-stat-icon{transform:scale(1.08) translateY(-2px);box-shadow:0 8px 22px rgba(71,220,255,.3)}
+.nc3-stat-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:.2s}
 .nc3-stat-icon svg{width:20px;height:20px;stroke:#fff}
 .nc3-stat-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
 .nc3-stat-icon.red{background:linear-gradient(135deg,#ef4444,#f87171)}
@@ -485,9 +433,9 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-stat-spark{position:absolute;right:12px;bottom:12px;width:60px;height:24px;opacity:.5;pointer-events:none}
 .nc3-stat-spark::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 24' preserveAspectRatio='none'><polyline points='0,18 10,15 20,17 30,10 40,12 50,6 60,3' fill='none' stroke='%234edca9' stroke-width='2'/></svg>") no-repeat center;background-size:100% 100%}
 
-/* BALANCE CHART */
+/* ============ BALANCE CHART ============ */
 .balance-chart-panel{display:flex;flex-direction:column;height:400px;min-height:400px;overflow:hidden}
-.balance-current{font-size:1.25rem;font-weight:800;color:var(--pri);font-family:ui-monospace,monospace;text-shadow:0 0 20px rgba(0,212,255,.4)}
+.balance-current{font-size:1.25rem;font-weight:800;color:var(--pri);font-family:ui-monospace,monospace}
 .balance-chart-wrap{flex:1;position:relative;margin-top:16px;min-height:180px}
 .balance-chart-wrap svg{width:100%;height:100%;display:block;overflow:visible}
 .balance-chart-wrap .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:.88rem;text-align:center;flex-direction:column;gap:8px}
@@ -495,16 +443,14 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .bottom-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-top:14px;align-items:stretch}
 .bottom-grid .recent-tx-panel{height:400px;min-height:400px;display:flex;flex-direction:column;margin-top:0;overflow:hidden}
 .bottom-grid .recent-tx-list{flex:1;overflow-y:auto;padding-right:6px;margin-top:4px}
-.bottom-grid .recent-tx-list::-webkit-scrollbar{width:5px}
-.bottom-grid .recent-tx-list::-webkit-scrollbar-thumb{background:rgba(0,212,255,.35);border-radius:3px}
 
 /* ============ RESPONSIVE ============ */
 @media(max-width:1100px){.nc3-overview,.nc3-lower,.nc3-bottom-row{grid-template-columns:1fr}.nc3-action-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.bottom-grid{grid-template-columns:1fr}.balance-chart-panel,.bottom-grid .recent-tx-panel{height:auto;min-height:320px}.nc3-asset-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.side{width:78px}.body{padding:20px 15px 90px}.top{padding:0 15px}.nc3-hero{align-items:flex-start;gap:15px;flex-direction:column}.nc3-overview,.nc3-asset-grid,.nc3-action-grid{grid-template-columns:1fr}.nc3-balance{font-size:2.55rem}.nc3-bank-card{height:215px}.brand .nm,.mi .tx,.umi .inf{display:none}.mi{justify-content:center}.umi{justify-content:center}}
 @media(max-width:500px){.nc3-hero h1{font-size:1.55rem}.nc3-balance-card{padding:19px;min-height:350px}.nc3-card-actions button b{display:none}.nc3-action-grid{grid-template-columns:1fr 1fr}.nc3-action{grid-template-columns:36px 1fr}.nc3-action i{display:none}.nc3-asset{grid-template-columns:38px 1fr auto}}
-@media (max-width:480px){.top-search{display:none}.body{padding:16px 14px}.stats-grid{grid-template-columns:1fr}.bottom-grid{grid-template-columns:1fr}}
- /* ============ ONBOARDING ============ */
+@media (max-width:480px){.top-search{display:none}.body{padding:16px 14px}.bottom-grid{grid-template-columns:1fr}}
+/* ============ ONBOARDING ============ */
 .onboard{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:3000;overflow-y:auto;padding:40px 20px}
 .onboard.on{display:flex}
 .onb-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;width:100%;max-width:520px;box-shadow:var(--shadow-lg)}
@@ -512,7 +458,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .onb-logo .blogo{width:38px;height:38px}
 .onb-box h1{font-size:1.55rem;font-weight:800;margin-bottom:8px;letter-spacing:-.02em}
 .onb-box > p{color:var(--mut);font-size:.92rem;margin-bottom:26px}
-.onb-preview{margin-bottom:24px;transition:.3s}
+.onb-preview{margin-bottom:24px}
 .onb-step{display:none;width:100%;max-width:520px;animation:stepFadeIn .5s ease}
 .onb-step.on{display:block}
 @keyframes stepFadeIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -526,16 +472,14 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .onb-nav{display:flex;gap:10px;margin-top:20px}
 #onbStep3Title{background:linear-gradient(135deg,#fff,#8fb8ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .type-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.type-btn{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:border-color .2s,background .2s,color .2s,box-shadow .2s;font-family:inherit;color:var(--txt);font-size:.9rem}
-.type-btn:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
+.type-btn{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:.2s;font-family:inherit;color:var(--txt);font-size:.9rem}
 .type-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
 .cur-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.cur-btn{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:border-color .2s,background .2s,color .2s,box-shadow .2s;font-family:inherit;color:var(--txt);font-size:.88rem}
-.cur-btn:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
+.cur-btn{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:.2s;font-family:inherit;color:var(--txt);font-size:.88rem}
 .cur-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
 .onboard.exiting{opacity:0;transform:scale(1.05);transition:opacity .4s ease,transform .5s ease;pointer-events:none}
 
-/* CARD ANIMATION */
+/* ============ CARD ANIMATION ============ */
 .onb-anim-stage{position:fixed;inset:0;z-index:2500;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#0a1428,#05070e)}
 .onb-anim-stage.on{display:flex}
 .anim-card{width:380px;max-width:calc(100vw - 40px);height:220px;border-radius:20px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#1b2533 0%,#0a0e15 100%);border:1px solid rgba(71,220,255,.25);box-shadow:0 30px 80px -20px rgba(0,0,0,.9);opacity:0;transform:scale(.3) rotateY(45deg);transition:transform .9s cubic-bezier(.34,1.5,.5,1),opacity .6s ease;position:relative}
@@ -552,27 +496,21 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .lbl{font-size:9px;color:#7c9cbb;letter-spacing:1px;margin-bottom:2px}
 .val{font-size:13px;color:#fff;font-weight:600;text-transform:uppercase;opacity:0;transition:opacity .4s ease}
 .val.show{opacity:1}
-.ready-text{position:absolute;top:12%;left:50%;transform:translateX(-50%) scale(.8);font-size:22px;font-weight:700;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;transition:opacity .4s,transform .5s cubic-bezier(.34,1.5,.5,1);pointer-events:none}
+.ready-text{position:absolute;top:12%;left:50%;transform:translateX(-50%) scale(.8);font-size:22px;font-weight:700;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;transition:opacity .4s,transform .5s;pointer-events:none}
 .ready-text.show{opacity:1;transform:translateX(-50%) scale(1)}
 .pay.fresh-card{animation:freshCardGlow 2.5s ease-out}
-@keyframes freshCardGlow{0%{box-shadow:0 30px 60px -30px rgba(0,0,0,.9),0 0 60px rgba(0,212,255,.7),0 0 120px rgba(124,58,237,.5);transform:scale(1.03)}100%{box-shadow:0 30px 60px -30px rgba(0,0,0,.9);transform:scale(1)}}
+@keyframes freshCardGlow{0%{box-shadow:0 30px 60px -30px rgba(0,0,0,.9),0 0 60px rgba(0,212,255,.7);transform:scale(1.03)}100%{box-shadow:0 30px 60px -30px rgba(0,0,0,.9);transform:scale(1)}}
 .balance-pulse{animation:balancePulse 1.5s ease-out}
 @keyframes balancePulse{0%,100%{transform:scale(1)}30%{transform:scale(1.08)}60%{transform:scale(.98)}}
 
-/* CONFETTI */
+/* ============ CONFETTI ============ */
 .confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:2600;overflow:hidden}
 .confetti-piece{position:absolute;top:50%;left:50%;width:14px;height:14px;opacity:0;will-change:transform,opacity}
-.coin{border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff5c2,#d4a017 60%,#8a6508);box-shadow:0 0 12px rgba(255,215,0,.7);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#6b4a04;font-family:ui-monospace,monospace}
-.spark{border-radius:50%;background:radial-gradient(circle,#00d4ff,#0090c9);box-shadow:0 0 14px #00d4ff}
-.crystal{background:linear-gradient(135deg,#a78bfa,#7c3aed);box-shadow:0 0 14px #7c3aed;transform:rotate(45deg);border-radius:3px}
-.star{background:radial-gradient(circle,#00e08a,#00b46e);clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);box-shadow:0 0 12px #00e08a}
+.coin{border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff5c2,#d4a017 60%,#8a6508);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#6b4a04;font-family:ui-monospace,monospace}
+.spark{border-radius:50%;background:radial-gradient(circle,#00d4ff,#0090c9)}
+.crystal{background:linear-gradient(135deg,#a78bfa,#7c3aed);transform:rotate(45deg);border-radius:3px}
+.star{background:radial-gradient(circle,#00e08a,#00b46e);clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
 @keyframes confettiFly{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0deg)}10%{opacity:1}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(1) rotate(var(--rot))}}
-
-/* CARD DISSOLVE / MATERIALIZE */
-.pay.card-deleting{animation:cardDissolve .9s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none}
-@keyframes cardDissolve{0%{opacity:1;transform:perspective(1000px) rotateY(0deg) scale(1);filter:brightness(1) blur(0)}40%{opacity:.85;transform:perspective(1000px) rotateY(20deg) scale(.95);filter:brightness(1.4);box-shadow:0 0 60px rgba(255,84,112,.6)}100%{opacity:0;transform:perspective(1000px) rotateY(60deg) scale(.7);filter:brightness(.4) blur(8px)}}
-.pay.card-creating{animation:cardMaterialize 1.1s cubic-bezier(.34,1.56,.64,1) forwards}
-@keyframes cardMaterialize{0%{opacity:0;transform:scale(.5) rotateY(-60deg);filter:blur(20px) brightness(2)}60%{opacity:1;filter:blur(0) brightness(1.3);box-shadow:0 0 80px rgba(71,220,255,.7)}100%{opacity:1;transform:scale(1) rotateY(0deg);filter:blur(0) brightness(1)}}
 
 /* ============ VERIFICATION ============ */
 .verify-screen{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:2900;overflow-y:auto;padding:40px 20px}
@@ -581,15 +519,15 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .verify-step.on{display:block}
 @keyframes verifyFadeIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 .verify-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;box-shadow:var(--shadow-lg);text-align:center}
-.verify-icon{font-size:3rem;margin-bottom:16px;filter:drop-shadow(0 0 24px rgba(0,212,255,.5))}
+.verify-icon{font-size:3rem;margin-bottom:16px}
 .verify-box h1{font-size:1.5rem;font-weight:800;margin-bottom:8px}
 .verify-sub{color:var(--mut);font-size:.88rem;margin-bottom:24px}
 .verify-types{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-.vtype-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);transition:border-color .2s,background .2s,box-shadow .2s}
+.vtype-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);transition:.2s}
 .vtype-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
 .vtype-emoji{font-size:1.6rem}
 .vtype-name{font-size:.78rem;font-weight:600;text-align:center;line-height:1.2}
-.upload-zone{display:block;padding:28px 20px;background:rgba(7,10,15,.5);border:2px dashed var(--bd2);border-radius:14px;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:16px}
+.upload-zone{display:block;padding:28px 20px;background:rgba(7,10,15,.5);border:2px dashed var(--bd2);border-radius:14px;cursor:pointer;transition:.2s;margin-bottom:16px}
 .upload-zone:hover{border-color:var(--pri);background:rgba(0,212,255,.04)}
 .upload-inner{text-align:center}
 .upload-icon{font-size:2rem;margin-bottom:8px;opacity:.7}
@@ -605,16 +543,16 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .selfie-hint{background:rgba(255,176,32,.06);border:1px solid rgba(255,176,32,.2);border-radius:12px;padding:14px 16px;margin-bottom:18px;text-align:left}
 .hint-line{font-size:.85rem;color:var(--txt);padding:4px 0}
 .verify-spinner{font-size:3rem;margin-bottom:16px}
-.verify-timer{font-family:ui-monospace,monospace;font-size:2.4rem;font-weight:800;color:var(--pri);margin:18px 0 20px;text-shadow:0 0 20px rgba(0,212,255,.4)}
+.verify-timer{font-family:ui-monospace,monospace;font-size:2.4rem;font-weight:800;color:var(--pri);margin:18px 0 20px}
 .verify-progress{background:rgba(255,255,255,.06);height:6px;border-radius:3px;overflow:hidden;margin-bottom:24px}
 .verify-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;transition:width .5s ease}
 .verify-steps-list{text-align:left}
-.vstep{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:.88rem;color:var(--mut);transition:color .3s}
+.vstep{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:.88rem;color:var(--mut)}
 .vstep.done{color:var(--txt)}
 .vstep.done .vstep-check,.vstep.done .vstep-dot{color:var(--ok);font-weight:800}
 .vstep.active{color:var(--pri);font-weight:600}
 .vstep-check,.vstep-dot{width:20px;text-align:center;flex-shrink:0}
-.success-circle{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:800;margin:0 auto 24px;box-shadow:0 0 0 12px rgba(0,224,138,.12),0 0 60px rgba(0,224,138,.5);animation:successPop .6s cubic-bezier(.34,1.56,.64,1)}
+.success-circle{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:800;margin:0 auto 24px;box-shadow:0 0 0 12px rgba(0,224,138,.12);animation:successPop .6s cubic-bezier(.34,1.56,.64,1)}
 @keyframes successPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
 .verify-success-note{background:rgba(0,224,138,.06);border:1px solid rgba(0,224,138,.2);border-radius:12px;padding:16px;margin:20px 0 24px;font-size:.88rem;color:var(--txt);line-height:1.5;text-align:left}
 @media (max-width:540px){.verify-box{padding:26px 22px}.verify-types{grid-template-columns:1fr}.vtype-btn{flex-direction:row;gap:12px;justify-content:flex-start}}
@@ -624,11 +562,11 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .track-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px;flex-wrap:wrap}
 .track-id-box{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);padding:12px 18px;border-radius:12px}
 .track-id-box .l{font-size:.7rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-.track-id-box .v{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--pri);font-size:1.05rem}
+.track-id-box .v{font-family:ui-monospace,monospace;font-weight:700;color:var(--pri);font-size:1.05rem}
 .progress-steps{display:flex;justify-content:space-between;margin-bottom:24px;position:relative}
 .progress-steps::before{content:'';position:absolute;top:14px;left:22px;right:22px;height:2px;background:var(--bd);z-index:0}
 .step{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;position:relative;z-index:1}
-.step-dot{width:30px;height:30px;border-radius:50%;background:var(--pan2);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--mut);transition:background .3s,border-color .3s,color .3s,box-shadow .3s}
+.step-dot{width:30px;height:30px;border-radius:50%;background:var(--pan2);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--mut);transition:.3s}
 .step.done .step-dot{background:var(--ok);border-color:var(--ok);color:#04121a}
 .step.active .step-dot{background:var(--pri);border-color:var(--pri);color:#04121a;box-shadow:0 0 0 6px rgba(0,212,255,.15)}
 .step-label{font-size:.7rem;color:var(--mut);text-align:center;font-weight:500;max-width:90px}
@@ -636,10 +574,9 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .progress-bar-bg{background:rgba(255,255,255,.06);height:9px;border-radius:5px;overflow:hidden;margin:16px 0}
 .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;border-radius:5px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
-.info-box{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:16px;position:relative;overflow:hidden;transition:border-color .3s,background .3s,transform .3s}
+.info-box{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:16px}
 .info-box .l{font-size:.68rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
 .info-box .v{font-weight:600;font-size:.9rem;word-break:break-word}
-.info-box:hover{border-color:rgba(0,212,255,.35);background:rgba(0,212,255,.03);transform:translateY(-2px)}
 .log{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-top:16px;max-height:220px;overflow-y:auto}
 .log-item{display:flex;gap:12px;padding:8px 0;font-size:.85rem;border-bottom:1px solid rgba(255,255,255,.04)}
 .log-item:last-child{border-bottom:none}
@@ -650,14 +587,13 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 @media(max-width:700px){.info-grid{grid-template-columns:1fr}}
 
 /* ============ WELCOME BANNER ============ */
-.welcome-banner{display:flex;align-items:center;gap:16px;padding:18px 22px;margin-bottom:22px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(124,58,237,.12));border:1px solid rgba(0,212,255,.3);border-radius:16px;position:relative;overflow:hidden}
+.welcome-banner{display:flex;align-items:center;gap:16px;padding:18px 22px;margin-bottom:22px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(124,58,237,.12));border:1px solid rgba(0,212,255,.3);border-radius:16px}
 .welcome-banner.hidden{display:none}
 .wb-icon{font-size:2rem;flex-shrink:0}
 .wb-text{flex:1}
 .wb-title{font-size:1.05rem;font-weight:800;margin-bottom:3px}
 .wb-sub{font-size:.85rem;color:var(--mut)}
-.wb-close{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--mut);cursor:pointer;font-size:1rem;transition:background .2s,border-color .2s,color .2s;flex-shrink:0}
-.wb-close:hover{background:rgba(255,84,112,.15);border-color:rgba(255,84,112,.4);color:#ff5470}
+.wb-close{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--mut);cursor:pointer;flex-shrink:0}
 
 /* ============ WITHDRAW MODAL ============ */
 .wd-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}
@@ -675,7 +611,6 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .wd-btn{flex:1;padding:10px 16px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 .wd-btn-cancel{background:rgba(255,255,255,.05);color:#7c9cbb}
 .wd-btn-submit{background:linear-gradient(135deg,#00d4ff,#a855f7);color:#fff}
-.wd-btn-submit:hover{opacity:.9}
 
 /* ============ TX STATUS MODAL ============ */
 .tx-status{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility .3s}
@@ -697,69 +632,68 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 /* ============ DEPOSIT VERIFICATION ============ */
 .dep-verify-overlay{position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:4000;padding:20px}
 .dep-verify-overlay.on{display:flex}
-.dep-verify-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(0,212,255,.25);border-radius:24px;padding:42px 38px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);position:relative}
+.dep-verify-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(0,212,255,.25);border-radius:24px;padding:42px 38px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
 .dep-step{display:none;text-align:center}
 .dep-step.on{display:block}
-.dep-icon-big{font-size:4rem;margin-bottom:20px;filter:drop-shadow(0 0 30px rgba(0,212,255,.6))}
+.dep-icon-big{font-size:4rem;margin-bottom:20px}
 .dep-step h1{font-size:1.6rem;font-weight:800;margin-bottom:10px}
 .dep-step h2{font-size:1.25rem;font-weight:700;margin:24px 0 20px;line-height:1.35}
 .dep-sub{color:var(--mut);font-size:.92rem;margin-bottom:20px;line-height:1.5}
 .dep-note{color:var(--mut);font-size:.85rem;margin:20px 0 8px;line-height:1.5}
 .dep-amount-card{background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(124,58,237,.08));border:1px solid rgba(0,212,255,.25);border-radius:16px;padding:22px;margin:20px 0}
 .dep-amount-card.success{background:linear-gradient(135deg,rgba(0,224,138,.1),rgba(0,200,83,.08));border-color:rgba(0,224,138,.3)}
-.dep-amount-crypto{font-family:ui-monospace,Menlo,monospace;font-size:1.5rem;font-weight:800;color:var(--pri);margin-bottom:6px}
+.dep-amount-crypto{font-family:ui-monospace,monospace;font-size:1.5rem;font-weight:800;color:var(--pri);margin-bottom:6px}
 .dep-amount-card.success .dep-amount-crypto{color:var(--ok)}
-.dep-amount-usd{font-size:.95rem;color:var(--mut);font-family:ui-monospace,Menlo,monospace}
+.dep-amount-usd{font-size:.95rem;color:var(--mut);font-family:ui-monospace,monospace}
 .dep-progress{background:rgba(255,255,255,.08);height:6px;border-radius:3px;overflow:hidden;margin-bottom:12px}
 .dep-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));border-radius:3px;transition:width .5s ease}
 .dep-step-label{font-size:.78rem;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
 .dep-options{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-.dep-opt{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;font-family:inherit;color:var(--txt);text-align:left;transition:border-color .2s,background .2s,transform .2s;font-size:.95rem}
-.dep-opt:hover{border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.05);transform:translateX(4px)}
+.dep-opt{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;font-family:inherit;color:var(--txt);text-align:left;transition:.2s;font-size:.95rem}
 .dep-opt.on{border-color:var(--pri);background:rgba(0,212,255,.1);box-shadow:0 0 0 4px rgba(0,212,255,.12)}
 .dep-opt-icon{font-size:1.4rem;flex-shrink:0}
 .dep-opt-text{font-weight:600;line-height:1.3}
-.dep-checkbox{display:flex;align-items:flex-start;gap:14px;padding:18px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;margin-top:8px;transition:border-color .2s;text-align:left}
+.dep-checkbox{display:flex;align-items:flex-start;gap:14px;padding:18px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;margin-top:8px;text-align:left}
 .dep-checkbox input{display:none}
-.dep-checkmark{width:24px;height:24px;border:2px solid var(--bd2);border-radius:7px;flex-shrink:0;position:relative;transition:background .2s,border-color .2s,box-shadow .2s;margin-top:2px}
-.dep-checkmark::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#04121a;opacity:0;transition:opacity .2s}
+.dep-checkmark{width:24px;height:24px;border:2px solid var(--bd2);border-radius:7px;flex-shrink:0;position:relative;margin-top:2px}
+.dep-checkmark::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#04121a;opacity:0;transition:.2s}
 .dep-checkbox input:checked + .dep-checkmark{background:var(--pri);border-color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.15)}
 .dep-checkbox input:checked + .dep-checkmark::after{opacity:1}
 .dep-check-text{flex:1;font-size:.9rem;color:var(--txt);line-height:1.45}
 .dep-legal{background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.2);border-radius:12px;padding:14px 16px;margin:16px 0 0;font-size:.78rem;color:var(--mut);line-height:1.55;text-align:left}
-.dep-success-icon{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900;margin:0 auto 24px;box-shadow:0 0 0 12px rgba(0,224,138,.12),0 0 60px rgba(0,224,138,.55)}
+.dep-success-icon{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900;margin:0 auto 24px;box-shadow:0 0 0 12px rgba(0,224,138,.12)}
 .dep-balance{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(0,0,0,.25);border-radius:12px;margin-top:16px;font-size:.9rem}
 .dep-balance span:first-child{color:var(--mut)}
-.dep-balance-value{font-family:ui-monospace,Menlo,monospace;font-weight:800;color:var(--pri);font-size:1.1rem}
+.dep-balance-value{font-family:ui-monospace,monospace;font-weight:800;color:var(--pri);font-size:1.1rem}
 
 /* ============ ADMIN PANEL ============ */
 .admin-panel{position:fixed;inset:0;background:radial-gradient(900px 500px at 20% 0%,rgba(124,58,237,.1),transparent 60%),radial-gradient(800px 500px at 100% 100%,rgba(0,212,255,.08),transparent 60%),var(--bg);z-index:4500;display:none;flex-direction:column;overflow:hidden}
 .admin-panel.on{display:flex}
-.admin-top{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;background:rgba(13,18,25,.92);border-bottom:1px solid var(--bd);position:relative;z-index:10;flex:0 0 auto}
+.admin-top{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;background:rgba(13,18,25,.92);border-bottom:1px solid var(--bd);flex:0 0 auto}
 .admin-brand{display:flex;align-items:center;gap:12px;font-size:1.1rem;font-weight:800}
 .admin-brand .blogo{width:38px;height:38px}
 .admin-brand span{color:var(--pri)}
 .admin-top-actions{display:flex;align-items:center;gap:12px}
 .admin-user{font-size:.85rem;color:var(--mut);font-family:ui-monospace,monospace}
 .admin-body{flex:1 1 auto;min-height:0;overflow:hidden;display:grid;grid-template-columns:240px minmax(0,1fr);padding:0;margin:0;width:100%;max-width:none}
-.admin-sidebar{grid-column:1;grid-row:1/-1;width:240px;min-width:240px;max-width:240px;height:100%;min-height:0;overflow-y:auto;padding:20px 12px;margin:0;box-sizing:border-box;background:rgba(10,15,25,.95);border-right:1px solid rgba(255,255,255,.06);align-self:stretch}
-.admin-nav-item{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:12px 14px;margin:0 0 4px 0;border-radius:10px;cursor:pointer;color:#8b95a5;font-size:14px;font-weight:500;position:relative;width:100%;box-sizing:border-box;text-align:left;background:transparent;transition:background .15s,color .15s}
+.admin-sidebar{grid-column:1;grid-row:1/-1;width:240px;min-width:240px;max-width:240px;height:100%;min-height:0;overflow-y:auto;padding:20px 12px;margin:0;box-sizing:border-box;background:rgba(10,15,25,.95);border-right:1px solid rgba(255,255,255,.06)}
+.admin-nav-item{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:12px 14px;margin:0 0 4px 0;border-radius:10px;cursor:pointer;color:#8b95a5;font-size:14px;font-weight:500;position:relative;width:100%;box-sizing:border-box;text-align:left;background:transparent;transition:.15s}
 .admin-nav-item:hover{background:rgba(255,255,255,.04);color:#e7edf5}
 .admin-nav-item.active{background:linear-gradient(135deg,rgba(95,46,229,.2),rgba(139,92,246,.15));color:#e7edf5;font-weight:600}
 .admin-nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:linear-gradient(180deg,#5f2ee5,#8b5cf6);border-radius:0 3px 3px 0}
 .admin-nav-badge{margin-left:auto;background:#ff3b3b;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .admin-nav-badge.warn{background:#f6c344;color:#1a1a1a}
-.admin-content{grid-column:2;grid-row:1/-1;height:100%;min-height:0;max-height:100%;overflow-y:auto;overflow-x:hidden;padding:28px 32px;margin:0;box-sizing:border-box;width:auto;min-width:0;align-self:stretch;display:block}
+.admin-content{grid-column:2;grid-row:1/-1;height:100%;min-height:0;max-height:100%;overflow-y:auto;overflow-x:hidden;padding:28px 32px;margin:0;box-sizing:border-box;width:auto;min-width:0;display:block}
 .admin-section{display:none}
 .admin-section.active{display:block}
 .admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
-.admin-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:20px;transition:border-color .25s,background .25s,transform .25s;position:relative;overflow:hidden}
+.admin-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:20px;transition:.25s}
 .admin-stat-card:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.04);transform:translateY(-3px)}
 .admin-stat-icon{font-size:1.5rem;margin-bottom:10px}
 .admin-stat-value{font-size:1.5rem;font-weight:800;font-family:ui-monospace,monospace;margin-bottom:4px;letter-spacing:-.02em}
 .admin-stat-label{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
 .admin-clients-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px}
-.admin-client-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:22px;transition:border-color .2s,background .2s}
+.admin-client-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:22px;transition:.2s}
 .admin-client-card:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.03)}
 .admin-client-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
 .admin-client-avatar{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#04121a;flex-shrink:0}
@@ -780,7 +714,6 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .admin-system-row:first-child{padding-top:0}
 .admin-system-label{font-size:.82rem;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;font-weight:600;margin-bottom:4px}
 .admin-system-value{font-size:1rem;font-weight:700;font-family:ui-monospace,monospace}
-#adminBalanceMask,#adminMsgMask{z-index:9000}
 
 /* ADMIN WITHDRAWALS */
 .admin-withdrawals-list{display:flex;flex-direction:column;gap:12px;padding:12px 0}
@@ -800,21 +733,22 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .awd-row b{color:#e8f4ff;font-family:monospace}
 .awd-date{font-size:11px;color:#5967fb;margin-bottom:10px}
 .awd-actions{display:flex;gap:10px;margin-top:12px}
-.awd-btn{flex:1;padding:12px 20px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;transition:transform .2s,box-shadow .2s,background .2s}
-.awd-approve{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;box-shadow:0 6px 16px rgba(16,185,129,.3)}
-.awd-approve:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(16,185,129,.45)}
+.awd-btn{flex:1;padding:12px 20px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;transition:.2s}
+.awd-approve{background:linear-gradient(135deg,#10b981,#34d399);color:#fff}
+.awd-approve:hover{transform:translateY(-2px)}
 .awd-reject{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
-.awd-reject:hover{background:rgba(239,68,68,.25);transform:translateY(-2px)}
 
 @media (max-width:1000px){.admin-clients-list{grid-template-columns:1fr}}
 @media (max-width:900px){.admin-stats{grid-template-columns:repeat(2,1fr)}.admin-client-grid{grid-template-columns:repeat(2,1fr)}.admin-top{padding:16px 20px}.admin-user{display:none}}
 @media (max-width:500px){.admin-stats{grid-template-columns:1fr}.admin-client-grid{grid-template-columns:1fr}}
 
-/* ============ LIVE CHAT ============ */
-#chatToggle{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#5f2ee5 0%,#8b5cf6 100%);color:#fff;cursor:pointer;box-shadow:0 12px 32px rgba(95,46,229,.45);display:flex;align-items:center;justify-content:center;z-index:9000;transition:transform .2s,box-shadow .3s}
+/* ============ LIVE CHAT (НОВЫЙ) ============ */
+#chatToggle{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#5f2ee5 0%,#8b5cf6 100%);color:#fff;cursor:pointer;box-shadow:0 12px 32px rgba(95,46,229,.45);display:flex;align-items:center;justify-content:center;z-index:9000;transition:.2s}
 #chatToggle:hover{transform:scale(1.08);box-shadow:0 16px 40px rgba(95,46,229,.6)}
+#chatToggle svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2}
 #chatToggle #chatBadge{position:absolute;top:-4px;right:-4px;background:#ff3b3b;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;border:2px solid #0f1720;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center}
 #chatPanel{position:fixed;bottom:100px;right:24px;width:380px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 140px);background:linear-gradient(180deg,#0f1720 0%,#0b1219 100%);border:1px solid rgba(139,92,246,.2);border-radius:20px;z-index:9001;display:none;flex-direction:column;overflow:hidden;box-shadow:0 24px 72px rgba(0,0,0,.7)}
+#chatPanel.open{display:flex}
 .chat-header{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:flex-start;background:linear-gradient(135deg,rgba(95,46,229,.15),rgba(139,92,246,.08))}
 .chat-agent{display:flex;gap:12px;align-items:center}
 .chat-avatar{position:relative;width:46px;height:46px;flex-shrink:0}
@@ -824,263 +758,82 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .chat-agent-role{color:#8b95a5;font-size:11px;margin-top:1px}
 .chat-agent-status{color:#22c55e;font-size:11px;margin-top:4px;display:flex;align-items:center;gap:5px}
 .chat-dot{display:inline-block;width:6px;height:6px;background:#22c55e;border-radius:50%}
-.chat-close{background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;line-height:1;padding:0;transition:color .2s}
-.chat-close:hover{color:#e7edf5}
+.chat-close{background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;line-height:1;padding:0}
 .chat-messages{flex:1;overflow-y:auto;padding:16px}
 .chat-messages::-webkit-scrollbar{width:6px}
 .chat-messages::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:3px}
 .chat-welcome{text-align:center;padding:20px 10px}
-.chat-welcome-avatar img{width:60px;height:60px;border-radius:50%;border:2px solid rgba(139,92,246,.4);margin-bottom:8px}
 .chat-welcome-name{color:#e7edf5;font-weight:600;font-size:14px}
 .chat-welcome-text{color:#8b95a5;font-size:12px;margin-top:6px;line-height:1.5}
-.chat-msg{display:flex;margin-bottom:12px;animation:msgIn .3s ease}
-@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg{display:flex;margin-bottom:14px;animation:msgSlideIn .25s ease-out}
+@keyframes msgSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .chat-msg.client{justify-content:flex-end}
 .chat-msg.admin{justify-content:flex-start}
-.chat-msg > div{min-width:0}
-.chat-bubble{max-width:76%;width:fit-content;min-width:60px;padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.45;word-break:normal;overflow-wrap:anywhere;white-space:normal}
-.chat-msg.client .chat-bubble{background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border-bottom-right-radius:4px}
-.chat-msg.admin .chat-bubble{background:rgba(255,255,255,.06);color:#e7edf5;border-bottom-left-radius:4px;border:1px solid rgba(255,255,255,.05)}
-.chat-msg-meta{font-size:10px;color:#8b95a5;margin-top:4px;display:flex;gap:4px;align-items:center}
-.chat-msg.client .chat-msg-meta{justify-content:flex-end}
-.chat-input-wrap{padding:12px 14px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center}
-.chat-input{flex:1;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;font-family:inherit;transition:border-color .2s,background .2s}
-.chat-input:focus{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.05)}
-.chat-input::placeholder{color:#5a6673}
-.chat-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .2s}
-.chat-send:hover{transform:scale(1.05);box-shadow:0 6px 16px rgba(95,46,229,.5)}
-.chat-footer{padding:8px 14px;text-align:center;font-size:10px;color:#5a6673;border-top:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.2)}
-
-#tkTopic,#tkPriority{color-scheme:dark;background:#0f1720;color:#e7edf5;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-#tkTopic option,#tkPriority option{background:#0f1720;color:#e7edf5;padding:10px}
-#tkTopic option:checked,#tkPriority option:checked{background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff}
-
-@media (max-width:480px){
-  #chatPanel{bottom:0;right:0;left:0;top:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;border-radius:0;z-index:99999}
-  #chatPanel .chat-close{display:flex;align-items:center;justify-content:center;width:44px;height:44px;position:absolute;top:12px;right:12px;z-index:100001;background:rgba(255,80,80,.2);border-radius:50%;color:#ff6b6b;font-size:26px;cursor:pointer;border:none}
-  #chatPanel .chat-header{padding-right:70px;position:relative}
-  #chatToggle{bottom:16px;right:16px;z-index:100000}
-}
-
-/* ============ LIGHT THEME ============ */
-body.light-theme{--bg:#f5f7fb;--pan:#fff;--pan2:#f0f2f7;--txt:#0f172a;--mut:#64748b;--bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.14);--pri:#5b8def;--pri2:#8b5cf6;--nc3-bg:#f5f7fb;--nc3-surface:#fff;--nc3-surface2:#f0f2f7;--nc3-line:rgba(0,0,0,.08);--nc3-muted:#64748b;--nc3-text:#0f172a;--nc3-cyan:#0ea5e9;--nc3-violet:#7c3aed;background:#f5f7fb;color:#0f172a}
-body.light-theme .side{background:linear-gradient(180deg,#fff,#f0f2f7);border-right:1px solid rgba(0,0,0,.08)}
-body.light-theme .top{background:rgba(255,255,255,.9);border-bottom:1px solid rgba(0,0,0,.08)}
-body.light-theme .panel,body.light-theme .mas,body.light-theme .admin-client-card,body.light-theme .tbl{background:#fff;border-color:rgba(0,0,0,.08);color:#0f172a}
-body.light-theme .fc{background:#f5f7fb;border-color:rgba(0,0,0,.12);color:#0f172a}
-body.light-theme .mi:hover{background:rgba(0,0,0,.04)}
-body.light-theme .mi.on{background:linear-gradient(90deg,rgba(91,141,239,.15),rgba(91,141,239,.05));color:#5b8def}
-body.light-theme .box,body.light-theme .onb-box,body.light-theme .login-box,body.light-theme .admin-stat-card{background:#fff;border-color:rgba(0,0,0,.08);color:#0f172a}
-body.light-theme .login-screen,body.light-theme .onboard,body.light-theme .verify-screen{background:#f5f7fb}
-body.light-theme .admin-panel{background:#f5f7fb}
-body.light-theme .top-search input{color:#0f172a}
-body.light-theme .top-icon,body.light-theme .settings-btn,body.light-theme .notif-bell{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:#0f172a}
-body.light-theme .recent-tx-item{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.06)}
-body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-color:rgba(91,141,239,.2)}
-
-/* ============ CARD DETAILS ROWS (единственный) ============ */
-.iban-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px}
-.iban-row:last-child{border-bottom:none}
-.iban-row .l{color:var(--mut);flex-shrink:0;font-size:13px}
-.iban-row .v{font-family:ui-monospace,Menlo,monospace;font-weight:600;letter-spacing:.02em;text-align:right;word-break:break-all;color:var(--txt)}
-/* ============ PNL UPGRADE ============ */
-
-/* Профит — зелёный, как Revolut */
-.nc3-performance{
-  font-weight:700;
-}
-.pnl-line.positive,
-.nc3-performance.pnl-line.positive{
-  color:#00ffa3 !important;
-  text-shadow:0 0 12px rgba(0,255,163,.35);
-}
-.pnl-line.negative,
-.nc3-performance.pnl-line.negative{
-  color:#ff5470 !important;
-  text-shadow:0 0 12px rgba(255,84,112,.3);
-}
-
-/* Иконка ▲ ▼ — ярче */
-.pnl-line.positive span:first-child,
-.nc3-performance .pnl-icon-up{
-  color:#00ffa3 !important;
-}
-.pnl-line.negative span:first-child{
-  color:#ff5470 !important;
-}
-
-/* Процент — жирнее */
-.pnl-line strong{
-  font-weight:800;
-  font-family:ui-monospace,Menlo,monospace;
-}
-
-/* Текст объяснения — ярче */
-#pnlExplain{
-  font-weight:600;
-  font-size:.72rem;
-  margin-top:8px;
-}
-/* TYPING INDICATOR */
-.typing-dot {
-  display: inline-block;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #8b95a5;
-  animation: typingBounce 1.4s infinite ease-in-out;
-}
-.typing-dot:nth-child(1) { animation-delay: 0s; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typingBounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-6px); opacity: 1; }
-}
-/* ============ CHAT BUBBLES POLISH ============ */
-
-/* Пузырь — ограниченная ширина, красивый перенос */
+.chat-msg > div{min-width:0;max-width:80%}
 .chat-bubble{
-  max-width:80% !important;
+  max-width:80%;
   width:fit-content;
   min-width:40px;
   padding:11px 15px;
   border-radius:18px;
   font-size:13.5px;
   line-height:1.5;
-  word-break:normal !important;
-  overflow-wrap:break-word !important;
-  white-space:pre-wrap;
+  word-break:normal;
+  overflow-wrap:break-word;
+  word-wrap:break-word;
   hyphens:none;
+  white-space:pre-wrap;
+  color:inherit
 }
-
-/* Убираем огромные пузыри от длинных сообщений */
-.chat-msg > div{
-  max-width:80%;
-}
-
-/* Свои сообщения — синий градиент с тенью */
-.chat-msg.client .chat-bubble{
-  background:linear-gradient(135deg,#5f2ee5,#8b5cf6);
-  color:#fff;
-  border-bottom-right-radius:6px;
-  box-shadow:0 4px 12px -4px rgba(95,46,229,.4);
-}
-
-/* Сообщения Елены — тёмно-серые */
-.chat-msg.admin .chat-bubble{
-  background:rgba(255,255,255,.07);
-  color:#e7edf5;
-  border:1px solid rgba(255,255,255,.06);
-  border-bottom-left-radius:6px;
-}
-
-/* Мета под пузырём — компактнее */
-.chat-msg-meta{
-  font-size:10px;
-  color:#8b95a5;
-  margin-top:5px;
-  padding:0 6px;
-  display:flex;
-  gap:5px;
-  align-items:center;
-}
+.chat-msg.client .chat-bubble{background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border-bottom-right-radius:6px;box-shadow:0 4px 12px -4px rgba(95,46,229,.4)}
+.chat-msg.admin .chat-bubble{background:rgba(255,255,255,.07);color:#e7edf5;border-bottom-left-radius:6px;border:1px solid rgba(255,255,255,.06)}
+.chat-bubble img.chat-img{max-width:100%;border-radius:12px;display:block;margin-bottom:6px;cursor:pointer}
+.chat-bubble .chat-text{margin-top:2px}
+.chat-bubble .chat-time{font-size:10px;opacity:.6;margin-top:5px;display:block}
+.chat-msg-meta{font-size:10px;color:#8b95a5;margin-top:5px;padding:0 6px;display:flex;gap:5px;align-items:center}
 .chat-msg.client .chat-msg-meta{justify-content:flex-end}
-
-/* Отступы между сообщениями */
-.chat-msg{margin-bottom:14px}
-
-/* Если подряд идут сообщения от одного автора — уменьшить отступ */
 .chat-msg.same-author{margin-top:-6px}
 .chat-msg.same-author .chat-msg-meta{display:none}
+.chat-typing-dots{display:inline-flex;align-items:center;gap:4px;padding:4px 0}
+.typing-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#8b95a5;animation:typingBounce 1.4s infinite ease-in-out}
+.typing-dot:nth-child(1){animation-delay:0s}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+.chat-input-wrap{padding:12px 14px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.15)}
+.chat-input{flex:1;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;font-family:inherit;resize:none;max-height:80px;min-height:42px}
+.chat-input:focus{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.05)}
+.chat-attach{width:42px;height:42px;border-radius:12px;border:none;background:rgba(255,255,255,.05);color:#8b95a5;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.chat-attach:hover{background:rgba(139,92,246,.15);color:#a78bfa}
+.chat-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;font-size:18px}
+.chat-send:hover{transform:scale(1.05)}
+.chat-footer{padding:8px 14px;text-align:center;font-size:10px;color:#5a6673;border-top:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.2)}
+.chat-ticket-form{display:flex;flex-direction:column;height:100%}
+.chat-ticket-body{flex:1;overflow-y:auto;padding:20px 18px}
+.chat-conversation{display:none;flex-direction:column;height:100%}
+.chat-conversation.open{display:flex}
+.chat-ticket-label{display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:14px}
+.chat-ticket-label:first-child{margin-top:0}
 
-/* Точка возле "печатает" */
-.chat-msg.admin.chat-typing .chat-bubble{
-  padding:13px 18px;
-  display:inline-flex;
-  align-items:center;
-  gap:5px;
-  min-width:52px;
-}
+/* Скрываем native input file */
+.chat-file-input{display:none}
 
-/* Скроллбар чата — тонкий */
-.chat-messages::-webkit-scrollbar{width:6px}
-.chat-messages::-webkit-scrollbar-thumb{
-  background:rgba(139,92,246,.3);
-  border-radius:3px;
-}
-.chat-messages::-webkit-scrollbar-thumb:hover{
-  background:rgba(139,92,246,.5);
-}
+/* Фото в модалке админа */
+.ac-img{max-width:100%;border-radius:10px;margin-bottom:4px;cursor:pointer}
 
-/* Анимация появления сообщения */
-.chat-msg{
-  animation:msgSlideIn .25s ease-out;
-}
-@keyframes msgSlideIn{
-  from{opacity:0;transform:translateY(6px)}
-  to{opacity:1;transform:translateY(0)}
-}
-/* ============ CHAT BUBBLE WORD BREAK FIX ============ */
-.chat-bubble{
-  max-width:80% !important;
-  width:fit-content !important;
-  min-width:40px !important;
-  padding:11px 15px !important;
-  border-radius:18px !important;
-  font-size:13.5px !important;
-  line-height:1.5 !important;
-  
-  /* ✅ Правильные правила переноса: */
-  word-break:normal !important;        /* НЕ ломаем посреди слова */
-  overflow-wrap:break-word !important; /* ломаем ТОЛЬКО длинные слова (>ширины пузыря) */
-  hyphens:none !important;             /* без автоматических дефисов */
-  white-space:pre-wrap !important;     /* сохраняем \n */
-}
+/* Lightbox */
+#imgLightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:99999;padding:20px;cursor:zoom-out}
+#imgLightbox.on{display:flex}
+#imgLightbox img{max-width:100%;max-height:100%;border-radius:8px}
 
-/* Родитель — даём больше места */
-.chat-msg > div{
-  max-width:85% !important;
-  min-width:0 !important;
-}
+#tkTopic,#tkPriority{color-scheme:dark;background:#0f1720;color:#e7edf5;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+#tkTopic option,#tkPriority option{background:#0f1720;color:#e7edf5;padding:10px}
 
-/* Очень узкий чат — пузырь почти всю ширину */
-@media (max-width:400px){
-  .chat-msg > div{max-width:90% !important}
-  .chat-bubble{max-width:100% !important}
-}
-  /* CHAT BUBBLE — правильные переносы */
-.chat-bubble{
-  word-break:normal !important;
-  overflow-wrap:break-word !important;
-  hyphens:none !important;
-  max-width:80% !important;
-  width:fit-content !important;
-}
-.chat-msg > div{
-  max-width:85% !important;
-  min-width:0 !important;
-}
-@media (max-width:400px){
-  .chat-msg > div{max-width:90% !important}
-  .chat-bubble{max-width:100% !important}
-}
-/* ============ CHAT BUBBLE FINAL FIX ============ */
-.chat-bubble,
-#chatMessages .chat-bubble,
-.chat-msg .chat-bubble{
-  word-break:normal !important;
-  overflow-wrap:break-word !important;
-  word-wrap:break-word !important;
-  hyphens:none !important;
-  white-space:pre-wrap !important;
-  max-width:80% !important;
-}
-.chat-msg > div{
-  max-width:85% !important;
-  min-width:0 !important;
-}
-.chat-msg.client > div{
-  max-width:85% !important;
+@media (max-width:480px){
+  #chatPanel{bottom:0;right:0;left:0;top:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;border-radius:0;z-index:99999}
+  #chatPanel .chat-close{display:flex;align-items:center;justify-content:center;width:44px;height:44px;position:absolute;top:12px;right:12px;z-index:100001;background:rgba(255,80,80,.2);border-radius:50%;color:#ff6b6b;font-size:26px;cursor:pointer;border:none}
+  #chatPanel .chat-header{padding-right:70px;position:relative}
+  #chatToggle{bottom:16px;right:16px;z-index:100000}
 }
 </style>
 
@@ -1110,7 +863,7 @@ document.addEventListener('DOMContentLoaded', function(){
 </head>
 <body>
 
-<!-- ============ LOGIN SCREEN ============ -->
+<!-- ============ LOGIN ============ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <div class="login-logo">
@@ -1120,10 +873,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <h1 class="login-title">Welcome back</h1>
     <p class="login-sub">Sign in to your account</p>
     <div class="login-form" id="loginForm">
-      <div class="fg">
-        <label>Email</label>
-        <input type="email" class="fc" id="loginEmail" placeholder="your@email.com" autocomplete="email">
-      </div>
+      <div class="fg"><label>Email</label><input type="email" class="fc" id="loginEmail" placeholder="your@email.com" autocomplete="email"></div>
       <div class="fg">
         <label>Password</label>
         <div class="pass-wrap">
@@ -1135,9 +885,7 @@ document.addEventListener('DOMContentLoaded', function(){
       <button class="btn b1 login-btn" id="btnLogin">Sign in →</button>
       <div class="login-divider"><span>or</span></div>
       <button class="btn b2 login-btn-outline" id="btnGoToSignup" type="button">Create new account</button>
-      <div class="login-hint">
-        <span>Forgot password?</span> <a href="#" id="forgotPass">Contact support</a>
-      </div>
+      <div class="login-hint"><span>Forgot password?</span> <a href="#" id="forgotPass">Contact support</a></div>
     </div>
     <div class="login-loading" id="loginLoading" style="display:none">
       <div class="login-spinner"></div>
@@ -1154,34 +902,13 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="nm">Nordic<span>Crypto</span></div>
   </div>
   <ul class="menu">
-    <li class="mi on" data-p="dash">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
-      <span class="tx">Dashboard</span>
-    </li>
-    <li class="mi" data-p="cards">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
-      <span class="tx">My Cards</span>
-    </li>
-    <li class="mi" data-p="assets">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/><circle cx="7" cy="17" r="1"/></svg>
-      <span class="tx">Crypto Assets</span>
-    </li>
-    <li class="mi" data-p="tx">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-      <span class="tx">Transactions</span>
-    </li>
-    <li class="mi" data-p="order">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
-      <span class="tx">Order New Card</span>
-    </li>
+    <li class="mi on" data-p="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="tx">Dashboard</span></li>
+    <li class="mi" data-p="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg><span class="tx">My Cards</span></li>
+    <li class="mi" data-p="assets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg><span class="tx">Crypto Assets</span></li>
+    <li class="mi" data-p="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg><span class="tx">Transactions</span></li>
+    <li class="mi" data-p="order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg><span class="tx">Order New Card</span></li>
   </ul>
-  <div class="umi">
-    <div class="av" id="userAvatar">--</div>
-    <div class="inf">
-      <h4 id="userName">User</h4>
-      <span style="font-size:11px;color:#8b95a5;">Premium Metal</span>
-    </div>
-  </div>
+  <div class="umi"><div class="av" id="userAvatar">--</div><div class="inf"><h4 id="userName">User</h4><span style="font-size:11px;color:#8b95a5;">Premium Metal</span></div></div>
 </div>
 
 <!-- ============ MAIN ============ -->
@@ -1193,10 +920,7 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
   <div style="display:flex;align-items:center;gap:12px">
     <div class="curr-switch" id="currSwitch">
-      <button class="curr-btn-top" id="currBtnTop">
-        <span id="currCode">USD</span>
-        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
+      <button class="curr-btn-top" id="currBtnTop"><span id="currCode">USD</span><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M6 9l6 6 6-6"/></svg></button>
       <div class="curr-menu" id="currMenu">
         <div class="curr-opt on" data-cur="USD"><span>USD</span> <span class="curr-rate">$1.00</span></div>
         <div class="curr-opt" data-cur="EUR"><span>EUR</span> <span class="curr-rate" id="rateEUR">—</span></div>
@@ -1206,24 +930,10 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="curr-opt" data-cur="GBP"><span>GBP</span> <span class="curr-rate" id="rateGBP">—</span></div>
       </div>
     </div>
-    <button class="settings-btn" id="settingsBtn" title="Settings">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-    </button>
-    <button class="top-icon top-icon-refresh" id="btnRefreshBalance" title="Refresh balance">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
-        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/>
-        <path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-      </svg>
-    </button>
-    <div class="notif-bell" id="notifBell" title="Notifications">
-      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-      <span class="notif-badge" id="notifBadge" style="display:none">0</span>
-    </div>
-    <button class="sound-btn" id="soundBtn" title="Enable notification sound">
-      <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
-      <span>Enable sound</span>
-    </button>
+    <button class="settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    <button class="top-icon" id="btnRefreshBalance" title="Refresh balance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+    <div class="notif-bell" id="notifBell" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></div>
+    <button class="sound-btn" id="soundBtn"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg><span>Enable sound</span></button>
     <div class="st"><span class="dot"></span> Online</div>
   </div>
 </div>
@@ -1266,7 +976,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="nc3-mini-stats">
             <div class="nc3-mini-stat"><span class="nc3-mini-label">Income 30D</span><span class="nc3-mini-value" id="statIncome30">—</span></div>
             <div class="nc3-mini-stat"><span class="nc3-mini-label">Spending 30D</span><span class="nc3-mini-value" id="statSpending30">—</span></div>
-            <div class="nc3-mini-stat"><span class="nc3-mini-label">Transactions</span><span class="nc3-mini-value" id="statTxCount">—</span></div>
+            <div class="nc3-mini-stat"><span class="nc3-mini-label">Transactions</span><span class="nc3-mini-value" id="statTxCount2">—</span></div>
           </div>
         </div>
       </div>
@@ -1275,16 +985,9 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="nc3-section-label">Your card</div>
         <div class="pay pay-large nc3-bank-card" id="cardDash">
           <div class="pay-shine"></div>
-          <div class="ptop">
-            <div class="pb" id="cardBrandDash">NORDIC CRYPTO</div>
-            <div class="pt" id="cardTypeDash">METAL VISA</div>
-          </div>
+          <div class="ptop"><div class="pb" id="cardBrandDash">NORDIC CRYPTO</div><div class="pt" id="cardTypeDash">METAL VISA</div></div>
           <div class="chip-row">
-            <div class="chip-real">
-              <div class="chip-contact"></div><div class="chip-contact"></div>
-              <div class="chip-contact"></div><div class="chip-contact"></div>
-              <div class="chip-center"></div>
-            </div>
+            <div class="chip-real"><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-center"></div></div>
             <svg class="nfc-icon" viewBox="0 0 24 24"><path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/></svg>
           </div>
           <div class="pn" id="cardNumDash">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
@@ -1295,18 +998,9 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
         <div class="nc3-card-actions">
-          <button class="nc3-card-action" id="btnFreezeCard">
-            <span class="nc3-card-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2 12h20"/></svg></span>
-            <span class="nc3-card-action-label">Freeze</span>
-          </button>
-          <button class="nc3-card-action" id="btnLimitsCard">
-            <span class="nc3-card-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8"/></svg></span>
-            <span class="nc3-card-action-label">Limits</span>
-          </button>
-          <button class="nc3-card-action" id="btnSettingsCard">
-            <span class="nc3-card-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-            <span class="nc3-card-action-label">Settings</span>
-          </button>
+          <button class="nc3-card-action" id="btnFreezeCard"><span class="nc3-card-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2 12h20"/></svg></span><span class="nc3-card-action-label">Freeze</span></button>
+          <button class="nc3-card-action" id="btnLimitsCard"><span class="nc3-card-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8"/></svg></span><span class="nc3-card-action-label">Limits</span></button>
+          <button class="nc3-card-action" id="btnSettingsCard"><span class="nc3-card-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="nc3-card-action-label">Settings</span></button>
         </div>
       </div>
     </section>
@@ -1318,22 +1012,14 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
       <div class="nc3-asset-grid">
         <div class="nc3-asset">
-          <div class="nc3-asset-icon btc">
-            <svg viewBox="0 0 32 32" width="26" height="26"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg>
-          </div>
-          <div class="nc3-asset-main">
-            <div class="nc3-asset-name">Bitcoin <span>BTC</span></div>
-            <div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div>
-          </div>
+          <div class="nc3-asset-icon btc"><svg viewBox="0 0 32 32" width="26" height="26"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg></div>
+          <div class="nc3-asset-main"><div class="nc3-asset-name">Bitcoin <span>BTC</span></div><div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div></div>
           <div class="nc3-asset-value"><strong id="btcPrice">$—</strong><span id="btcChange">—</span></div>
           <div class="crypto-chart" id="btcChart" style="color:#f7931a"></div>
         </div>
         <div class="nc3-asset">
           <div class="nc3-asset-icon eth"><svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg></div>
-          <div class="nc3-asset-main">
-            <div class="nc3-asset-name">Ethereum <span>ETH</span></div>
-            <div class="nc3-asset-amount" id="ethB">0.00000000 ETH</div>
-          </div>
+          <div class="nc3-asset-main"><div class="nc3-asset-name">Ethereum <span>ETH</span></div><div class="nc3-asset-amount" id="ethB">0.00000000 ETH</div></div>
           <div class="nc3-asset-value"><strong id="ethPrice">$—</strong><span id="ethChange">—</span></div>
           <div class="crypto-chart" id="ethChart" style="color:#8c6cff"></div>
         </div>
@@ -1341,56 +1027,25 @@ document.addEventListener('DOMContentLoaded', function(){
     </section>
 
     <section class="nc3-actions-section">
-      <div class="nc3-section-head">
-        <div><div class="nc3-kicker">Shortcuts</div><h2>Move money</h2></div>
-      </div>
+      <div class="nc3-section-head"><div><div class="nc3-kicker">Shortcuts</div><h2>Move money</h2></div></div>
       <div class="nc3-action-grid">
-        <button class="nc3-action" id="btnWithdrawV2">
-          <span class="nc3-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span>
-          <span><b>Withdraw</b><small>Cash out to your account</small></span>
-          <i>↗</i>
-        </button>
-        <button class="nc3-action" id="btnTransferV2">
-          <span class="nc3-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 7h14"/><path d="m15 3 4 4-4 4"/><path d="M19 17H5"/><path d="m9 13-4 4 4 4"/></svg></span>
-          <span><b>Transfer</b><small>Send to another person</small></span>
-          <i>→</i>
-        </button>
-        <button class="nc3-action" id="btnExchangeV2">
-          <span class="nc3-action-icon pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
-          <span><b>Exchange</b><small>Swap crypto instantly</small></span>
-          <i>→</i>
-        </button>
-        <button class="nc3-action" id="btnCopyCardV2">
-          <span class="nc3-action-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>
-          <span><b>Copy card</b><small>Card number</small></span>
-          <i>→</i>
-        </button>
-        <button class="nc3-action" id="btnReceiveMoney">
-          <span class="nc3-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg></span>
-          <span><b>Receive money</b><small>Your IBAN</small></span>
-          <i>→</i>
-        </button>
+        <button class="nc3-action" id="btnWithdrawV2"><span class="nc3-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span><span><b>Withdraw</b><small>Cash out to your account</small></span><i>↗</i></button>
+        <button class="nc3-action" id="btnTransferV2"><span class="nc3-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 7h14"/><path d="m15 3 4 4-4 4"/><path d="M19 17H5"/><path d="m9 13-4 4 4 4"/></svg></span><span><b>Transfer</b><small>Send to another person</small></span><i>→</i></button>
+        <button class="nc3-action" id="btnExchangeV2"><span class="nc3-action-icon pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span><span><b>Exchange</b><small>Swap crypto instantly</small></span><i>→</i></button>
+        <button class="nc3-action" id="btnCopyCardV2"><span class="nc3-action-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span><span><b>Copy card</b><small>Card number</small></span><i>→</i></button>
+        <button class="nc3-action" id="btnReceiveMoney"><span class="nc3-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg></span><span><b>Receive money</b><small>Your IBAN</small></span><i>→</i></button>
       </div>
     </section>
 
     <section class="nc3-lower">
       <div class="nc3-chart-panel">
-        <div class="nc3-panel-head">
-          <div><div class="nc3-kicker">Balance history</div><h2>Last 7 days</h2></div>
-          <strong id="balanceCurrent">$0.00</strong>
-        </div>
+        <div class="nc3-panel-head"><div><div class="nc3-kicker">Balance history</div><h2>Last 7 days</h2></div><strong id="balanceCurrent">$0.00</strong></div>
         <div class="nc3-large-chart" id="balanceChartSecondary"></div>
       </div>
       <div class="nc3-transactions">
-        <div class="nc3-panel-head">
-          <div><div class="nc3-kicker">Activity</div><h2>Recent transactions</h2></div>
-          <a href="#" id="viewAllTx">View all</a>
-        </div>
+        <div class="nc3-panel-head"><div><div class="nc3-kicker">Activity</div><h2>Recent transactions</h2></div><a href="#" id="viewAllTx">View all</a></div>
         <div class="recent-tx-list" id="recentTxList">
-          <div class="recent-tx-empty">
-            <div style="font-size:2rem;opacity:.35;margin-bottom:8px">◌</div>
-            <div>No transactions yet</div>
-          </div>
+          <div class="recent-tx-empty"><div style="font-size:2rem;opacity:.35;margin-bottom:8px">◌</div><div>No transactions yet</div></div>
         </div>
       </div>
     </section>
@@ -1399,49 +1054,38 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="nc3-iban">
         <div class="nc3-iban-copy">
           <div class="nc3-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/><circle cx="12" cy="11" r="1.5"/></svg></div>
-          <div>
-            <div class="nc3-kicker">Bank details</div>
-            <h3 id="ibanTitle">Receive by IBAN</h3>
-            <p>Share your account details securely.</p>
-          </div>
+          <div><div class="nc3-kicker">Bank details</div><h3 id="ibanTitle">Receive by IBAN</h3><p>Share your account details securely.</p></div>
         </div>
-        <div id="ibanPending" class="iban-pending">
-          <div class="iban-spinner"></div>
-          <div class="iban-pending-text">Your IBAN is being generated...</div>
-          <div class="iban-pending-sub">This usually takes a few minutes</div>
-        </div>
+        <div id="ibanPending" class="iban-pending"><div class="iban-spinner"></div><div class="iban-pending-text">Your IBAN is being generated...</div><div class="iban-pending-sub">This usually takes a few minutes</div></div>
         <div id="ibanReady" class="nc3-iban-details" style="display:none">
           <div><span>IBAN</span><b id="myIban">—</b></div>
           <div><span>SWIFT / BIC</span><b id="mySwift">ESSESESSXXX</b></div>
           <div><span>Bank</span><b id="myBank">NordicCrypto Bank AB</b></div>
           <div><span>Country</span><b id="myCountry">—</b></div>
         </div>
-        <button class="nc3-copy-iban" id="btnCopyIban">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          <span>Copy details</span>
-        </button>
+        <button class="nc3-copy-iban" id="btnCopyIban"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg><span>Copy details</span></button>
       </div>
 
-      <div class="nc3-stat-strip" id="statsGrid">
+      <div class="nc3-stat-strip">
         <div class="nc3-stat">
           <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-          <div class="nc3-stat-body"><span>Deposited</span><strong id="statIncome">$0.00</strong><small id="statIncomeChange">↑ +12.4%</small></div>
-          <div class="nc3-stat-spark" data-trend="up"></div>
+          <div class="nc3-stat-body"><span>Deposited</span><strong id="statIncome">$0.00</strong><small>↑ +12.4%</small></div>
+          <div class="nc3-stat-spark"></div>
         </div>
         <div class="nc3-stat">
           <div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
-          <div class="nc3-stat-body"><span>Spent</span><strong id="statSpending">$0.00</strong><small id="statSpendingChange">↓ 0.0%</small></div>
-          <div class="nc3-stat-spark" data-trend="down"></div>
+          <div class="nc3-stat-body"><span>Spent</span><strong id="statSpending">$0.00</strong><small>↓ 0.0%</small></div>
+          <div class="nc3-stat-spark"></div>
         </div>
         <div class="nc3-stat">
           <div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-4 4"/></svg></div>
-          <div class="nc3-stat-body"><span>Transactions</span><strong id="statTxCount2">0</strong><small id="statTxChange">↑ +100%</small></div>
-          <div class="nc3-stat-spark" data-trend="up"></div>
+          <div class="nc3-stat-body"><span>Transactions</span><strong id="statTxCount">0</strong><small>↑ +100%</small></div>
+          <div class="nc3-stat-spark"></div>
         </div>
         <div class="nc3-stat">
           <div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-          <div class="nc3-stat-body"><span>Days with us</span><strong id="statDays">1</strong><small id="statDaysChange">↑ +100%</small></div>
-          <div class="nc3-stat-spark" data-trend="up"></div>
+          <div class="nc3-stat-body"><span>Days with us</span><strong id="statDays">1</strong><small>↑ +100%</small></div>
+          <div class="nc3-stat-spark"></div>
         </div>
       </div>
     </section>
@@ -1454,16 +1098,9 @@ document.addEventListener('DOMContentLoaded', function(){
   <div id="cardDetails">
     <div class="pay" style="max-width:420px" id="cardFull">
       <div class="pay-shine"></div>
-      <div class="ptop">
-        <div class="pb" id="cardBrandFull">NORDIC CRYPTO</div>
-        <div class="pt" id="cardTypeFull">METAL VISA</div>
-      </div>
+      <div class="ptop"><div class="pb" id="cardBrandFull">NORDIC CRYPTO</div><div class="pt" id="cardTypeFull">METAL VISA</div></div>
       <div class="chip-row">
-        <div class="chip-real">
-          <div class="chip-contact"></div><div class="chip-contact"></div>
-          <div class="chip-contact"></div><div class="chip-contact"></div>
-          <div class="chip-center"></div>
-        </div>
+        <div class="chip-real"><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-center"></div></div>
         <svg class="nfc-icon" viewBox="0 0 24 24"><path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/></svg>
       </div>
       <div class="pn" id="cardNumFull">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
@@ -1473,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="card-network" id="cardNetwork2"></div>
       </div>
     </div>
-    <div class="bar" style="margin-top:20px">
+    <div class="bar" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn b2" id="btnChangeDesign">🎨 Change Design</button>
       <button class="btn b2" id="btnShowCvv">👁 Show CVV</button>
       <button class="btn b2" id="btnFreeze">❄ Freeze Card</button>
@@ -1481,17 +1118,17 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
     <div class="panel" style="margin-top:24px;max-width:520px">
       <h4 style="margin-bottom:16px">Card Details</h4>
-      <div class="iban-row"><span class="l">Card Number</span><span class="v" id="detNum">—</span></div>
-      <div class="iban-row"><span class="l">CVV</span><span class="v" id="detCvv">●●●</span></div>
-      <div class="iban-row"><span class="l">Expires</span><span class="v" id="detExp">—</span></div>
-      <div class="iban-row"><span class="l">Cardholder</span><span class="v" id="detName">—</span></div>
-      <div class="iban-row"><span class="l">Type</span><span class="v" id="detType">—</span></div>
-      <div class="iban-row"><span class="l">Currency</span><span class="v" id="detCur">—</span></div>
-      <div class="iban-row"><span class="l">Status</span><span class="v" id="detStatus">Active</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Card Number</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detNum">—</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">CVV</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detCvv">●●●</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Expires</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detExp">—</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Cardholder</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detName">—</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Type</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detType">—</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Currency</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detCur">—</span></div>
+      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;gap:16px"><span style="color:#94a3b8;font-size:13px">Status</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detStatus">Active</span></div>
     </div>
     <div class="panel" style="margin-top:24px;max-width:520px">
       <h4 style="margin-bottom:12px">Want a physical card?</h4>
-      <p style="color:var(--mut);font-size:.88rem;margin-bottom:16px">Order a premium metal card shipped to your address.</p>
+      <p style="color:#94a3b8;font-size:.88rem;margin-bottom:16px">Order a premium metal card shipped to your address.</p>
       <button class="btn b1" id="btnGoOrder">Order Physical Card →</button>
     </div>
   </div>
@@ -1500,9 +1137,9 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ ASSETS ============ -->
 <div id="assets" class="pg">
   <div class="sh"><h2>Crypto Portfolio</h2><p>Your crypto holdings</p></div>
-  <div class="ma" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
-    <div class="panel"><div style="font-size:.72rem;color:var(--mut);letter-spacing:.08em">BITCOIN (BTC)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aBtc">0.00000000</div><div style="color:var(--mut);font-size:.85rem;margin-top:6px" id="aBtcU">≈ $0.00</div></div>
-    <div class="panel"><div style="font-size:.72rem;color:var(--mut);letter-spacing:.08em">ETHEREUM (ETH)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aEth">0.00000000</div><div style="color:var(--mut);font-size:.85rem;margin-top:6px" id="aEthU">≈ $0.00</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+    <div class="panel"><div style="font-size:.72rem;color:#94a3b8;letter-spacing:.08em">BITCOIN (BTC)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aBtc">0.00000000</div><div style="color:#94a3b8;font-size:.85rem;margin-top:6px" id="aBtcU">≈ $0.00</div></div>
+    <div class="panel"><div style="font-size:.72rem;color:#94a3b8;letter-spacing:.08em">ETHEREUM (ETH)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aEth">0.00000000</div><div style="color:#94a3b8;font-size:.85rem;margin-top:6px" id="aEthU">≈ $0.00</div></div>
   </div>
 </div>
 
@@ -1515,19 +1152,19 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ ORDER NEW CARD ============ -->
 <div id="order" class="pg">
   <div id="orderForm">
-    <div class="sh"><h2>Order Physical Metal Card</h2><p>Premium NordicCrypto Metal shipped from Stockholm, Sweden</p></div>
+    <div class="sh"><h2>Order Physical Metal Card</h2><p>Premium NordicCrypto Metal shipped from Stockholm</p></div>
     <div class="panel" style="max-width:640px">
       <h3 style="margin-bottom:18px;font-size:1.05rem">Shipping Details</h3>
       <div class="fr">
         <div class="fg" style="flex:2"><label>Full Name</label><input class="fc" id="oName" placeholder="Satoshi Sat Nakamoto"></div>
         <div class="fg" style="flex:1"><label>Card Type</label><select class="fc" id="oType"><option>Metal (Free)</option><option>Gold (+$100)</option></select></div>
       </div>
-      <div class="fg"><label>Country</label><select class="fc" id="oCountry"><option>Sweden</option><option>Norway</option><option>Finland</option><option>Denmark</option><option>Germany</option><option>United Kingdom</option><option>United States</option><option>France</option><option>Spain</option><option>Netherlands</option></select></div>
-      <div class="fg"><label>City</label><input class="fc" id="oCity" placeholder="e.g. Stockholm"></div>
-      <div class="fg"><label>Street Address</label><input class="fc" id="oStreet" placeholder="e.g. Drottninggatan 1"></div>
+      <div class="fg"><label>Country</label><select class="fc" id="oCountry"><option>Sweden</option><option>Norway</option><option>Finland</option><option>Denmark</option><option>Germany</option><option>United Kingdom</option><option>United States</option></select></div>
+      <div class="fg"><label>City</label><input class="fc" id="oCity" placeholder="Stockholm"></div>
+      <div class="fg"><label>Street Address</label><input class="fc" id="oStreet" placeholder="Drottninggatan 1"></div>
       <div class="fr">
         <div class="fg" style="flex:1"><label>Postal Code</label><input class="fc" id="oZip" placeholder="111 51"></div>
-        <div class="fg" style="flex:1"><label>Phone</label><input class="fc" id="oPhone" placeholder="+46 ..."></div>
+        <div class="fg" style="flex:1"><label>Phone</label><input class="fc" id="oPhone" placeholder="+46..."></div>
       </div>
       <button class="btn b1" style="width:100%;justify-content:center" id="btnOrder">Place Order</button>
     </div>
@@ -1535,33 +1172,30 @@ document.addEventListener('DOMContentLoaded', function(){
   <div id="orderTrack" class="hidden">
     <div class="track-wrap">
       <div class="track-head">
-        <div class="sh" style="margin-bottom:0"><h2>Track Your Card</h2><p>Live tracking from Stockholm to your door</p></div>
+        <div class="sh" style="margin-bottom:0"><h2>Track Your Card</h2><p>Live tracking</p></div>
         <div class="track-id-box"><div class="l">Tracking ID</div><div class="v" id="trackId">—</div></div>
       </div>
       <div class="panel">
         <div class="progress-steps" id="stepsWrap">
-          <div class="step" data-i="0"><div class="step-dot">1</div><div class="step-label">Order Received</div></div>
-          <div class="step" data-i="1"><div class="step-dot">2</div><div class="step-label">Card Minted</div></div>
-          <div class="step" data-i="2"><div class="step-dot">3</div><div class="step-label">Packed</div></div>
-          <div class="step" data-i="3"><div class="step-dot">4</div><div class="step-label">In Transit</div></div>
-          <div class="step" data-i="4"><div class="step-dot">5</div><div class="step-label">Out for Delivery</div></div>
-          <div class="step" data-i="5"><div class="step-dot">6</div><div class="step-label">Delivered</div></div>
+          <div class="step"><div class="step-dot">1</div><div class="step-label">Order Received</div></div>
+          <div class="step"><div class="step-dot">2</div><div class="step-label">Card Minted</div></div>
+          <div class="step"><div class="step-dot">3</div><div class="step-label">Packed</div></div>
+          <div class="step"><div class="step-dot">4</div><div class="step-label">In Transit</div></div>
+          <div class="step"><div class="step-dot">5</div><div class="step-label">Out for Delivery</div></div>
+          <div class="step"><div class="step-dot">6</div><div class="step-label">Delivered</div></div>
         </div>
         <div class="progress-bar-bg"><div class="progress-bar-fill" id="trackBar"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--mut);margin-bottom:16px">
-          <span id="trackStatus">Processing...</span>
-          <span id="trackPct">0%</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#94a3b8;margin-bottom:16px"><span id="trackStatus">Processing...</span><span id="trackPct">0%</span></div>
         <div class="info-grid">
           <div class="info-box"><div class="l">Current Location</div><div class="v" id="trackLoc">NordicCrypto HQ, Stockholm</div></div>
           <div class="info-box"><div class="l">Destination</div><div class="v" id="trackDest">—</div></div>
           <div class="info-box"><div class="l">Recipient</div><div class="v" id="trackName">—</div></div>
           <div class="info-box"><div class="l">Estimated Delivery</div><div class="v" id="trackEta">—</div></div>
         </div>
-        <div class="track-actions" id="trackActions">
-          <button class="btn b2" id="btnContactSupport"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Contact Support</button>
-          <button class="btn b2" id="btnOrderAnother"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>Order Another Card</button>
-          <button class="btn b3" id="btnCancelOrder"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg>Cancel Order</button>
+        <div class="track-actions">
+          <button class="btn b2" id="btnContactSupport">Contact Support</button>
+          <button class="btn b2" id="btnOrderAnother">Order Another Card</button>
+          <button class="btn b3" id="btnCancelOrder">Cancel Order</button>
         </div>
         <div class="log" id="trackLog"></div>
       </div>
@@ -1572,7 +1206,7 @@ document.addEventListener('DOMContentLoaded', function(){
 </div>
 </div>
 
-<!-- ======== MODAL (Add Funds / Transfer) ======== -->
+<!-- ============ MODAL Add/Transfer ============ -->
 <div class="mask" id="mask">
   <div class="box">
     <h2 id="mTitle">Add Funds</h2>
@@ -1588,20 +1222,17 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="Credit Card">Credit Card</option>
       </select>
     </div>
-    <div class="fg" id="mDestWrap" style="display:none">
-      <label id="mDestLabel">Recipient details</label>
-      <input class="fc" id="mDest" placeholder="">
-    </div>
+    <div class="fg" id="mDestWrap" style="display:none"><label id="mDestLabel">Recipient details</label><input class="fc" id="mDest"></div>
     <div id="mTransferSepa" style="display:none">
       <div class="fg"><label>Recipient name</label><input class="fc" id="mRecipientName" placeholder="Full name"></div>
-      <div class="fg"><label>IBAN</label><input class="fc" id="mRecipientIban" placeholder="XX00 0000 0000 0000 0000 00"></div>
+      <div class="fg"><label>IBAN</label><input class="fc" id="mRecipientIban" placeholder="XX00..."></div>
       <div class="fg"><label>Purpose</label><input class="fc" id="mRecipientPurpose" placeholder="Payment for..."></div>
     </div>
     <div id="mTransferSwift" style="display:none">
       <div class="fg"><label>Recipient name</label><input class="fc" id="mSwiftName" placeholder="Full name"></div>
       <div class="fg"><label>IBAN / Account</label><input class="fc" id="mSwiftIban" placeholder="XX00..."></div>
       <div class="fg"><label>SWIFT / BIC</label><input class="fc" id="mSwiftCode" placeholder="XXXXXXXX"></div>
-      <div class="fg"><label>Bank name</label><input class="fc" id="mSwiftBank" placeholder="Bank name"></div>
+      <div class="fg"><label>Bank name</label><input class="fc" id="mSwiftBank" placeholder="Bank"></div>
       <div class="fg"><label>Country</label><input class="fc" id="mSwiftCountry" placeholder="Country"></div>
       <div class="fg"><label>Purpose</label><input class="fc" id="mSwiftPurpose" placeholder="Payment for..."></div>
     </div>
@@ -1619,27 +1250,27 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <!-- ============ ONBOARDING ============ -->
 <div class="onboard" id="onboard">
-  <div class="onb-step onb-step-1 on" id="onbStep1">
+  <div class="onb-step on" id="onbStep1">
     <div class="onb-box onb-welcome">
       <div class="onb-logo"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <div class="welcome-icon">💎</div>
       <h1>Welcome to your<br>personal crypto banking</h1>
-      <p class="welcome-sub">Your secure gateway to digital assets. Set up your account in just 1 minute.</p>
+      <p class="welcome-sub">Your secure gateway to digital assets.</p>
       <div class="welcome-features">
         <div class="feat"><span>🔒</span> Bank-level security</div>
         <div class="feat"><span>⚡</span> Instant virtual card</div>
         <div class="feat"><span>🌍</span> Global crypto access</div>
       </div>
-      <button class="btn b1 onb-next" id="onbNext1" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:24px">Get started →</button>
+      <button class="btn b1" id="onbNext1" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:24px">Get started →</button>
     </div>
   </div>
-  <div class="onb-step onb-step-2" id="onbStep2">
+  <div class="onb-step" id="onbStep2">
     <div class="onb-box">
       <div class="onb-logo"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <h1>Enter your name</h1>
-      <p>This will appear on your card. You can change it later.</p>
-      <div class="fg"><label>First name</label><input class="fc" id="onbFirst" placeholder="Satoshi" maxlength="20" autofocus></div>
-      <div class="fg"><label>Middle name <span style="color:var(--mut);font-weight:400">(optional)</span></label><input class="fc" id="onbMiddle" placeholder="N" maxlength="20"></div>
+      <p>This will appear on your card.</p>
+      <div class="fg"><label>First name</label><input class="fc" id="onbFirst" placeholder="Satoshi" maxlength="20"></div>
+      <div class="fg"><label>Middle name (optional)</label><input class="fc" id="onbMiddle" placeholder="N" maxlength="20"></div>
       <div class="fg"><label>Last name</label><input class="fc" id="onbLast" placeholder="Nakamoto" maxlength="20"></div>
       <div class="fg">
         <label>Country</label>
@@ -1658,11 +1289,11 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
   </div>
-  <div class="onb-step onb-step-3" id="onbStep3">
+  <div class="onb-step" id="onbStep3">
     <div class="onb-box">
       <div class="onb-logo"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <h1 id="onbStep3Title">Almost done!</h1>
-      <p>Choose your card type and currency to finish.</p>
+      <p>Choose your card type and currency.</p>
       <div class="onb-preview">
         <div class="pay" style="max-width:100%;height:200px">
           <div class="ptop"><div class="pb">NORDIC CRYPTO</div><div class="pt" id="prevType">VIRTUAL VISA</div></div>
@@ -1686,13 +1317,6 @@ document.addEventListener('DOMContentLoaded', function(){
           <button type="button" class="design-opt" data-design="mountain"><div class="design-preview mountain"></div><span>Mountain</span></button>
           <button type="button" class="design-opt" data-design="aurora"><div class="design-preview aurora"></div><span>Aurora</span></button>
           <button type="button" class="design-opt" data-design="city"><div class="design-preview city"></div><span>City</span></button>
-        </div>
-        <div class="fg" style="margin-top:16px">
-          <label>Custom accent color</label>
-          <div style="display:flex;align-items:center;gap:14px">
-            <input type="range" min="0" max="360" value="200" id="hueSlider" style="flex:1;accent-color:#00d4ff;cursor:pointer">
-            <div id="huePreview" style="width:38px;height:38px;border-radius:10px;background:hsl(200,70%,50%);border:1px solid rgba(255,255,255,.2);flex-shrink:0"></div>
-          </div>
         </div>
       </div>
       <div class="fg">
@@ -1724,25 +1348,14 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="verify-box">
       <div class="verify-icon">🪪</div>
       <h1>Verify your identity</h1>
-      <p class="verify-sub">Step 1 of 3 — Identity document</p>
+      <p class="verify-sub">Step 1 of 3</p>
       <div class="verify-types">
         <button class="vtype-btn on" data-type="Passport"><span class="vtype-emoji">📘</span><span class="vtype-name">Passport</span></button>
-        <button class="vtype-btn" data-type="Driver's License"><span class="vtype-emoji">🚗</span><span class="vtype-name">Driver's License</span></button>
+        <button class="vtype-btn" data-type="Driver's License"><span class="vtype-emoji">🚗</span><span class="vtype-name">Driver's</span></button>
         <button class="vtype-btn" data-type="National ID"><span class="vtype-emoji">🆔</span><span class="vtype-name">National ID</span></button>
       </div>
-      <label class="upload-zone" id="docUpload">
-        <input type="file" accept="image/*" id="docFile" style="display:none">
-        <div class="upload-inner">
-          <div class="upload-icon">📤</div>
-          <div class="upload-text">Click to upload photo of your document</div>
-          <div class="upload-hint">JPG, PNG — up to 10 MB</div>
-        </div>
-      </label>
-      <div class="uploaded-file" id="docUploaded" style="display:none">
-        <span class="file-check">✓</span>
-        <span class="file-name" id="docFileName">document.jpg</span>
-        <span class="file-size" id="docFileSize">240 KB</span>
-      </div>
+      <label class="upload-zone" id="docUpload"><input type="file" accept="image/*" id="docFile" style="display:none"><div class="upload-inner"><div class="upload-icon">📤</div><div class="upload-text">Upload document</div><div class="upload-hint">JPG, PNG — up to 10 MB</div></div></label>
+      <div class="uploaded-file" id="docUploaded" style="display:none"><span class="file-check">✓</span><span class="file-name" id="docFileName">document.jpg</span><span class="file-size" id="docFileSize">240 KB</span></div>
       <button class="btn b1 verify-next" id="verifyNext1" disabled>Continue →</button>
     </div>
   </div>
@@ -1750,25 +1363,10 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="verify-box">
       <div class="verify-icon">🤳</div>
       <h1>Take a selfie</h1>
-      <p class="verify-sub">Step 2 of 3 — Selfie with your ID</p>
-      <div class="selfie-hint">
-        <div class="hint-line">💡 Hold your ID next to your face</div>
-        <div class="hint-line">💡 Good lighting, no glasses</div>
-        <div class="hint-line">💡 Look straight at the camera</div>
-      </div>
-      <label class="upload-zone" id="selfieUpload">
-        <input type="file" accept="image/*" id="selfieFile" style="display:none">
-        <div class="upload-inner">
-          <div class="upload-icon">📸</div>
-          <div class="upload-text">Click to upload your selfie</div>
-          <div class="upload-hint">JPG, PNG — up to 10 MB</div>
-        </div>
-      </label>
-      <div class="uploaded-file" id="selfieUploaded" style="display:none">
-        <span class="file-check">✓</span>
-        <span class="file-name" id="selfieFileName">selfie.jpg</span>
-        <span class="file-size" id="selfieFileSize">180 KB</span>
-      </div>
+      <p class="verify-sub">Step 2 of 3</p>
+      <div class="selfie-hint"><div class="hint-line">💡 Hold ID next to your face</div><div class="hint-line">💡 Good lighting</div></div>
+      <label class="upload-zone" id="selfieUpload"><input type="file" accept="image/*" id="selfieFile" style="display:none"><div class="upload-inner"><div class="upload-icon">📸</div><div class="upload-text">Upload selfie</div></div></label>
+      <div class="uploaded-file" id="selfieUploaded" style="display:none"><span class="file-check">✓</span><span class="file-name" id="selfieFileName">selfie.jpg</span><span class="file-size" id="selfieFileSize">180 KB</span></div>
       <div class="verify-nav">
         <button class="btn b2" id="verifyBack2" style="flex:1">← Back</button>
         <button class="btn b1" id="verifyNext2" style="flex:2" disabled>Continue →</button>
@@ -1779,19 +1377,13 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="verify-box">
       <div class="verify-icon">🏠</div>
       <h1>Your address</h1>
-      <p class="verify-sub">Step 3 of 3 — Where do you live?</p>
-      <div class="fg"><label>Street address</label><input class="fc" id="vStreet" placeholder="Drottninggatan 1"></div>
+      <p class="verify-sub">Step 3 of 3</p>
+      <div class="fg"><label>Street</label><input class="fc" id="vStreet" placeholder="Drottninggatan 1"></div>
       <div class="fr">
         <div class="fg" style="flex:1"><label>City</label><input class="fc" id="vCity" placeholder="Stockholm"></div>
-        <div class="fg" style="flex:1"><label>Postal code</label><input class="fc" id="vZip" placeholder="111 51"></div>
+        <div class="fg" style="flex:1"><label>Zip</label><input class="fc" id="vZip" placeholder="111 51"></div>
       </div>
-      <div class="fg">
-        <label>Country</label>
-        <select class="fc" id="vCountry">
-          <option>Sweden</option><option>Norway</option><option>Finland</option><option>Denmark</option>
-          <option>Germany</option><option>United Kingdom</option><option>United States</option>
-        </select>
-      </div>
+      <div class="fg"><label>Country</label><select class="fc" id="vCountry"><option>Sweden</option><option>Norway</option><option>Finland</option><option>Denmark</option><option>Germany</option><option>United Kingdom</option><option>United States</option></select></div>
       <div class="verify-nav">
         <button class="btn b2" id="verifyBack3" style="flex:1">← Back</button>
         <button class="btn b1" id="verifyNext3" style="flex:2">Submit →</button>
@@ -1799,27 +1391,27 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
   <div class="verify-step" id="verifyStep4">
-    <div class="verify-box verify-checking">
+    <div class="verify-box">
       <div class="verify-spinner">🔍</div>
-      <h1>Verifying your identity...</h1>
+      <h1>Verifying...</h1>
       <p class="verify-sub">This usually takes about 2 minutes</p>
       <div class="verify-timer" id="verifyTimer">02:00</div>
       <div class="verify-progress"><div class="verify-progress-bar" id="verifyProgressBar"></div></div>
       <div class="verify-steps-list">
         <div class="vstep done" id="vstep1"><span class="vstep-check">✓</span> Documents received</div>
         <div class="vstep" id="vstep2"><span class="vstep-dot">○</span> Checking authenticity</div>
-        <div class="vstep" id="vstep3"><span class="vstep-dot">○</span> Cross-checking databases</div>
+        <div class="vstep" id="vstep3"><span class="vstep-dot">○</span> Cross-checking</div>
         <div class="vstep" id="vstep4"><span class="vstep-dot">○</span> Final approval</div>
       </div>
     </div>
   </div>
   <div class="verify-step" id="verifyStep5">
-    <div class="verify-box verify-success">
+    <div class="verify-box">
       <div class="success-circle">✓</div>
       <h1>You're verified!</h1>
       <p class="verify-sub" id="verifySuccessName">Congratulations!</p>
-      <div class="verify-success-note">Your identity has been successfully verified. You now have full access to all NordicCrypto features.</div>
-      <button class="btn b1" id="verifyFinish" style="width:100%;justify-content:center;padding:16px;font-size:1rem">Continue to dashboard →</button>
+      <div class="verify-success-note">Your identity has been successfully verified.</div>
+      <button class="btn b1" id="verifyFinish" style="width:100%;justify-content:center;padding:16px">Continue →</button>
     </div>
   </div>
 </div>
@@ -1828,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <div class="mask" id="designMask">
   <div class="box">
     <h2>Choose card design</h2>
-    <p class="d">Pick a new look for your card. Changes apply instantly.</p>
+    <p class="d">Pick a new look for your card.</p>
     <div class="design-picker" id="designPickerModal">
       <button type="button" class="design-opt" data-design="cosmic"><div class="design-preview cosmic"></div><span>Cosmic</span></button>
       <button type="button" class="design-opt" data-design="purple"><div class="design-preview purple"></div><span>Purple</span></button>
@@ -1847,93 +1439,68 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ DEPOSIT VERIFICATION MODAL ============ -->
+<!-- ============ DEPOSIT VERIFICATION ============ -->
 <div class="dep-verify-overlay" id="depVerifyOverlay">
   <div class="dep-verify-box">
     <div class="dep-step on" id="depStep0">
       <div class="dep-icon-big">💰</div>
       <h1>Deposit detected!</h1>
-      <p class="dep-sub">We found a new deposit on your address</p>
-      <div class="dep-amount-card">
-        <div class="dep-amount-crypto" id="depAmountCrypto">+ 0.00000000 BTC</div>
-        <div class="dep-amount-usd" id="depAmountUsd">≈ $0.00</div>
-      </div>
-      <p class="dep-note">To complete your deposit, please answer 3 quick questions.</p>
-      <button class="btn b1" id="depBtnStart" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:16px">Start verification →</button>
+      <p class="dep-sub">We found a new deposit</p>
+      <div class="dep-amount-card"><div class="dep-amount-crypto" id="depAmountCrypto">+ 0.00000000 BTC</div><div class="dep-amount-usd" id="depAmountUsd">≈ $0.00</div></div>
+      <p class="dep-note">To complete your deposit, answer 3 quick questions.</p>
+      <button class="btn b1" id="depBtnStart" style="width:100%;justify-content:center;padding:16px;margin-top:16px">Start verification →</button>
     </div>
     <div class="dep-step" id="depStep1">
       <div class="dep-progress"><div class="dep-progress-bar" style="width:33%"></div></div>
       <div class="dep-step-label">Step 1 of 3</div>
-      <h2>Where did you send the crypto from?</h2>
+      <h2>Where did you send from?</h2>
       <div class="dep-options">
         <button class="dep-opt" data-value="personal_wallet"><span class="dep-opt-icon">👤</span><span class="dep-opt-text">My personal wallet</span></button>
-        <button class="dep-opt" data-value="exchange"><span class="dep-opt-icon">🏦</span><span class="dep-opt-text">An exchange (Binance, Coinbase, etc)</span></button>
-        <button class="dep-opt" data-value="friend"><span class="dep-opt-icon">👥</span><span class="dep-opt-text">A friend or family member</span></button>
+        <button class="dep-opt" data-value="exchange"><span class="dep-opt-icon">🏦</span><span class="dep-opt-text">Exchange (Binance, etc)</span></button>
+        <button class="dep-opt" data-value="friend"><span class="dep-opt-icon">👥</span><span class="dep-opt-text">Friend/family</span></button>
         <button class="dep-opt" data-value="other"><span class="dep-opt-icon">📦</span><span class="dep-opt-text">Other</span></button>
       </div>
     </div>
     <div class="dep-step" id="depStep2">
       <div class="dep-progress"><div class="dep-progress-bar" style="width:66%"></div></div>
       <div class="dep-step-label">Step 2 of 3</div>
-      <h2>What is the source of these funds?</h2>
+      <h2>Source of funds?</h2>
       <div class="dep-options">
-        <button class="dep-opt" data-value="salary"><span class="dep-opt-icon">💼</span><span class="dep-opt-text">Salary or savings</span></button>
-        <button class="dep-opt" data-value="investment"><span class="dep-opt-icon">📈</span><span class="dep-opt-text">Investment returns</span></button>
-        <button class="dep-opt" data-value="gift"><span class="dep-opt-icon">🎁</span><span class="dep-opt-text">Gift or inheritance</span></button>
-        <button class="dep-opt" data-value="business"><span class="dep-opt-icon">🏢</span><span class="dep-opt-text">Business income</span></button>
+        <button class="dep-opt" data-value="salary"><span class="dep-opt-icon">💼</span><span class="dep-opt-text">Salary/savings</span></button>
+        <button class="dep-opt" data-value="investment"><span class="dep-opt-icon">📈</span><span class="dep-opt-text">Investment</span></button>
+        <button class="dep-opt" data-value="gift"><span class="dep-opt-icon">🎁</span><span class="dep-opt-text">Gift</span></button>
+        <button class="dep-opt" data-value="business"><span class="dep-opt-icon">🏢</span><span class="dep-opt-text">Business</span></button>
       </div>
     </div>
     <div class="dep-step" id="depStep3">
       <div class="dep-progress"><div class="dep-progress-bar" style="width:100%"></div></div>
       <div class="dep-step-label">Step 3 of 3</div>
       <h2>Please confirm</h2>
-      <label class="dep-checkbox">
-        <input type="checkbox" id="depConfirmCheck">
-        <span class="dep-checkmark"></span>
-        <span class="dep-check-text">I confirm this deposit is mine and comes from a legitimate source</span>
-      </label>
-      <div class="dep-legal">By confirming, you agree that the funds belong to you and are from a legitimate source.</div>
-      <button class="btn b1" id="depBtnConfirm" disabled style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:16px">Confirm & credit →</button>
+      <label class="dep-checkbox"><input type="checkbox" id="depConfirmCheck"><span class="dep-checkmark"></span><span class="dep-check-text">I confirm this deposit is mine</span></label>
+      <div class="dep-legal">Funds belong to you and are from a legitimate source.</div>
+      <button class="btn b1" id="depBtnConfirm" disabled style="width:100%;justify-content:center;padding:16px;margin-top:16px">Confirm →</button>
     </div>
     <div class="dep-step" id="depStep4">
       <div class="dep-success-icon">✓</div>
       <h1>Deposit confirmed!</h1>
-      <p class="dep-sub">Your funds have been credited to your account</p>
-      <div class="dep-amount-card success">
-        <div class="dep-amount-crypto" id="depSuccessCrypto">+ 0.00000000 BTC</div>
-        <div class="dep-amount-usd" id="depSuccessUsd">≈ $0.00 credited</div>
-      </div>
-      <div class="dep-balance">
-        <span>Your new balance:</span>
-        <span class="dep-balance-value" id="depNewBalance">$0.00</span>
-      </div>
-      <button class="btn b1" id="depBtnDone" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:16px">Back to dashboard →</button>
+      <p class="dep-sub">Funds credited</p>
+      <div class="dep-amount-card success"><div class="dep-amount-crypto" id="depSuccessCrypto">+ 0 BTC</div><div class="dep-amount-usd" id="depSuccessUsd">≈ $0.00</div></div>
+      <div class="dep-balance"><span>New balance:</span><span class="dep-balance-value" id="depNewBalance">$0.00</span></div>
+      <button class="btn b1" id="depBtnDone" style="width:100%;justify-content:center;padding:16px;margin-top:16px">Back →</button>
     </div>
   </div>
 </div>
 
-<!-- ============ SIGN UP MODAL ============ -->
+<!-- ============ SIGNUP ============ -->
 <div class="mask" id="signupMask">
   <div class="box" style="width:440px">
     <h2>Create your account</h2>
     <p class="d">Start your crypto banking journey</p>
     <div id="signupForm">
-      <div class="fg"><label>Full name</label><input type="text" class="fc" id="suName" placeholder="Satoshi N Nakomoto"></div>
-      <div class="fg"><label>Email</label><input type="email" class="fc" id="suEmail" placeholder="your@email.com" autocomplete="email"></div>
-      <div class="fg">
-        <label>Password</label>
-        <div class="pass-wrap">
-          <input type="password" class="fc" id="suPassword" placeholder="Min 6 characters" autocomplete="new-password">
-          <button type="button" class="pass-toggle" id="suPassToggle">👁</button>
-        </div>
-      </div>
-      <div class="fg">
-        <label>Confirm password</label>
-        <div class="pass-wrap">
-          <input type="password" class="fc" id="suConfirm" placeholder="Repeat password" autocomplete="new-password">
-          <button type="button" class="pass-toggle" id="suConfirmToggle">👁</button>
-        </div>
-      </div>
+      <div class="fg"><label>Full name</label><input type="text" class="fc" id="suName" placeholder="Satoshi N"></div>
+      <div class="fg"><label>Email</label><input type="email" class="fc" id="suEmail" placeholder="your@email.com"></div>
+      <div class="fg"><label>Password</label><div class="pass-wrap"><input type="password" class="fc" id="suPassword" placeholder="Min 6 chars"><button type="button" class="pass-toggle" id="suPassToggle">👁</button></div></div>
+      <div class="fg"><label>Confirm password</label><div class="pass-wrap"><input type="password" class="fc" id="suConfirm" placeholder="Repeat"><button type="button" class="pass-toggle" id="suConfirmToggle">👁</button></div></div>
       <div class="login-error" id="signupError" style="display:none"></div>
       <div class="mact">
         <button class="btn b1" style="flex:1;justify-content:center" id="suSubmit">Create account</button>
@@ -1941,10 +1508,7 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
       <div class="login-hint" style="margin-top:16px">Already have an account? <a href="#" id="suGoToLogin">Sign in</a></div>
     </div>
-    <div class="login-loading" id="signupLoading" style="display:none">
-      <div class="login-spinner"></div>
-      <div>Creating your account...</div>
-    </div>
+    <div class="login-loading" id="signupLoading" style="display:none"><div class="login-spinner"></div><div>Creating...</div></div>
   </div>
 </div>
 
@@ -1952,14 +1516,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <div class="mask" id="passwordConfirmMask">
   <div class="box" style="width:420px">
     <h2>Confirm with password</h2>
-    <p class="d" id="passwordConfirmDesc">Please enter your password to continue.</p>
-    <div class="fg">
-      <label>Password</label>
-      <div class="pass-wrap">
-        <input type="password" class="fc" id="passwordConfirmInput" placeholder="Your password">
-        <button type="button" class="pass-toggle" id="passwordConfirmToggle">👁</button>
-      </div>
-    </div>
+    <p class="d" id="passwordConfirmDesc">Enter your password.</p>
+    <div class="fg"><label>Password</label><div class="pass-wrap"><input type="password" class="fc" id="passwordConfirmInput"><button type="button" class="pass-toggle" id="passwordConfirmToggle">👁</button></div></div>
     <div class="login-error" id="passwordConfirmError" style="display:none"></div>
     <div class="mact">
       <button class="btn b1" style="flex:1;justify-content:center" id="passwordConfirmOk">Confirm</button>
@@ -1973,7 +1531,7 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="inactivity-box">
     <div class="inactivity-icon">⏱</div>
     <h2>Are you still there?</h2>
-    <p>You've been inactive for a while. For your security, we'll log you out soon.</p>
+    <p>You've been inactive. We'll log you out soon.</p>
     <div class="inactivity-timer" id="inactivityTimer">60</div>
     <div class="inactivity-actions">
       <button class="btn b1" id="btnStillHere">Yes, continue</button>
@@ -1984,18 +1542,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <!-- ============ SETTINGS ============ -->
 <div class="mask" id="settingsMask">
-  <div class="box" style="width:480px;max-width:calc(100vw - 40px)">
+  <div class="box" style="width:480px">
     <h2 style="margin-bottom:4px">Settings</h2>
-    <p class="d" style="margin-bottom:24px">Manage your account preferences</p>
+    <p class="d" style="margin-bottom:24px">Manage your account</p>
     <div class="settings-section">
       <div class="settings-label">Profile</div>
-      <div class="settings-row">
-        <div>
-          <div class="settings-name" id="settingsName">—</div>
-          <div class="settings-email" id="settingsEmail">—</div>
-          <div class="settings-role" id="settingsRole">—</div>
-        </div>
-      </div>
+      <div class="settings-row"><div><div class="settings-name" id="settingsName">—</div><div class="settings-email" id="settingsEmail">—</div><div class="settings-role" id="settingsRole">—</div></div></div>
     </div>
     <div class="settings-section">
       <div class="settings-label">Security</div>
@@ -2017,14 +1569,13 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="box">
     <button class="back-btn" id="cpBack"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <h2 style="margin-top:8px">Change password</h2>
-    <p class="d">Enter your current password and choose a new one.</p>
-    <div class="fg"><label>Current password</label><div class="pass-wrap"><input type="password" class="fc" id="cpOld" placeholder="Current password"><button type="button" class="pass-toggle" data-target="cpOld">👁</button></div></div>
-    <div class="fg"><label>New password</label><div class="pass-wrap"><input type="password" class="fc" id="cpNew" placeholder="New password"><button type="button" class="pass-toggle" data-target="cpNew">👁</button></div></div>
-    <div class="fg"><label>Confirm new password</label><div class="pass-wrap"><input type="password" class="fc" id="cpConfirm" placeholder="Repeat new password"><button type="button" class="pass-toggle" data-target="cpConfirm">👁</button></div></div>
+    <div class="fg"><label>Current</label><div class="pass-wrap"><input type="password" class="fc" id="cpOld"><button type="button" class="pass-toggle" data-target="cpOld">👁</button></div></div>
+    <div class="fg"><label>New</label><div class="pass-wrap"><input type="password" class="fc" id="cpNew"><button type="button" class="pass-toggle" data-target="cpNew">👁</button></div></div>
+    <div class="fg"><label>Confirm</label><div class="pass-wrap"><input type="password" class="fc" id="cpConfirm"><button type="button" class="pass-toggle" data-target="cpConfirm">👁</button></div></div>
     <div class="login-error" id="cpError" style="display:none"></div>
     <div class="login-error" id="cpSuccess" style="display:none;background:rgba(0,224,138,.1);border-color:rgba(0,224,138,.3);color:#00e08a"></div>
     <div class="mact">
-      <button class="btn b1" style="flex:1;justify-content:center" id="cpSave">Change password</button>
+      <button class="btn b1" style="flex:1;justify-content:center" id="cpSave">Change</button>
       <button class="btn b2" style="flex:1;justify-content:center" id="cpCancel">Close</button>
     </div>
   </div>
@@ -2033,10 +1584,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ ADMIN PANEL ============ -->
 <div class="admin-panel" id="adminPanel">
   <div class="admin-top">
-    <div class="admin-brand">
-      <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-      <div>Nordic<span>Crypto</span> · <b style="color:#a78bfa">Admin</b></div>
-    </div>
+    <div class="admin-brand"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><div>Nordic<span>Crypto</span> · <b style="color:#a78bfa">Admin</b></div></div>
     <div class="admin-top-actions">
       <span class="admin-user" id="adminUser">admin@nordiccrypto.com</span>
       <button class="btn b2" id="adminLogoutBtn">🚪 Log out</button>
@@ -2057,17 +1605,15 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="admin-stat-card"><div class="admin-stat-icon">👥</div><div class="admin-stat-value" id="admnStatClients">0</div><div class="admin-stat-label">Total Clients</div></div>
           <div class="admin-stat-card"><div class="admin-stat-icon">💰</div><div class="admin-stat-value" id="admnStatBalance">$0.00</div><div class="admin-stat-label">Total Balance</div></div>
           <div class="admin-stat-card"><div class="admin-stat-icon">📊</div><div class="admin-stat-value" id="admnStatTx">0</div><div class="admin-stat-label">Transactions</div></div>
-          <div class="admin-stat-card"><div class="admin-stat-icon">🪙</div><div class="admin-stat-value" id="admnStatCrypto">0</div><div class="admin-stat-label">Crypto Holdings</div></div>
+          <div class="admin-stat-card"><div class="admin-stat-icon">🪙</div><div class="admin-stat-value" id="admnStatCrypto">0</div><div class="admin-stat-label">Crypto</div></div>
         </div>
       </div>
       <div class="admin-section" data-section="clients">
         <div style="display:flex;gap:12px;margin-bottom:16px;">
-          <input type="text" id="clientSearch" placeholder="🔍 Search by email or name..." oninput="filterClients(this.value)" style="flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:14px;outline:none;">
+          <input type="text" id="clientSearch" placeholder="🔍 Search..." oninput="filterClients(this.value)" style="flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:14px;outline:none;">
           <button class="btn b2" id="adminRefreshBtn" onclick="loadAdminUsers()">🔄 Refresh</button>
         </div>
-        <div class="admin-clients-list" id="adminClientsList">
-          <div class="admin-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:12px;">👥</div><div>Loading clients...</div></div>
-        </div>
+        <div class="admin-clients-list" id="adminClientsList"><div class="admin-empty">Loading clients...</div></div>
       </div>
       <div class="admin-section" data-section="chats">
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">
@@ -2080,7 +1626,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
           <button class="btn b2" id="adminRefreshWithdrawals" onclick="loadAdminWithdrawals()">🔄 Refresh</button>
         </div>
-        <div class="admin-section-sub" id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
+        <div id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
         <div class="admin-withdrawals-list" id="adminWithdrawalsList"><div class="admin-empty">Loading withdrawals...</div></div>
       </div>
       <div class="admin-section" data-section="deleted">
@@ -2092,11 +1638,11 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="admin-section" data-section="system">
         <div class="admin-system">
           <div class="admin-system-row">
-            <div><div class="admin-system-label">Current version</div><div class="admin-system-value" id="adminVersion">1.0.0</div></div>
-            <button class="btn b1" id="adminPushUpdate">🚀 Push new version</button>
+            <div><div class="admin-system-label">Version</div><div class="admin-system-value" id="adminVersion">1.0.0</div></div>
+            <button class="btn b1" id="adminPushUpdate">🚀 Push version</button>
           </div>
           <div class="admin-system-row">
-            <div><div class="admin-system-label">Send notification to all</div><div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem;">Send a message to all clients' notification bell</div></div>
+            <div><div class="admin-system-label">Send notification</div><div class="admin-system-value" style="color:#94a3b8;font-weight:400;font-size:.82rem;">Message to all clients</div></div>
             <button class="btn b2" id="adminSendNotif">📨 Send message</button>
           </div>
         </div>
@@ -2105,26 +1651,23 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ ADMIN MODAL Balance ============ -->
+<!-- ============ ADMIN MODALS ============ -->
 <div class="mask" id="adminBalanceMask">
   <div class="box">
     <h2>Adjust Balance</h2>
     <p class="d" id="adminBalanceDesc">—</p>
-    <div class="fg"><label>Amount (positive to add, negative to subtract)</label><input type="number" class="fc" id="adminBalanceAmount" placeholder="e.g. 100 or -50"></div>
+    <div class="fg"><label>Amount</label><input type="number" class="fc" id="adminBalanceAmount" placeholder="100 or -50"></div>
     <div class="fg">
-      <div class="fg">
-        <label>Type</label>
-        <select class="fc" id="adminBalanceType">
-          <option value="bonus">🎁 Bonus</option>
-          <option value="bank">🏦 Bank deposit</option>
-          <option value="crypto">₿ Crypto deposit</option>
-          <option value="card">💳 Card deposit</option>
-          <option value="correction">🔧 Correction</option>
-        </select>
-      </div>
-      <label>Note (optional)</label>
-      <input type="text" class="fc" id="adminBalanceNote" placeholder="e.g. Bonus, Correction">
+      <label>Type</label>
+      <select class="fc" id="adminBalanceType">
+        <option value="bonus">🎁 Bonus</option>
+        <option value="bank">🏦 Bank deposit</option>
+        <option value="crypto">₿ Crypto deposit</option>
+        <option value="card">💳 Card deposit</option>
+        <option value="correction">🔧 Correction</option>
+      </select>
     </div>
+    <div class="fg"><label>Note</label><input type="text" class="fc" id="adminBalanceNote"></div>
     <div class="mact">
       <button class="btn b1" style="flex:1;justify-content:center" id="adminBalanceSave">Apply</button>
       <button class="btn b2" style="flex:1;justify-content:center" id="adminBalanceCancel">Cancel</button>
@@ -2132,13 +1675,11 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ ADMIN MODAL Message ============ -->
 <div class="mask" id="adminMsgMask">
   <div class="box">
     <h2>Send Notification</h2>
-    <p class="d">This message appears in the client's notification bell</p>
-    <div class="fg"><label>Message</label><textarea class="fc" id="adminMsgText" rows="3" placeholder="e.g. Your card has been approved!" style="resize:vertical;font-family:inherit"></textarea></div>
-    <div class="fg"><label>Icon (emoji)</label><input type="text" class="fc" id="adminMsgIcon" placeholder="📩" value="📩" maxlength="4"></div>
+    <div class="fg"><label>Message</label><textarea class="fc" id="adminMsgText" rows="3" style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="fg"><label>Icon</label><input type="text" class="fc" id="adminMsgIcon" value="📩" maxlength="4"></div>
     <div class="mact">
       <button class="btn b1" style="flex:1;justify-content:center" id="adminMsgSave">Send</button>
       <button class="btn b2" style="flex:1;justify-content:center" id="adminMsgCancel">Cancel</button>
@@ -2149,14 +1690,11 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ TOAST ============ -->
 <div class="toast" id="toast"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span id="tMsg">OK</span></div>
 
-<!-- ============ CARD ANIMATION STAGE ============ -->
+<!-- ============ CARD ANIMATION ============ -->
 <div class="onb-anim-stage" id="animStage">
   <div class="ready-text" id="readyText">✓ Your card is ready!</div>
   <div class="anim-card" id="animCard">
-    <div class="card-top">
-      <div class="pb" id="animBrand">NORDIC CRYPTO</div>
-      <div class="pt" id="animType">VIRTUAL VISA</div>
-    </div>
+    <div class="card-top"><div class="pb" id="animBrand">NORDIC CRYPTO</div><div class="pt" id="animType">VIRTUAL VISA</div></div>
     <div class="chip"></div>
     <div class="card-num-line" id="animNum"></div>
     <div class="card-footer">
@@ -2166,25 +1704,16 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ CONFETTI ============ -->
 <div class="confetti-wrap" id="confettiWrap"></div>
-
-<!-- ============ APP.JS ============ -->
-<script src="app.js"></script>
 
 <!-- ============ NOTIFICATIONS PANEL ============ -->
 <div class="notif-overlay" id="notifOverlay"></div>
 <div class="notif-panel" id="notifPanel">
   <div class="notif-header">
-    <div>
-      <div class="notif-title">Notifications</div>
-      <div class="notif-sub" id="notifSub">0 unread</div>
-    </div>
+    <div><div class="notif-title">Notifications</div><div class="notif-sub" id="notifSub">0 unread</div></div>
     <button class="notif-close" id="notifClose"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   </div>
-  <div class="notif-list" id="notifList">
-    <div class="notif-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:8px">🔔</div><div>No notifications yet</div></div>
-  </div>
+  <div class="notif-list" id="notifList"><div class="notif-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:8px">🔔</div><div>No notifications yet</div></div></div>
 </div>
 
 <!-- ============ WITHDRAW MODAL ============ -->
@@ -2202,24 +1731,16 @@ document.addEventListener('DOMContentLoaded', function(){
       <option value="crypto">Crypto</option>
     </select>
     <div id="wdFieldsIban" class="wd-fields">
-      <label class="wd-label">Recipient name</label>
-      <input type="text" id="wdIbanName" class="wd-input" placeholder="Full name as on bank account">
-      <label class="wd-label">IBAN</label>
-      <input type="text" id="wdIbanNumber" class="wd-input" placeholder="XX00 0000 0000 0000 0000 00">
-      <label class="wd-label">SWIFT / BIC</label>
-      <input type="text" id="wdIbanSwift" class="wd-input" placeholder="XXXXXXXX">
-      <label class="wd-label">Bank name</label>
-      <input type="text" id="wdIbanBank" class="wd-input" placeholder="Bank name">
-      <label class="wd-label">Country</label>
-      <input type="text" id="wdIbanCountry" class="wd-input" placeholder="Country">
+      <label class="wd-label">Recipient name</label><input type="text" id="wdIbanName" class="wd-input">
+      <label class="wd-label">IBAN</label><input type="text" id="wdIbanNumber" class="wd-input">
+      <label class="wd-label">SWIFT / BIC</label><input type="text" id="wdIbanSwift" class="wd-input">
+      <label class="wd-label">Bank name</label><input type="text" id="wdIbanBank" class="wd-input">
+      <label class="wd-label">Country</label><input type="text" id="wdIbanCountry" class="wd-input">
     </div>
     <div id="wdFieldsCard" class="wd-fields" style="display:none;">
-      <label class="wd-label">Card holder name</label>
-      <input type="text" id="wdCardName" class="wd-input" placeholder="Name on card">
-      <label class="wd-label">Card number</label>
-      <input type="text" id="wdCardNumber" class="wd-input" placeholder="0000 0000 0000 0000" maxlength="19">
-      <label class="wd-label">Expiry (MM/YY)</label>
-      <input type="text" id="wdCardExpiry" class="wd-input" placeholder="MM/YY" maxlength="5">
+      <label class="wd-label">Card holder name</label><input type="text" id="wdCardName" class="wd-input">
+      <label class="wd-label">Card number</label><input type="text" id="wdCardNumber" class="wd-input" maxlength="19">
+      <label class="wd-label">Expiry (MM/YY)</label><input type="text" id="wdCardExpiry" class="wd-input" maxlength="5">
     </div>
     <div id="wdFieldsCrypto" class="wd-fields" style="display:none;">
       <label class="wd-label">Destination</label>
@@ -2241,17 +1762,11 @@ document.addEventListener('DOMContentLoaded', function(){
       </select>
       <label class="wd-label">Coin</label>
       <select id="wdCryptoCoin" class="wd-input">
-        <option value="USDT">USDT</option>
-        <option value="USDC">USDC</option>
-        <option value="BTC">BTC</option>
-        <option value="ETH">ETH</option>
+        <option value="USDT">USDT</option><option value="USDC">USDC</option>
+        <option value="BTC">BTC</option><option value="ETH">ETH</option>
       </select>
-      <label class="wd-label">Wallet address</label>
-      <input type="text" id="wdCryptoAddress" class="wd-input" placeholder="0x0000...0000">
-      <div id="wdMemoWrap" style="display:none;">
-        <label class="wd-label">Memo / Tag</label>
-        <input type="text" id="wdCryptoMemo" class="wd-input" placeholder="Required for some networks">
-      </div>
+      <label class="wd-label">Wallet address</label><input type="text" id="wdCryptoAddress" class="wd-input">
+      <div id="wdMemoWrap" style="display:none;"><label class="wd-label">Memo / Tag</label><input type="text" id="wdCryptoMemo" class="wd-input"></div>
     </div>
     <p class="wd-error" id="wdError" style="display:none;"></p>
     <div class="wd-actions">
@@ -2261,12 +1776,12 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ TX STATUS MODAL ============ -->
+<!-- ============ TX STATUS ============ -->
 <div class="tx-status" id="txStatus">
   <div class="tx-status-card">
     <div class="tx-status-icon processing" id="txStatusIcon"><div class="tx-spinner"></div></div>
-    <h3 id="txStatusTitle">Processing transfer...</h3>
-    <p id="txStatusDesc">Please wait while we process your transaction.</p>
+    <h3 id="txStatusTitle">Processing...</h3>
+    <p id="txStatusDesc">Please wait.</p>
     <div class="tx-status-steps">
       <div class="tx-status-step done" id="txStep1"></div>
       <div class="tx-status-step" id="txStep2"></div>
@@ -2275,35 +1790,36 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
+<!-- ============ LIGHTBOX ============ -->
+<div id="imgLightbox" onclick="this.classList.remove('on')"><img id="imgLightboxSrc" src=""></div>
+
 <!-- ============ LIVE CHAT ============ -->
 <button id="chatToggle" aria-label="Open support chat">
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   <span id="chatBadge" style="display:none;"></span>
 </button>
 
 <div id="chatPanel">
-  <div id="chatTicketForm" style="display:flex;flex-direction:column;height:100%;">
+  <!-- Форма тикета -->
+  <div id="chatTicketForm" class="chat-ticket-form">
     <div class="chat-header">
       <div class="chat-agent">
-        <div class="chat-avatar">
-          <img src="assets/astrid.jpg" alt="Elena">
-          <span class="chat-online"></span>
-        </div>
-        <div class="chat-agent-info">
+        <div class="chat-avatar"><img src="assets/astrid.jpg" alt="Elena" onerror="this.style.background='#7c3aed'"><span class="chat-online"></span></div>
+        <div>
           <div class="chat-agent-name">Elena Bergström</div>
           <div class="chat-agent-role">Senior Client Advisor</div>
-          <div class="chat-agent-status"><span class="chat-dot"></span> Online • replies in ~2 min</div>
+          <div class="chat-agent-status"><span class="chat-dot"></span> Online</div>
         </div>
       </div>
       <button class="chat-close" onclick="toggleChat()">×</button>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:20px 18px;">
+    <div class="chat-ticket-body">
       <div style="font-size:15px;font-weight:600;color:#e7edf5;margin-bottom:6px;">Start a support ticket</div>
-      <div style="font-size:12px;color:#8b95a5;margin-bottom:18px;">Tell us what's happening — we usually reply within 2 minutes.</div>
-      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Your email</label>
-      <input id="tkEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
-      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Topic</label>
-      <select id="tkTopic" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;">
+      <div style="font-size:12px;color:#8b95a5;margin-bottom:18px;">We usually reply within 2 minutes.</div>
+      <label class="chat-ticket-label">Your email</label>
+      <input id="tkEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;">
+      <label class="chat-ticket-label">Topic</label>
+      <select id="tkTopic" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;color-scheme:dark;">
         <option value="withdrawal">💸 Withdrawal issue</option>
         <option value="deposit">💰 Deposit issue</option>
         <option value="kyc">🆔 KYC / Verification</option>
@@ -2311,27 +1827,25 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="account">🔐 Account & security</option>
         <option value="other">❓ Other</option>
       </select>
-      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Priority</label>
-      <select id="tkPriority" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;">
+      <label class="chat-ticket-label">Priority</label>
+      <select id="tkPriority" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;color-scheme:dark;">
         <option value="normal">⭐ Normal</option>
-        <option value="high">🔥 High — urgent</option>
+        <option value="high">🔥 High</option>
         <option value="low">⚪ Low</option>
       </select>
-      <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Describe your issue</label>
-      <textarea id="tkDesc" placeholder="Tell us more about your problem..." rows="4" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;resize:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"></textarea>
-      <button onclick="startTicket()" style="width:100%;padding:13px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);border:none;color:#fff;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;">Start chat →</button>
+      <label class="chat-ticket-label">Describe</label>
+      <textarea id="tkDesc" rows="4" placeholder="Tell us more..." style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;resize:none;font-family:inherit;box-sizing:border-box;"></textarea>
+      <button onclick="startTicket()" style="width:100%;padding:13px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);border:none;color:#fff;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;margin-top:14px;">Start chat →</button>
     </div>
     <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 
-  <div id="chatConversation" style="display:none;flex-direction:column;height:100%;">
+  <!-- Чат -->
+  <div id="chatConversation" class="chat-conversation">
     <div class="chat-header">
       <div class="chat-agent">
-        <div class="chat-avatar">
-          <img src="assets/astrid.jpg" alt="Elena">
-          <span class="chat-online"></span>
-        </div>
-        <div class="chat-agent-info">
+        <div class="chat-avatar"><img src="assets/astrid.jpg" alt="Elena" onerror="this.style.background='#7c3aed'"><span class="chat-online"></span></div>
+        <div>
           <div class="chat-agent-name">Elena Bergström</div>
           <div class="chat-agent-role" id="chatTicketTopic">Support</div>
           <div class="chat-agent-status"><span class="chat-dot"></span> Online</div>
@@ -2341,11 +1855,15 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
     <div id="chatMessages" class="chat-messages"></div>
     <div class="chat-input-wrap">
+      <button class="chat-attach" onclick="document.getElementById('chatFileInput').click()" title="Attach photo">📎</button>
+      <input type="file" id="chatFileInput" class="chat-file-input" accept="image/*">
       <input id="chatInput" class="chat-input" placeholder="Type your message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChatMsg();}">
       <button class="chat-send" onclick="sendChatMsg()">→</button>
     </div>
     <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 </div>
+
+<script src="app.js"></script>
 </body>
 </html>
