@@ -4659,17 +4659,14 @@ setInterval(updateUserUI, 5000);
    LIVE CHAT V2 — авто-обновление + typing indicator
    ============================================================ */
 
-// ========== CLIENT POLLING (каждые 2 сек) ==========
+// ========== CLIENT POLLING (каждые 1 сек) ==========
 (function(){
   var _lastAdminTyping = null;
+  var _lastChatHash = '';
 
   setInterval(async function(){
     var token = getSessionToken();
     if (!token) return;
-
-    var panel = document.getElementById('chatPanel');
-    var isOpen = panel && panel.style.display === 'flex';
-    if (!isOpen) return;
 
     var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
     if (!targetEmail) return;
@@ -4687,45 +4684,42 @@ setInterval(updateUserUI, 5000);
       var newLen = fresh.chat.length;
       st.chat = fresh.chat;
 
-      var adminTyping = !!(fresh.typing && fresh.typing.admin === true);
+      var adminTyping = false;
+      if (fresh.typing && fresh.typing.admin === true) {
+        var age = Date.now() - (fresh.typing.adminTs || 0);
+        adminTyping = age < 3000;
+      }
+      window._adminTyping = adminTyping;
 
-      if (newLen !== prevLen || adminTyping !== _lastAdminTyping) {
-        _lastAdminTyping = adminTyping;
-        window._adminTyping = adminTyping;
+      // ★ ОБНОВЛЯЕМ BADGE — всегда, даже если чат закрыт
+      if (typeof updateChatBadge === 'function') updateChatBadge();
 
-        var box = document.getElementById('chatMessages');
-        if (box) {
-          var chat = fresh.chat.slice().sort(function(a,b){ return a.ts - b.ts; });
-          var html = '';
-          if (!chat.length) {
-            html = '<div class="chat-welcome"><div class="chat-welcome-name">Elena Bergström</div><div class="chat-welcome-text">Hi! How can I help you today?</div></div>';
-          } else {
-            chat.forEach(function(m){
-              var isClient = m.from === 'client';
-              html += '<div class="chat-msg ' + (isClient ? 'client' : 'admin') + '">' +
-                '<div>' +
-                  '<div class="chat-bubble">' + escapeHtml(m.text) + '</div>' +
-                  '<div class="chat-msg-meta">' +
-                    (isClient ? 'You' : 'Elena') + ' • ' +
-                    new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
-                  '</div>' +
-                '</div>' +
-              '</div>';
-            });
+      // ★ ЕСЛИ ПРИШЛО НОВОЕ СООБЩЕНИЕ ОТ АДМИНА — уведомление + звук
+      if (newLen > prevLen) {
+        var newMsgs = fresh.chat.slice(prevLen);
+        var fromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
+        if (fromAdmin) {
+          // Звук
+          if (typeof playChatSound === 'function') playChatSound();
+          // Всплывающая нотификация в панели (если у клиента есть система notif)
+          var lastAdmin = newMsgs.filter(function(m){ return m.from === 'admin'; }).slice(-1)[0];
+          if (lastAdmin && typeof addNotification === 'function') {
+            addNotification('New message from Elena', '💬');
           }
-          if (adminTyping) {
-            html += '<div class="chat-msg admin chat-typing"><div><div class="chat-bubble">' +
-              '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>' +
-              '</div><div class="chat-msg-meta">Elena печатает...</div></div></div>';
-          }
-          box.innerHTML = html;
-          box.scrollTop = box.scrollHeight;
         }
+      }
 
-        if (newLen > prevLen) {
-          var newMsgs = fresh.chat.slice(prevLen);
-          if (newMsgs.some(function(m){ return m.from === 'admin'; })) {
-            if (typeof playChatSound === 'function') playChatSound();
+      // ★ Рендер сообщений — только если чат открыт
+      var panel = document.getElementById('chatPanel');
+      var isOpen = panel && panel.style.display === 'flex';
+      if (isOpen) {
+        var chatHash = newLen + '_' + (fresh.chat[newLen-1] ? fresh.chat[newLen-1].id : '') + '_' + (adminTyping ? 1 : 0);
+        if (chatHash !== _lastChatHash) {
+          _lastChatHash = chatHash;
+          if (typeof window.renderChatMessages === 'function') {
+            window.renderChatMessages();
+          } else if (typeof renderChatMessages === 'function') {
+            renderChatMessages();
           }
         }
       }
