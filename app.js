@@ -3460,27 +3460,74 @@ async function sendAdminChatMsg(email) {
 
 async function endAdminChat(email) {
   if (!email) return;
-  if (!confirm('End this chat? All messages will be deleted.')) return;
+  if (!confirm('End chat with this client?\nAll messages with ' + email + ' will be deleted.')) return;
+
   try {
     var token = getSessionToken();
-    if (!token) return;
+    if (!token) { alert('No session'); return; }
+
+    console.log('[endAdminChat] Clearing chat for:', email);
+
+    // 1. Загружаем state ТОЛЬКО этого клиента
     var r = await fetch(WORKER_URL + '?action=getUserState', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ token: token, email: email })
     });
     var state = await r.json();
-    if (!state || state.error) return;
+    if (!state || state.error) {
+      alert('Failed to load client state');
+      return;
+    }
+
+    console.log('[endAdminChat] BEFORE - chat:', (state.chat || []).length, 'msgs');
+
+    // 2. Полная очистка ТОЛЬКО этого клиента
     state.chat = [];
     state.ticket = null;
-    await fetch(WORKER_URL + '?action=setUserState', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    if (state.typing) state.typing = {};
+
+    // 3. Сохраняем ТОЛЬКО для этого клиента
+    var saveResp = await fetch(WORKER_URL + '?action=setUserState', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        token: token,
+        email: email,
+        state: state,
+        force: true
+      })
     });
-    alert('✅ Chat closed.');
+    var saveRes = await saveResp.json();
+    console.log('[endAdminChat] Save result:', saveRes);
+
+    if (!saveRes || !saveRes.ok) {
+      alert('Failed to save: ' + (saveRes.error || 'unknown'));
+      return;
+    }
+
+    // 4. Проверяем что сохранилось
+    var verifyR = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var verifyState = await verifyR.json();
+    console.log('[endAdminChat] AFTER - chat:', (verifyState.chat || []).length, 'msgs');
+
+    alert('✅ Chat closed for ' + email);
+    console.log('[endAdminChat] ✅ Done');
+
+    // 5. Закрываем модалку и обновляем список
     var modal = document.getElementById('adminChatModal');
     if (modal) modal.remove();
-    loadAdminChats();
-  } catch(e) { alert('Error: ' + e.message); }
+
+    if (typeof loadAdminChats === 'function') loadAdminChats();
+
+  } catch(e) {
+    console.error('[endAdminChat] Error:', e);
+    alert('Error: ' + e.message);
+  }
 }
 
 async function clearAllChats() {
