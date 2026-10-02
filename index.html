@@ -940,17 +940,17 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
 
 /* Пузырь — ограниченная ширина, красивый перенос */
 .chat-bubble{
-  max-width:78% !important;
+  max-width:80% !important;
   width:fit-content;
-  min-width:50px;
+  min-width:40px;
   padding:11px 15px;
   border-radius:18px;
   font-size:13.5px;
   line-height:1.5;
-  word-break:break-word;
-  overflow-wrap:anywhere;
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
   white-space:pre-wrap;
-  hyphens:auto;
+  hyphens:none;
 }
 
 /* Убираем огромные пузыри от длинных сообщений */
@@ -1063,6 +1063,24 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
 @media (max-width:400px){
   .chat-msg > div{max-width:90% !important}
   .chat-bubble{max-width:100% !important}
+}
+/* ============ CHAT BUBBLE FINAL FIX ============ */
+.chat-bubble,
+#chatMessages .chat-bubble,
+.chat-msg .chat-bubble{
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+  word-wrap:break-word !important;
+  hyphens:none !important;
+  white-space:pre-wrap !important;
+  max-width:80% !important;
+}
+.chat-msg > div{
+  max-width:85% !important;
+  min-width:0 !important;
+}
+.chat-msg.client > div{
+  max-width:85% !important;
 }
 </style>
 
