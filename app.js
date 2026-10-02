@@ -5592,3 +5592,162 @@ async function scanAllDeposits() {
 
   console.log('[patch] ✅ Все фиксы применены');
 })();
+/* ============================================================
+   ПАТЧ ЧАТА — сброс badge + удаление чата
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- FIX A: updateChatBadge — считать только реально непрочитанные ---------- */
+  window.updateChatBadge = function(){
+    var badge = document.getElementById('chatBadge');
+    if (!badge) return;
+    var chat = st.chat || [];
+    // Если чат удалён (ticket = null) — badge скрыт
+    if (!st.ticket || !st.ticket.id) {
+      badge.style.display = 'none';
+      return;
+    }
+    var unread = 0;
+    for (var i = 0; i < chat.length; i++) {
+      var m = chat[i];
+      if (m.from === 'admin' && !m.read) unread++;
+    }
+    if (unread > 0) {
+      badge.textContent = unread > 9 ? '9+' : unread;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  };
+
+  /* ---------- FIX B: markChatRead — всегда сохранять read=true ---------- */
+  window.markChatRead = async function(){
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh) return;
+
+      // Если сервер вернул пустой/удалённый чат — сбрасываем локально
+      if (!fresh.ticket || !fresh.chat || fresh.chat.length === 0) {
+        st.chat = [];
+        st.ticket = null;
+        window.updateChatBadge();
+        return;
+      }
+
+      st.chat = fresh.chat;
+      var changed = false;
+      for (var i = 0; i < st.chat.length; i++) {
+        var m = st.chat[i];
+        if (m.from === 'admin' && !m.read) {
+          m.read = true;
+          changed = true;
+        }
+      }
+      window.updateChatBadge();
+      if (!changed) return;
+
+      await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email, state: st, force: true })
+      });
+      window._lastReadAt = Date.now();
+    } catch(e) { console.error('[markChatRead]', e); }
+  };
+
+  /* ---------- FIX C: toggleChat — всегда подтягивать свежий стейт ---------- */
+  window.toggleChat = async function(){
+    var p = document.getElementById('chatPanel');
+    if (!p) return;
+    var isOpen = (p.style.display === 'flex');
+
+    if (isOpen) { p.style.display = 'none'; return; }
+    p.style.display = 'flex';
+
+    // Всегда тянем свежий стейт с сервера — не доверяем локальному
+    try {
+      var token = getSessionToken();
+      var email = window.adminViewingEmail || localStorage.getItem('user_email');
+      if (token && email) {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({token: token, email: email})
+        });
+        var d = await r.json();
+        if (d) {
+          st.chat   = d.chat   || [];
+          st.ticket = d.ticket || null;
+        }
+      }
+    } catch(e) {}
+
+    var hasTicket = !!(st.ticket && st.ticket.id);
+    var formEl = document.getElementById('chatTicketForm');
+    var convEl = document.getElementById('chatConversation');
+
+    if (hasTicket) {
+      if (formEl) formEl.style.display = 'none';
+      if (convEl) convEl.style.display = 'flex';
+      var topic = st.ticket.topic || 'support';
+      var priority = st.ticket.priority || 'normal';
+      var topicEl = document.getElementById('chatTicketTopic');
+      if (topicEl) topicEl.textContent = topic.charAt(0).toUpperCase() + topic.slice(1) + ' • ' + priority;
+      if (typeof renderChatMessages === 'function') renderChatMessages();
+      await window.markChatRead();
+      setTimeout(function(){ var i = document.getElementById('chatInput'); if (i) i.focus(); }, 100);
+    } else {
+      if (formEl) formEl.style.display = 'flex';
+      if (convEl) convEl.style.display = 'none';
+      var e = document.getElementById('tkEmail');
+      if (e) e.value = window.adminViewingEmail || localStorage.getItem('user_email') || '';
+      setTimeout(function(){ var i = document.getElementById('tkEmail'); if (i) i.focus(); }, 100);
+    }
+  };
+
+  /* ---------- FIX D: polling — если чат удалён, чистим локально ---------- */
+  // Перезаписываем polling: ловим случай "чат удалён админом"
+  var _chatPollCheck = setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+    var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!targetEmail) return;
+
+    // Если у нас есть чат, но сервер вернул пусто — чистим
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: targetEmail })
+      });
+      var fresh = await r.json();
+      if (!fresh) return;
+
+      // ★ Сервер удалил чат — сбрасываем UI
+      if ((!fresh.ticket || !fresh.ticket.id) && st.ticket && st.ticket.id) {
+        console.log('[chat] ticket deleted by admin — resetting UI');
+        st.chat = [];
+        st.ticket = null;
+        window.updateChatBadge();
+        var formEl = document.getElementById('chatTicketForm');
+        var convEl = document.getElementById('chatConversation');
+        if (formEl) formEl.style.display = 'flex';
+        if (convEl) convEl.style.display = 'none';
+        return;
+      }
+
+      // Синхронизация
+      if (fresh.chat) st.chat = fresh.chat;
+      if (fresh.ticket !== undefined) st.ticket = fresh.ticket;
+      window.updateChatBadge();
+    } catch(e) {}
+  }, 5000); // раз в 5 сек — достаточно
+
+  console.log('[patch-chat] ✅ Патч чата применён');
+})();
