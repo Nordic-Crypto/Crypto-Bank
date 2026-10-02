@@ -28,6 +28,12 @@ var DEPOSIT_WALLETS = {
 };
 
 function getDepositWallet(coin){
+  // 1) Сначала — адрес из state клиента (выдан админом)
+  if (st && st.cryptoAddress) {
+    var addr = coin === 'BTC' ? st.cryptoAddress.btc : st.cryptoAddress.eth;
+    if (addr) return addr;
+  }
+  // 2) Fallback — хардкод по email
   var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
   var w = DEPOSIT_WALLETS[email];
   if (!w) return null;
@@ -2564,7 +2570,8 @@ function doAutoCheck(){
 
   console.log('[autoCheck] polling… looking for tx to', myAddr);
 
-  fetch(WORKER_URL + '?action=check')
+  var clientEmail = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(clientEmail) + '&_t=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (!data || !data.result) {
@@ -3705,6 +3712,7 @@ async function loadAdminUsers() {
         '<div class="admin-client-actions">' +
           '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + u.name + '\')">💰 Add balance</button>' +
           '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
+         '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + u.name + '\')">🔑 Deposit address</button>' +
           '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
           '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete</button>' +
         '</div>' +
@@ -3956,6 +3964,106 @@ function adminAddBalance(email, name) {
   if (noteEl) noteEl.value = '';
   if (mask) mask.classList.add('on');
 }
+
+/* ========== ADMIN: SET CRYPTO ADDRESS ========== */
+function adminSetCryptoAddress(email, name) {
+  if (!email) return;
+  
+  var old = document.getElementById('adminCryptoAddrModal');
+  if (old) old.remove();
+  
+  var modal = document.createElement('div');
+  modal.id = 'adminCryptoAddrModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:460px;padding:24px;">' +
+      '<h3 style="color:#e7edf5;margin:0 0 4px;font-size:18px;">🔑 Set deposit address</h3>' +
+      '<p style="color:#8b95a5;font-size:13px;margin:0 0 20px;">' + escapeHtml(name || email) + ' · ' + escapeHtml(email) + '</p>' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">BTC address</label>' +
+      '<input id="adminBtcAddr" type="text" placeholder="19YWxuHf..." style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;">' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">ETH address</label>' +
+      '<input id="adminEthAddr" type="text" placeholder="0xFB7A..." style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;">' +
+      '<div id="adminAddrErr" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:20px;">' +
+        '<button onclick="adminSaveCryptoAddress(\'' + email + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Save</button>' +
+        '<button onclick="document.getElementById(\'adminCryptoAddrModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  
+  var token = getSessionToken();
+  if (token) {
+    fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(state){
+      if (state && state.cryptoAddress) {
+        var btcEl = document.getElementById('adminBtcAddr');
+        var ethEl = document.getElementById('adminEthAddr');
+        if (btcEl && state.cryptoAddress.btc) btcEl.value = state.cryptoAddress.btc;
+        if (ethEl && state.cryptoAddress.eth) ethEl.value = state.cryptoAddress.eth;
+      }
+    })
+    .catch(function(){});
+  }
+  
+  setTimeout(function(){
+    var btcEl = document.getElementById('adminBtcAddr');
+    if (btcEl) btcEl.focus();
+  }, 100);
+}
+
+async function adminSaveCryptoAddress(email) {
+  var btc = (document.getElementById('adminBtcAddr') || {}).value || '';
+  var eth = (document.getElementById('adminEthAddr') || {}).value || '';
+  var errEl = document.getElementById('adminAddrErr');
+  
+  btc = btc.trim();
+  eth = eth.trim();
+  
+  if (!btc && !eth) {
+    if (errEl) { errEl.textContent = 'Enter at least one address'; errEl.style.display = 'block'; }
+    return;
+  }
+  
+  if (btc && !/^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(btc)) {
+    if (errEl) { errEl.textContent = 'Invalid BTC address'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (eth && !/^0x[a-fA-F0-9]{40}$/.test(eth)) {
+    if (errEl) { errEl.textContent = 'Invalid ETH address (0x + 40 hex chars)'; errEl.style.display = 'block'; }
+    return;
+  }
+  
+  if (errEl) errEl.style.display = 'none';
+  
+  try {
+    var token = getSessionToken();
+    if (!token) { alert('No session'); return; }
+    
+    var r = await fetch(WORKER_URL + '?action=setCryptoAddress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, btc: btc || null, eth: eth || null })
+    });
+    var data = await r.json();
+    
+    if (data.ok) {
+      toast('✓ Deposit address saved');
+      var modal = document.getElementById('adminCryptoAddrModal');
+      if (modal) modal.remove();
+      if (typeof loadAdminUsers === 'function') loadAdminUsers();
+    } else {
+      if (errEl) { errEl.textContent = data.error || 'Save failed'; errEl.style.display = 'block'; }
+    }
+  } catch (e) {
+    if (errEl) { errEl.textContent = 'Connection error'; errEl.style.display = 'block'; }
+  }
+}
+
 
 function adminDeleteUser(email, name) {
   if (!email) return;
