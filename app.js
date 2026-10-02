@@ -976,14 +976,24 @@ function finalizeDeposit(){
   var symbol = depPendingTx.symbol;
   var credit = depPendingTx.usdValue;
 
+  // Защита: если tx или hash отсутствуют — не зачисляем
+  if (!tx || !tx.hash) {
+    console.error('[finalizeDeposit] missing tx or hash', depPendingTx);
+    toast('Deposit error — contact support', true);
+    return;
+  }
+
   st.usd += credit;
   if (symbol === 'BTC') st.btc += cryptoAmt;
   else if (symbol === 'ETH') st.eth += cryptoAmt;
 
+  // Убедимся, что txs — массив
+  if (!Array.isArray(st.txs)) st.txs = [];
+
   st.txs.unshift({
     date: now(),
     ts: Date.now(),
-    desc: 'Crypto deposit — ' + cryptoAmt.toFixed(8) + ' ' + symbol + ' (' + tx.hash.slice(0, 10) + '…)',
+    desc: 'Crypto deposit — ' + Number(cryptoAmt).toFixed(8) + ' ' + symbol + ' (' + tx.hash.slice(0, 10) + '…)',
     amt: credit,
     status: 'Processing',
     hash: tx.hash,
@@ -991,6 +1001,8 @@ function finalizeDeposit(){
     symbol: symbol,
     verification: { source: depAnswers.source, origin: depAnswers.origin, confirmedAt: Date.now() }
   });
+
+  console.log('[finalizeDeposit] tx added, total txs:', st.txs.length);
 
   if (!st.depositVerifications) st.depositVerifications = [];
   st.depositVerifications.push({
@@ -1015,18 +1027,17 @@ function finalizeDeposit(){
   render();
 
   var cryptoEl = document.getElementById('depSuccessCrypto');
-  var usdEl    = document.getElementById('depSuccessUsd');
-  var balEl    = document.getElementById('depNewBalance');
+  var usdEl = document.getElementById('depSuccessUsd');
+  var balEl = document.getElementById('depNewBalance');
   if (cryptoEl) cryptoEl.textContent = '+ ' + cryptoAmt.toFixed(8) + ' ' + symbol;
-  if (usdEl)    usdEl.textContent    = '≈ ' + fmtCurrency(credit) + ' credited';
-  if (balEl)    balEl.textContent    = fmtCurrency(st.usd);
+  if (usdEl) usdEl.textContent = '≈ ' + fmtCurrency(credit) + ' credited';
+  if (balEl) balEl.textContent = fmtCurrency(st.usd);
 
   showDepStep(4);
   playChime();
   spawnConfetti();
   addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol, '✅');
 }
-
 /* ========== BALANCE CHART ========== */
 function renderBalanceChart(){
   var wrap    = document.getElementById('balanceChart');
