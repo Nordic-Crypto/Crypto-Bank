@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NordicCrypto</title>
- <style>
+<style>
 /* ============ TOOLTIP ============ */
 .chart-tooltip{position:absolute;background:rgba(15,20,35,.95);border:1px solid rgba(71,220,255,.4);border-radius:8px;padding:6px 10px;font-size:12px;color:#e8f4ff;pointer-events:none;opacity:0;transition:opacity .15s ease;white-space:nowrap;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,.5);transform:translate(-50%,-120%)}
 .chart-tooltip .tt-date{color:#7c9cbb;font-size:10px;display:block;margin-bottom:2px}
@@ -23,63 +23,82 @@
   --nc3-bg:#070a12;--nc3-surface:#0d121d;--nc3-surface2:#111827;
   --nc3-line:rgba(255,255,255,.075);--nc3-muted:#7e8ca3;--nc3-text:#f4f7fb;
   --nc3-cyan:#47dcff;--nc3-violet:#8c6cff;--nc3-green:#36e2a3;--nc3-pink:#ee62b9;
+  --shadow-sm:0 4px 12px rgba(0,0,0,.25);
+  --shadow-md:0 12px 30px rgba(0,0,0,.35);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.45);
+  --glow-cyan:0 0 24px rgba(71,220,255,.35);
+  --glow-violet:0 0 24px rgba(140,108,255,.35);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);display:flex;overflow:hidden;color-scheme:dark}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);display:flex;overflow:hidden;color-scheme:dark;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 @media (min-width:1700px){html{font-size:17px}}
 @media (min-width:2000px){html{font-size:18px}}
 @media (min-width:2400px){html{font-size:19px}}
 @media (max-width:600px){html{font-size:14px}}
 @media (max-width:400px){html{font-size:12px}}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(900px 500px at 15% -10%,rgba(0,212,255,.10),transparent 60%),radial-gradient(800px 500px at 100% 110%,rgba(124,58,237,.12),transparent 60%)}
+
+/* Aurora — БЕЗ анимации (для производительности) */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:
+  radial-gradient(900px 500px at 15% -10%,rgba(0,212,255,.10),transparent 60%),
+  radial-gradient(800px 500px at 100% 110%,rgba(124,58,237,.12),transparent 60%)}
+
+/* Custom scrollbar — премиум */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.02)}
+::-webkit-scrollbar-thumb{background:rgba(71,220,255,.25);border-radius:4px;transition:background .2s}
+::-webkit-scrollbar-thumb:hover{background:rgba(71,220,255,.5)}
+*{scrollbar-width:thin;scrollbar-color:rgba(71,220,255,.25) rgba(255,255,255,.02)}
 
 /* ============ SIDEBAR ============ */
-.side{width:238px;background:rgba(7,10,18,.78);backdrop-filter:blur(26px);border-right:1px solid var(--nc3-line);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
+.side{width:238px;background:rgba(7,10,18,.88);border-right:1px solid var(--nc3-line);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
 .brand{font-size:1.3rem;font-weight:800;margin-bottom:42px;display:flex;align-items:center;gap:11px}
-.blogo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center}
+.blogo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
 .blogo svg{width:18px;height:18px;stroke:#04121a;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .brand span{color:var(--pri)}
 .menu{list-style:none;flex:1;display:flex;flex-direction:column;gap:4px}
-.mi{padding:12px 14px;border-radius:12px;cursor:pointer;color:var(--mut);font-weight:500;font-size:.92rem;transition:.2s;display:flex;align-items:center;gap:13px;position:relative;user-select:none}
-.mi svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.mi{padding:12px 14px;border-radius:12px;cursor:pointer;color:var(--mut);font-weight:500;font-size:.92rem;transition:background .2s,color .2s;display:flex;align-items:center;gap:13px;position:relative;user-select:none}
+.mi svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;transition:filter .2s}
 .mi:hover{background:rgba(255,255,255,.045);color:var(--txt)}
-.mi.on{background:linear-gradient(100deg,rgba(71,220,255,.13),rgba(71,220,255,.025));color:var(--pri);box-shadow:inset 0 0 0 1px rgba(71,220,255,.11)}
+.mi.on{background:linear-gradient(100deg,rgba(71,220,255,.13),rgba(71,220,255,.025));color:var(--pri);box-shadow:inset 0 0 0 1px rgba(71,220,255,.11),0 0 20px -5px rgba(71,220,255,.3)}
+.mi.on svg{filter:drop-shadow(0 0 6px rgba(71,220,255,.7))}
 .mi.on::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;background:var(--pri);border-radius:0 3px 3px 0}
 .umi{border-top:1px solid var(--bd);padding-top:18px;display:flex;align-items:center;gap:12px}
-.av{width:42px;height:42px;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:.9rem;color:#05070a;flex-shrink:0}
+.av{width:42px;height:42px;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:.9rem;color:#05070a;flex-shrink:0;box-shadow:var(--shadow-sm)}
 .umi h4{font-size:.86rem;font-weight:600}
 .umi p{font-size:.72rem;color:var(--ok);margin-top:2px}
 
 /* ============ MAIN ============ */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1;background:transparent}
-.top{height:70px;background:rgba(7,10,18,.72);backdrop-filter:blur(26px);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 30px;flex-shrink:0;gap:20px;position:relative;z-index:100}
-.top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px;transition:.2s}
+.top{height:70px;background:rgba(7,10,18,.88);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 30px;flex-shrink:0;gap:20px;position:relative;z-index:100}
+.top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px;transition:border-color .2s,box-shadow .2s}
 .top-search:focus-within{border-color:var(--pri);box-shadow:0 0 0 4px rgba(91,141,239,.15)}
 .top-search svg{width:18px;height:18px;stroke:var(--mut);fill:none;stroke-width:2;flex-shrink:0}
 .top-search input{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-size:.92rem;font-family:inherit}
 .top-search input::placeholder{color:var(--mut)}
-.top-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);cursor:pointer;font-size:1rem;transition:.2s}
-.top-icon:hover{background:rgba(255,255,255,.08);border-color:var(--pri)}
+.top-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);cursor:pointer;font-size:1rem;transition:background .2s,border-color .2s,transform .2s}
+.top-icon:hover{background:rgba(255,255,255,.08);border-color:var(--pri);transform:translateY(-2px)}
 .top-icon-refresh{position:relative;overflow:hidden}
 .top-icon-refresh svg{width:18px;height:18px;stroke:#7dd3fc;transition:transform .6s cubic-bezier(.34,1.56,.64,1),stroke .3s}
-.top-icon-refresh:hover{border-color:rgba(71,220,255,.5);background:rgba(71,220,255,.08);box-shadow:0 0 20px rgba(71,220,255,.3)}
+.top-icon-refresh:hover{border-color:rgba(71,220,255,.5);background:rgba(71,220,255,.08);box-shadow:var(--glow-cyan)}
 .top-icon-refresh:hover svg{stroke:#47dcff;transform:rotate(180deg)}
 .ttl{font-size:1.25rem;font-weight:700}
 .st{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mut);background:rgba(0,224,138,.07);border:1px solid rgba(0,224,138,.18);padding:7px 14px;border-radius:999px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
 .body{flex:1;padding:26px 30px 48px;overflow-y:auto;overflow-x:hidden;min-height:0}
-.pg{display:none;animation:fade .35s ease}
-.pg.on{display:block}
+.pg{display:none}
+.pg.on{display:block;animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
 /* ============ PANEL / BUTTON ============ */
-.panel{background:var(--pan);border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:0 20px 50px -20px rgba(0,0,0,.7)}
-.btn{padding:12px 20px;border-radius:10px;border:none;font-weight:600;font-size:.9rem;cursor:pointer;transition:.2s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
+.panel{background:var(--pan);border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:var(--shadow-md)}
+.btn{padding:12px 20px;border-radius:10px;border:none;font-weight:600;font-size:.9rem;cursor:pointer;transition:transform .15s,box-shadow .2s,filter .15s,background .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
 .btn:active{transform:scale(.97)}
 .btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.btn:hover{transform:translateY(-2px)}
 .b1{background:linear-gradient(135deg,var(--pri),#0090c9);color:#04121a;box-shadow:0 10px 24px -10px rgba(0,212,255,.8)}
-.b1:hover{filter:brightness(1.1)}
+.b1:hover{filter:brightness(1.1);box-shadow:0 14px 30px -10px rgba(0,212,255,.9)}
 .b2{background:rgba(255,255,255,.03);border:1px solid var(--bd2);color:var(--txt)}
 .b2:hover{background:rgba(255,255,255,.07)}
 .b3{background:rgba(255,84,112,.1);border:1px solid rgba(255,84,112,.3);color:#ff5470}
@@ -91,7 +110,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 /* ============ FORM ============ */
 .fg{margin-bottom:18px}
 .fg label{display:block;margin-bottom:8px;color:var(--mut);font-size:.82rem;font-weight:500}
-.fc{width:100%;padding:13px 15px;background:rgba(7,10,15,.7);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);font-size:.95rem;font-family:inherit;transition:.2s}
+.fc{width:100%;padding:13px 15px;background:rgba(7,10,15,.7);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);font-size:.95rem;font-family:inherit;transition:border-color .2s,box-shadow .2s}
 .fc:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.12)}
 .fc::placeholder{color:#4b5769}
 .fr{display:flex;gap:14px}
@@ -99,17 +118,19 @@ select.fc{background:#0f1420;color:#e8f4ff;color-scheme:dark}
 select.fc option{background:#0f1420;color:#e8f4ff}
 
 /* ============ TOAST ============ */
-.toast{position:fixed;top:22px;right:22px;background:var(--pan2);border:1px solid var(--bd2);border-left:4px solid var(--ok);padding:15px 22px;border-radius:10px;box-shadow:0 20px 50px -10px rgba(0,0,0,.8);display:flex;align-items:center;gap:11px;transform:translateX(130%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:2000;font-size:.9rem;max-width:380px}
+.toast{position:fixed;top:22px;right:22px;background:var(--pan2);border:1px solid var(--bd2);border-left:4px solid var(--ok);padding:15px 22px;border-radius:10px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:11px;transform:translateX(130%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:2000;font-size:.9rem;max-width:380px}
 .toast.on{transform:translateX(0)}
 .toast svg{width:18px;height:18px;stroke:var(--ok);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .hidden{display:none}
 
 /* ============ MASK / BOX ============ */
-.mask{position:fixed;inset:0;background:rgba(3,6,11,.75);display:none;justify-content:center;align-items:center;z-index:7000}
+.mask{position:fixed;inset:0;background:rgba(3,6,11,.75);display:none;justify-content:center;align-items:center;z-index:7000;animation:maskIn .2s ease}
 .mask.on{display:flex}
+@keyframes maskIn{from{opacity:0}to{opacity:1}}
 #signupMask{display:none}
 #signupMask.on{display:flex}
-.box{background:linear-gradient(180deg,var(--pan2),#0f151e);padding:30px;border-radius:16px;width:440px;max-width:calc(100vw - 40px);border:1px solid var(--bd2);box-shadow:0 40px 90px -20px rgba(0,0,0,.9)}
+.box{background:linear-gradient(180deg,var(--pan2),#0f151e);padding:30px;border-radius:16px;width:440px;max-width:calc(100vw - 40px);border:1px solid var(--bd2);box-shadow:var(--shadow-lg);animation:boxIn .25s cubic-bezier(.34,1.56,.64,1)}
+@keyframes boxIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 .box h2{margin-bottom:6px;font-size:1.25rem}
 .box .d{color:var(--mut);font-size:.86rem;margin-bottom:22px}
 .mact{display:flex;gap:10px;margin-top:24px}
@@ -118,7 +139,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .tbl{background:var(--pan);border:1px solid var(--bd);border-radius:16px;overflow:hidden}
 .tbl table{width:100%;border-collapse:collapse}
 .tbl th{text-align:left;color:var(--mut);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;padding:16px 22px;border-bottom:1px solid var(--bd);font-weight:600}
-.tbl td{padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.9rem}
+.tbl td{padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.9rem;transition:background .15s}
+.tbl tr:hover td{background:rgba(71,220,255,.04)}
 .tbl tr:last-child td{border-bottom:none}
 .empty{text-align:center;padding:60px 20px;color:var(--mut)}
 .empty svg{width:48px;height:48px;stroke:var(--mut);fill:none;stroke-width:1.5;margin-bottom:12px;opacity:.5}
@@ -131,7 +153,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 /* ============ LOGIN ============ */
 .login-screen{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:5000;padding:40px 20px;transition:opacity .4s ease}
 .login-screen.hidden{opacity:0;pointer-events:none}
-.login-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:42px 38px;width:100%;max-width:420px;box-shadow:0 40px 100px -20px rgba(0,0,0,.9),0 0 60px rgba(0,212,255,.1)}
+.login-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:42px 38px;width:100%;max-width:420px;box-shadow:var(--shadow-lg),0 0 60px rgba(0,212,255,.1);animation:boxIn .5s cubic-bezier(.34,1.4,.64,1)}
 .login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;font-size:1.3rem;font-weight:800}
 .login-logo .blogo{width:38px;height:38px}
 .login-logo-text span{color:var(--pri)}
@@ -150,27 +172,27 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--bd)}
 .login-btn-outline{width:100%;justify-content:center;padding:14px;font-size:.95rem}
 .pass-wrap{position:relative}
-.pass-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:1rem;padding:4px;transition:.2s}
+.pass-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:1rem;padding:4px;transition:color .2s}
 .pass-toggle:hover{color:var(--txt)}
 
 /* ============ NOTIFICATIONS ============ */
-.notif-bell{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:all .25s}
-.notif-bell:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.5);box-shadow:0 0 20px rgba(71,220,255,.3);transform:translateY(-2px)}
+.notif-bell{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:background .25s,border-color .25s,transform .25s,box-shadow .25s}
+.notif-bell:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.5);box-shadow:var(--glow-cyan);transform:translateY(-2px)}
 .notif-bell svg{width:18px;height:18px;stroke:#7dd3fc;fill:none;stroke-width:2}
 .notif-bell.has-unread svg{stroke:#ff5470;animation:bellRing .6s ease}
 @keyframes bellRing{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(10deg)}}
 .notif-badge{position:absolute;top:-4px;right:-4px;background:#ff5470;color:#fff;font-size:.68rem;font-weight:700;min-width:18px;height:18px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 12px rgba(255,84,112,.6)}
-.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.25s;z-index:1900}
+.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:1900}
 .notif-overlay.on{opacity:1;pointer-events:auto}
-.notif-panel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;background:linear-gradient(180deg,var(--pan2),#0a0f16);border-left:1px solid var(--bd2);box-shadow:-20px 0 60px -10px rgba(0,0,0,.8);transform:translateX(100%);transition:transform .3s;z-index:1950;display:flex;flex-direction:column}
+.notif-panel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;background:linear-gradient(180deg,var(--pan2),#0a0f16);border-left:1px solid var(--bd2);box-shadow:-20px 0 60px -10px rgba(0,0,0,.8);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:1950;display:flex;flex-direction:column}
 .notif-panel.on{transform:translateX(0)}
 .notif-header{padding:20px 22px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
 .notif-title{font-size:1.15rem;font-weight:700;margin-bottom:3px}
 .notif-sub{font-size:.8rem;color:var(--mut)}
-.notif-close{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.notif-close{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s,color .2s}
 .notif-close:hover{background:rgba(255,84,112,.15);border-color:rgba(255,84,112,.4);color:#ff5470}
 .notif-list{flex:1;overflow-y:auto;padding:12px}
-.notif-item{position:relative;display:flex;gap:14px;padding:14px 16px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;margin-bottom:8px;transition:.2s;cursor:pointer}
+.notif-item{position:relative;display:flex;gap:14px;padding:14px 16px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;margin-bottom:8px;transition:background .2s,border-color .2s;cursor:pointer}
 .notif-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.2)}
 .notif-item.unread{background:rgba(0,212,255,.06);border-color:rgba(0,212,255,.25)}
 .notif-icon{width:38px;height:38px;border-radius:10px;background:rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
@@ -181,27 +203,27 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 @media (max-width:600px){.notif-panel{width:100vw}}
 
 /* ============ SOUND ============ */
-.sound-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,176,32,.15);border:1px solid rgba(255,176,32,.5);border-radius:999px;color:var(--warn);cursor:pointer;font-family:inherit;font-size:.78rem;font-weight:600;transition:.2s;animation:soundPulse 1.8s infinite}
+.sound-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,176,32,.15);border:1px solid rgba(255,176,32,.5);border-radius:999px;color:var(--warn);cursor:pointer;font-family:inherit;font-size:.78rem;font-weight:600;transition:background .2s}
 .sound-btn:hover{background:rgba(255,176,32,.25)}
 .sound-btn.hidden{display:none}
 .sound-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
-@keyframes soundPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,176,32,.4)}50%{box-shadow:0 0 0 8px rgba(255,176,32,0)}}
 
 /* ============ CURRENCY ============ */
 .curr-switch{position:relative}
-.curr-btn-top{display:flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:999px;color:var(--txt);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600}
+.curr-btn-top{display:flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:999px;color:var(--txt);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600;transition:background .2s,border-color .2s}
 .curr-btn-top:hover{background:rgba(255,255,255,.08);border-color:var(--pri)}
-.curr-menu{position:absolute;top:calc(100% + 8px);right:0;background:linear-gradient(180deg,var(--pan2),#0f151e);border:1px solid var(--bd2);border-radius:12px;box-shadow:0 20px 50px -10px rgba(0,0,0,.8);padding:6px;min-width:220px;max-height:320px;overflow-y:auto;display:none;z-index:9999}
+.curr-menu{position:absolute;top:calc(100% + 8px);right:0;background:linear-gradient(180deg,var(--pan2),#0f151e);border:1px solid var(--bd2);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;min-width:220px;max-height:320px;overflow-y:auto;display:none;z-index:9999;animation:menuIn .15s ease}
+@keyframes menuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .curr-menu.on{display:block}
-.curr-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:.88rem;transition:.15s}
+.curr-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:.88rem;transition:background .15s}
 .curr-opt:hover{background:rgba(0,212,255,.08)}
 .curr-opt.on{background:rgba(0,212,255,.12);color:var(--pri)}
 .curr-opt span:first-child{font-weight:600;flex:1}
 .curr-rate{color:var(--mut);font-size:.78rem;font-family:ui-monospace,monospace}
 
 /* ============ SETTINGS ============ */
-.settings-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);cursor:pointer;transition:.2s}
-.settings-btn:hover{background:rgba(255,255,255,.08);border-color:var(--pri)}
+.settings-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.settings-btn:hover{background:rgba(255,255,255,.08);border-color:var(--pri);transform:translateY(-2px)}
 .settings-btn svg{width:18px;height:18px;stroke:var(--txt);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .settings-section{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--bd)}
 .settings-section:last-of-type{border-bottom:none;padding-bottom:0}
@@ -210,29 +232,29 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .settings-name{font-size:.92rem;font-weight:700;margin-bottom:3px}
 .settings-email{font-size:.78rem;color:var(--mut);font-family:ui-monospace,monospace}
 .settings-role{font-size:.72rem;padding:4px 10px;border-radius:6px;background:rgba(0,212,255,.12);color:var(--pri);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:inline-block;margin-top:6px}
-.settings-btn-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.9rem;font-weight:600;transition:.2s;margin-bottom:8px}
+.settings-btn-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.9rem;font-weight:600;transition:background .2s,border-color .2s,transform .2s;margin-bottom:8px}
 .settings-btn-row:hover{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.3);transform:translateX(4px)}
 .settings-btn-row.danger{color:#ff5470}
 .settings-btn-row.danger:hover{background:rgba(255,84,112,.05);border-color:rgba(255,84,112,.4)}
-.back-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--txt);cursor:pointer;transition:.2s;margin-bottom:8px}
+.back-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--txt);cursor:pointer;transition:background .2s,border-color .2s,color .2s;margin-bottom:8px}
 .back-btn:hover{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.35);color:var(--pri)}
 .back-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
 /* ============ INACTIVITY ============ */
 .inactivity-overlay{position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:6000;padding:20px}
 .inactivity-overlay.on{display:flex}
-.inactivity-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(255,176,32,.3);border-radius:20px;padding:38px;width:100%;max-width:420px;text-align:center;box-shadow:0 40px 100px -20px rgba(0,0,0,.95)}
+.inactivity-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(255,176,32,.3);border-radius:20px;padding:38px;width:100%;max-width:420px;text-align:center;box-shadow:var(--shadow-lg)}
 .inactivity-icon{font-size:3rem;margin-bottom:16px}
 .inactivity-box h2{font-size:1.4rem;font-weight:800;margin-bottom:10px}
 .inactivity-box p{color:var(--mut);font-size:.9rem;margin-bottom:20px;line-height:1.5}
 .inactivity-timer{font-family:ui-monospace,Menlo,monospace;font-size:3rem;font-weight:800;color:var(--warn);margin-bottom:24px}
 .inactivity-actions{display:flex;gap:10px}
 .inactivity-actions .btn{flex:1;justify-content:center;padding:14px}
-
-/* ============ PREMIUM CARD ============ */
-.pay{background:radial-gradient(500px 200px at 100% 0%,rgba(0,212,255,.18),transparent 60%),linear-gradient(135deg,#1b2533 0%,#0a0e15 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:26px;height:200px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 30px 60px -30px rgba(0,0,0,.9);position:relative;overflow:hidden;margin-bottom:24px;transition:transform .4s cubic-bezier(.34,1.56,.64,1),box-shadow .4s ease,background .5s ease}
+ /* ============ PREMIUM CARD ============ */
+.pay{background:radial-gradient(500px 200px at 100% 0%,rgba(0,212,255,.18),transparent 60%),linear-gradient(135deg,#1b2533 0%,#0a0e15 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:26px;height:200px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 30px 60px -30px rgba(0,0,0,.9);position:relative;overflow:hidden;margin-bottom:24px;transition:transform .3s ease,box-shadow .3s ease,background .5s ease}
 .pay-shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(120deg,transparent 0%,transparent 30%,rgba(255,255,255,.15) 50%,transparent 70%,transparent 100%);transition:left .8s ease;pointer-events:none;z-index:3}
 .pay:hover .pay-shine{left:100%}
+.pay:hover{transform:perspective(1000px) rotateY(-4deg) rotateX(3deg) translateY(-4px);box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}
 .pay.frozen{filter:grayscale(.7) brightness(.7)}
 .pay.frozen::before{content:'FROZEN';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;letter-spacing:.3em;color:rgba(255,255,255,.2);z-index:5;pointer-events:none}
 .ptop{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
@@ -252,16 +274,13 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .card-network{display:flex;align-items:center;color:inherit;opacity:.9}
 .card-network svg{width:56px;height:24px;display:block}
 .pay.pay-large{height:240px;padding:22px;margin-bottom:0;max-width:360px;width:100%;background:radial-gradient(500px 250px at 100% 0%,rgba(236,72,153,.5),transparent 60%),radial-gradient(400px 250px at 0% 100%,rgba(139,92,246,.55),transparent 60%),radial-gradient(300px 150px at 50% 50%,rgba(91,141,239,.3),transparent 70%),linear-gradient(135deg,#4c1d95 0%,#6b21a8 50%,#831843 100%);border:1px solid rgba(255,255,255,.15);box-shadow:0 30px 60px -20px rgba(139,92,246,.5),0 0 60px rgba(236,72,153,.3),inset 0 1px 0 rgba(255,255,255,.2);overflow:hidden}
-.pay.pay-large::before{content:'';position:absolute;bottom:-30px;left:-20%;width:140%;height:100px;background:radial-gradient(ellipse at 50% 100%,rgba(255,255,255,.15),transparent 70%),radial-gradient(ellipse at 30% 100%,rgba(255,255,255,.1),transparent 60%),radial-gradient(ellipse at 70% 100%,rgba(255,255,255,.08),transparent 60%);border-radius:50% 50% 0 0 / 100% 100% 0 0;pointer-events:none;z-index:1;animation:cardWaves 8s ease-in-out infinite}
-@keyframes cardWaves{0%,100%{transform:translateX(0) scaleY(1)}50%{transform:translateX(-3%) scaleY(1.15)}}
 .pay.pay-large .pn{font-size:1.3rem;letter-spacing:.12em;white-space:nowrap}
 .pay.pay-large .pb{font-size:.88rem}
 .pay.pay-large .chip-real{width:52px;height:38px}
 .pay.pay-large .pv{font-size:1rem}
 .pay.pay-large .pl{font-size:.68rem}
-.pay:hover{transform:perspective(1000px) rotateY(-4deg) rotateX(3deg) translateY(-4px);box-shadow:0 40px 80px -20px rgba(0,0,0,.9),0 0 60px rgba(0,212,255,.2)}
 
-/* ============ CARD DESIGNS ============ */
+/* CARD DESIGNS */
 .pay.design-cosmic{background:linear-gradient(135deg,#1a1a2e,#0f3460)}
 .pay.design-purple{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .pay.design-silver{background:linear-gradient(135deg,#c0c0c0,#808080)}
@@ -277,7 +296,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 
 /* DESIGN PICKER */
 .design-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
-.design-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.7rem;font-weight:600;transition:.2s}
+.design-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.7rem;font-weight:600;transition:border-color .2s,background .2s,box-shadow .2s}
 .design-opt:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
 .design-opt.on{border-color:var(--pri);background:rgba(0,212,255,.08);box-shadow:0 0 0 3px rgba(0,212,255,.15)}
 .design-preview{width:100%;height:34px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
@@ -302,19 +321,20 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-hero h1 span{background:linear-gradient(100deg,#fff,#aeeeff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .nc3-hero p{margin-top:7px;color:#718098;font-size:.88rem}
 .nc3-hero-actions{display:flex;gap:9px}
-.nc3-ghost,.nc3-primary{border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:11px 16px;font-weight:750;cursor:pointer;transition:.2s;display:flex;gap:7px;align-items:center;font-family:inherit;font-size:.9rem}
+.nc3-ghost,.nc3-primary{border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:11px 16px;font-weight:750;cursor:pointer;transition:transform .2s,background .2s,box-shadow .2s;display:flex;gap:7px;align-items:center;font-family:inherit;font-size:.9rem}
 .nc3-ghost{background:rgba(255,255,255,.035);color:#b6c1d1}
 .nc3-primary{background:linear-gradient(135deg,#46dfff,#238cff);color:#03111b;border:0;box-shadow:0 13px 28px rgba(36,154,255,.2)}
 .nc3-ghost:hover{background:rgba(255,255,255,.065);transform:translateY(-2px)}
 .nc3-primary:hover{transform:translateY(-2px);box-shadow:0 18px 34px rgba(36,154,255,.3)}
+
 .nc3-overview{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,480px);gap:18px}
 @media (max-width:1100px){.nc3-overview{grid-template-columns:1fr}}
-.nc3-balance-card,.nc3-card-wrap,.nc3-chart-panel,.nc3-transactions,.nc3-iban{background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid var(--nc3-line);border-radius:22px;box-shadow:0 22px 55px rgba(0,0,0,.22)}
+.nc3-balance-card,.nc3-card-wrap,.nc3-chart-panel,.nc3-transactions,.nc3-iban{background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid var(--nc3-line);border-radius:22px;box-shadow:var(--shadow-md)}
 .nc3-balance-card{min-height:385px;padding:25px;position:relative;overflow:hidden}
 .nc3-balance-card:before{content:"";position:absolute;width:520px;height:300px;right:-210px;top:-160px;background:radial-gradient(circle,rgba(71,220,255,.12),transparent 67%);pointer-events:none}
 .nc3-balance-top{display:flex;justify-content:space-between}
 .nc3-kicker{font-size:.68rem;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#47dcff;opacity:.85}
-.nc3-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:5px;background:linear-gradient(110deg,#fff,#cceeff 55%,#7bdfff);-webkit-background-clip:text;background-clip:text;color:transparent;word-break:keep-all;line-height:1.1}
+.nc3-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:5px;background:linear-gradient(110deg,#fff,#cceeff 55%,#7bdfff);-webkit-background-clip:text;background-clip:text;color:transparent;word-break:keep-all;line-height:1.1;text-shadow:0 0 40px rgba(71,220,255,.25)}
 @media (max-width:1100px){.nc3-balance{font-size:2.2rem}}
 .nc3-eur{color:#718098;font-size:.88rem;margin-top:3px}
 .nc3-balance-menu{color:#718098;letter-spacing:3px;padding:6px 2px}
@@ -334,6 +354,9 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-bank-card{width:100%;aspect-ratio:1.6/1;height:auto;min-height:220px;max-height:280px;border-radius:22px;padding:26px;background:radial-gradient(500px 250px at 90% -10%,rgba(255,83,190,.5),transparent 58%),radial-gradient(400px 240px at 0% 110%,rgba(95,76,255,.55),transparent 64%),linear-gradient(135deg,#2a1750 0%,#4a1a7a 50%,#751a55 100%);box-shadow:0 35px 70px rgba(0,0,0,.4),0 0 80px rgba(255,83,190,.22),0 0 100px rgba(95,76,255,.18),inset 0 1px 0 rgba(255,255,255,.22);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
 .nc3-bank-card .pn{font-size:1.13rem;letter-spacing:.16em}
 .nc3-bank-card .chip-real{transform:scale(.9);transform-origin:left center}
+.nc3-bank-card::after{content:'';position:absolute;inset:-2px;border-radius:24px;background:linear-gradient(120deg,transparent 0%,rgba(71,220,255,.4) 20%,rgba(255,83,190,.5) 40%,rgba(95,76,255,.5) 60%,transparent 80%);background-size:200% 200%;z-index:-1;animation:cardPulseBorder 4s ease-in-out infinite;filter:blur(4px);pointer-events:none}
+@keyframes cardPulseBorder{0%,100%{background-position:0% 50%;opacity:.6}50%{background-position:100% 50%;opacity:1}}
+
 .nc3-card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
 .nc3-card-action{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px;background:rgba(13,19,30,.72);border:1px solid var(--nc3-line);border-radius:14px;cursor:pointer;transition:background .2s,border-color .2s,transform .15s;font-family:inherit;color:#e7edf6}
 .nc3-card-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px)}
@@ -349,9 +372,10 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-assets,.nc3-actions-section{margin-top:27px}
 .nc3-section-head,.nc3-panel-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
 .nc3-section-head h2,.nc3-panel-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px}
-.nc3-link,.nc3-panel-head a{color:#65ddff;text-decoration:none;font-size:.72rem;font-weight:750}
+.nc3-link,.nc3-panel-head a{color:#65ddff;text-decoration:none;font-size:.72rem;font-weight:750;transition:color .2s}
+.nc3-link:hover,.nc3-panel-head a:hover{color:#fff}
 .nc3-asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.nc3-asset{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:94px;padding:16px;border:1px solid var(--nc3-line);border-radius:16px;background:rgba(13,19,30,.72);position:relative;overflow:hidden;transition:.2s}
+.nc3-asset{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:94px;padding:16px;border:1px solid var(--nc3-line);border-radius:16px;background:rgba(13,19,30,.72);position:relative;overflow:hidden;transition:transform .2s,border-color .2s,background .2s}
 .nc3-asset:hover{transform:translateY(-2px);border-color:rgba(71,220,255,.18);background:rgba(17,25,39,.9)}
 .nc3-asset-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem}
 .nc3-asset-icon.btc{background:rgba(245,158,11,.11);color:#ffbd4c}
@@ -367,10 +391,12 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 
 /* ACTIONS */
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:background .2s,border-color .2s,transform .15s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit;font-size:inherit}
-.nc3-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px)}
-.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);transition:transform .2s ease,box-shadow .25s ease;flex-shrink:0}
+.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:background .2s,border-color .2s,transform .15s,box-shadow .2s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit;font-size:inherit}
+.nc3-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px);box-shadow:0 15px 40px -10px rgba(71,220,255,.4)}
+.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);transition:transform .2s,box-shadow .25s;flex-shrink:0}
 .nc3-action:hover .nc3-action-icon{transform:scale(1.08) translateY(-2px);box-shadow:0 8px 22px rgba(71,220,255,.35)}
+.nc3-action:hover .nc3-action-icon svg{animation:iconSpin .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes iconSpin{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.15)}100%{transform:rotate(360deg) scale(1)}}
 .nc3-action-icon svg{width:20px;height:20px;stroke:#fff}
 .nc3-action-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .nc3-action-icon.pink{background:linear-gradient(135deg,#ec4899,#f472b6)}
@@ -392,8 +418,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 
 /* RECENT TX */
 .recent-tx-list{display:flex;flex-direction:column;gap:8px}
-.recent-tx-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:10px;transition:.2s}
-.recent-tx-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.25)}
+.recent-tx-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:10px;transition:background .2s,border-color .2s,transform .2s}
+.recent-tx-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.25);transform:translateX(4px)}
 .recent-tx-icon{width:38px;height:38px;border-radius:10px;background:rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
 .recent-tx-icon.deposit{background:rgba(0,224,138,.12)}
 .recent-tx-icon.transfer{background:rgba(255,176,32,.12)}
@@ -419,12 +445,11 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-iban::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(71,220,255,.12),transparent 70%);pointer-events:none}
 .nc3-iban-copy{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .nc3-iban-copy > div:last-child{display:flex;flex-direction:column;gap:4px}
-.nc3-kicker{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#47dcff;opacity:.8}
-.nc3-iban-copy h3{margin:0;font-size:16px;font-weight:700;color:#e8f4ff}
-.nc3-iban-copy p{margin:0;font-size:12px;color:#7c9cbb}
 .nc3-icon-circle{width:48px;height:48px;min-width:48px;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 18px rgba(6,182,212,.35);transition:transform .2s,box-shadow .25s;flex-shrink:0}
 .nc3-iban:hover .nc3-icon-circle{transform:scale(1.05);box-shadow:0 8px 24px rgba(6,182,212,.45)}
 .nc3-icon-circle svg{width:22px;height:22px;stroke:#fff;fill:none}
+.nc3-iban-copy h3{margin:0;font-size:16px;font-weight:700;color:#e8f4ff}
+.nc3-iban-copy p{margin:0;font-size:12px;color:#7c9cbb}
 .nc3-iban-details{display:flex;flex-direction:column;gap:10px;margin-top:16px}
 .nc3-iban-details > div{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(71,220,255,.04);border:1px solid rgba(71,220,255,.1);border-radius:10px;transition:background .2s,border-color .2s}
 .nc3-iban-details > div:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.25)}
@@ -434,8 +459,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 #mySwift{color:#a855f7}
 #myBank{color:#e8f4ff}
 #myCountry{color:#f59e0b}
-.nc3-copy-iban{margin-top:14px;width:100%;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(71,220,255,.08);border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#47dcff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s,border-color .2s}
-.nc3-copy-iban:hover{background:rgba(71,220,255,.15);border-color:rgba(71,220,255,.4)}
+.nc3-copy-iban{margin-top:14px;width:100%;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(71,220,255,.08);border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#47dcff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s,border-color .2s,transform .15s}
+.nc3-copy-iban:hover{background:rgba(71,220,255,.15);border-color:rgba(71,220,255,.4);transform:translateY(-1px)}
 .nc3-copy-iban svg{width:13px;height:13px;flex-shrink:0}
 .iban-pending{text-align:center;padding:20px 12px}
 .iban-spinner{width:28px;height:28px;border:3px solid rgba(0,212,255,.15);border-top-color:var(--pri);border-radius:50%;margin:0 auto 12px;animation:ibanSpin 1s linear infinite}
@@ -473,17 +498,16 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .bottom-grid .recent-tx-list::-webkit-scrollbar{width:5px}
 .bottom-grid .recent-tx-list::-webkit-scrollbar-thumb{background:rgba(0,212,255,.35);border-radius:3px}
 
-/* RESPONSIVE */
+/* ============ RESPONSIVE ============ */
 @media(max-width:1100px){.nc3-overview,.nc3-lower,.nc3-bottom-row{grid-template-columns:1fr}.nc3-action-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.bottom-grid{grid-template-columns:1fr}.balance-chart-panel,.bottom-grid .recent-tx-panel{height:auto;min-height:320px}.nc3-asset-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.side{width:78px}.body{padding:20px 15px 90px}.top{padding:0 15px}.nc3-hero{align-items:flex-start;gap:15px;flex-direction:column}.nc3-overview,.nc3-asset-grid,.nc3-action-grid{grid-template-columns:1fr}.nc3-balance{font-size:2.55rem}.nc3-bank-card{height:215px}.brand .nm,.mi .tx,.umi .inf{display:none}.mi{justify-content:center}.umi{justify-content:center}}
 @media(max-width:500px){.nc3-hero h1{font-size:1.55rem}.nc3-balance-card{padding:19px;min-height:350px}.nc3-card-actions button b{display:none}.nc3-action-grid{grid-template-columns:1fr 1fr}.nc3-action{grid-template-columns:36px 1fr}.nc3-action i{display:none}.nc3-asset{grid-template-columns:38px 1fr auto}}
 @media (max-width:480px){.top-search{display:none}.body{padding:16px 14px}.stats-grid{grid-template-columns:1fr}.bottom-grid{grid-template-columns:1fr}}
-
-/* ============ ONBOARDING ============ */
+ /* ============ ONBOARDING ============ */
 .onboard{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:3000;overflow-y:auto;padding:40px 20px}
 .onboard.on{display:flex}
-.onb-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;width:100%;max-width:520px;box-shadow:0 40px 100px -20px rgba(0,0,0,.9)}
+.onb-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;width:100%;max-width:520px;box-shadow:var(--shadow-lg)}
 .onb-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;font-size:1.4rem;font-weight:800}
 .onb-logo .blogo{width:38px;height:38px}
 .onb-box h1{font-size:1.55rem;font-weight:800;margin-bottom:8px;letter-spacing:-.02em}
@@ -493,8 +517,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .onb-step.on{display:block}
 @keyframes stepFadeIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 .onb-welcome{text-align:center;padding:44px 38px}
-.welcome-icon{font-size:3.5rem;margin:20px 0 24px;filter:drop-shadow(0 0 30px rgba(0,212,255,.6));animation:diamondFloat 3s ease-in-out infinite}
-@keyframes diamondFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.05)}}
+.welcome-icon{font-size:3.5rem;margin:20px 0 24px;filter:drop-shadow(0 0 30px rgba(0,212,255,.6))}
 .onb-welcome h1{font-size:1.8rem;line-height:1.25;margin-bottom:14px}
 .welcome-sub{color:var(--mut);font-size:.95rem;margin-bottom:28px;line-height:1.5}
 .welcome-features{display:flex;flex-direction:column;gap:12px;margin-bottom:8px;text-align:left}
@@ -503,11 +526,11 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .onb-nav{display:flex;gap:10px;margin-top:20px}
 #onbStep3Title{background:linear-gradient(135deg,#fff,#8fb8ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .type-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.type-btn{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:.2s;font-family:inherit;color:var(--txt);font-size:.9rem}
+.type-btn{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:border-color .2s,background .2s,color .2s,box-shadow .2s;font-family:inherit;color:var(--txt);font-size:.9rem}
 .type-btn:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
 .type-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
 .cur-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.cur-btn{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:.2s;font-family:inherit;color:var(--txt);font-size:.88rem}
+.cur-btn{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:border-color .2s,background .2s,color .2s,box-shadow .2s;font-family:inherit;color:var(--txt);font-size:.88rem}
 .cur-btn:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
 .cur-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
 .onboard.exiting{opacity:0;transform:scale(1.05);transition:opacity .4s ease,transform .5s ease;pointer-events:none}
@@ -545,22 +568,28 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .star{background:radial-gradient(circle,#00e08a,#00b46e);clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);box-shadow:0 0 12px #00e08a}
 @keyframes confettiFly{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0deg)}10%{opacity:1}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(1) rotate(var(--rot))}}
 
-/* VERIFICATION */
+/* CARD DISSOLVE / MATERIALIZE */
+.pay.card-deleting{animation:cardDissolve .9s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none}
+@keyframes cardDissolve{0%{opacity:1;transform:perspective(1000px) rotateY(0deg) scale(1);filter:brightness(1) blur(0)}40%{opacity:.85;transform:perspective(1000px) rotateY(20deg) scale(.95);filter:brightness(1.4);box-shadow:0 0 60px rgba(255,84,112,.6)}100%{opacity:0;transform:perspective(1000px) rotateY(60deg) scale(.7);filter:brightness(.4) blur(8px)}}
+.pay.card-creating{animation:cardMaterialize 1.1s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes cardMaterialize{0%{opacity:0;transform:scale(.5) rotateY(-60deg);filter:blur(20px) brightness(2)}60%{opacity:1;filter:blur(0) brightness(1.3);box-shadow:0 0 80px rgba(71,220,255,.7)}100%{opacity:1;transform:scale(1) rotateY(0deg);filter:blur(0) brightness(1)}}
+
+/* ============ VERIFICATION ============ */
 .verify-screen{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:2900;overflow-y:auto;padding:40px 20px}
 .verify-screen.on{display:flex}
 .verify-step{display:none;width:100%;max-width:520px;animation:verifyFadeIn .45s ease}
 .verify-step.on{display:block}
 @keyframes verifyFadeIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.verify-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;box-shadow:0 40px 100px -20px rgba(0,0,0,.9);text-align:center}
+.verify-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;box-shadow:var(--shadow-lg);text-align:center}
 .verify-icon{font-size:3rem;margin-bottom:16px;filter:drop-shadow(0 0 24px rgba(0,212,255,.5))}
 .verify-box h1{font-size:1.5rem;font-weight:800;margin-bottom:8px}
 .verify-sub{color:var(--mut);font-size:.88rem;margin-bottom:24px}
 .verify-types{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-.vtype-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);transition:.2s}
+.vtype-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);transition:border-color .2s,background .2s,box-shadow .2s}
 .vtype-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
 .vtype-emoji{font-size:1.6rem}
 .vtype-name{font-size:.78rem;font-weight:600;text-align:center;line-height:1.2}
-.upload-zone{display:block;padding:28px 20px;background:rgba(7,10,15,.5);border:2px dashed var(--bd2);border-radius:14px;cursor:pointer;transition:.2s;margin-bottom:16px}
+.upload-zone{display:block;padding:28px 20px;background:rgba(7,10,15,.5);border:2px dashed var(--bd2);border-radius:14px;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:16px}
 .upload-zone:hover{border-color:var(--pri);background:rgba(0,212,255,.04)}
 .upload-inner{text-align:center}
 .upload-icon{font-size:2rem;margin-bottom:8px;opacity:.7}
@@ -580,7 +609,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .verify-progress{background:rgba(255,255,255,.06);height:6px;border-radius:3px;overflow:hidden;margin-bottom:24px}
 .verify-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;transition:width .5s ease}
 .verify-steps-list{text-align:left}
-.vstep{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:.88rem;color:var(--mut);transition:.3s}
+.vstep{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:.88rem;color:var(--mut);transition:color .3s}
 .vstep.done{color:var(--txt)}
 .vstep.done .vstep-check,.vstep.done .vstep-dot{color:var(--ok);font-weight:800}
 .vstep.active{color:var(--pri);font-weight:600}
@@ -590,7 +619,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .verify-success-note{background:rgba(0,224,138,.06);border:1px solid rgba(0,224,138,.2);border-radius:12px;padding:16px;margin:20px 0 24px;font-size:.88rem;color:var(--txt);line-height:1.5;text-align:left}
 @media (max-width:540px){.verify-box{padding:26px 22px}.verify-types{grid-template-columns:1fr}.vtype-btn{flex-direction:row;gap:12px;justify-content:flex-start}}
 
-/* TRACKING */
+/* ============ TRACKING ============ */
 .track-wrap{max-width:720px}
 .track-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px;flex-wrap:wrap}
 .track-id-box{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);padding:12px 18px;border-radius:12px}
@@ -599,7 +628,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .progress-steps{display:flex;justify-content:space-between;margin-bottom:24px;position:relative}
 .progress-steps::before{content:'';position:absolute;top:14px;left:22px;right:22px;height:2px;background:var(--bd);z-index:0}
 .step{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;position:relative;z-index:1}
-.step-dot{width:30px;height:30px;border-radius:50%;background:var(--pan2);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--mut);transition:.3s}
+.step-dot{width:30px;height:30px;border-radius:50%;background:var(--pan2);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--mut);transition:background .3s,border-color .3s,color .3s,box-shadow .3s}
 .step.done .step-dot{background:var(--ok);border-color:var(--ok);color:#04121a}
 .step.active .step-dot{background:var(--pri);border-color:var(--pri);color:#04121a;box-shadow:0 0 0 6px rgba(0,212,255,.15)}
 .step-label{font-size:.7rem;color:var(--mut);text-align:center;font-weight:500;max-width:90px}
@@ -607,7 +636,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .progress-bar-bg{background:rgba(255,255,255,.06);height:9px;border-radius:5px;overflow:hidden;margin:16px 0}
 .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;border-radius:5px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
-.info-box{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:16px;position:relative;overflow:hidden;transition:.3s}
+.info-box{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:16px;position:relative;overflow:hidden;transition:border-color .3s,background .3s,transform .3s}
 .info-box .l{font-size:.68rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
 .info-box .v{font-weight:600;font-size:.9rem;word-break:break-word}
 .info-box:hover{border-color:rgba(0,212,255,.35);background:rgba(0,212,255,.03);transform:translateY(-2px)}
@@ -620,20 +649,20 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .track-actions .btn{flex:1;min-width:140px;justify-content:center;padding:14px 18px}
 @media(max-width:700px){.info-grid{grid-template-columns:1fr}}
 
-/* WELCOME BANNER */
+/* ============ WELCOME BANNER ============ */
 .welcome-banner{display:flex;align-items:center;gap:16px;padding:18px 22px;margin-bottom:22px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(124,58,237,.12));border:1px solid rgba(0,212,255,.3);border-radius:16px;position:relative;overflow:hidden}
 .welcome-banner.hidden{display:none}
 .wb-icon{font-size:2rem;flex-shrink:0}
 .wb-text{flex:1}
 .wb-title{font-size:1.05rem;font-weight:800;margin-bottom:3px}
 .wb-sub{font-size:.85rem;color:var(--mut)}
-.wb-close{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--mut);cursor:pointer;font-size:1rem;transition:.2s;flex-shrink:0}
+.wb-close{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--mut);cursor:pointer;font-size:1rem;transition:background .2s,border-color .2s,color .2s;flex-shrink:0}
 .wb-close:hover{background:rgba(255,84,112,.15);border-color:rgba(255,84,112,.4);color:#ff5470}
 
-/* WITHDRAW MODAL */
+/* ============ WITHDRAW MODAL ============ */
 .wd-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}
 .wd-modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px)}
-.wd-modal-card{position:relative;width:100%;max-width:420px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto}
+.wd-modal-card{position:relative;width:100%;max-width:420px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:16px;padding:24px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto}
 .wd-modal-card h3{margin:0 0 4px;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:20px;font-weight:700}
 .wd-sub{margin:0 0 16px;color:#7c9cbb;font-size:12px}
 .wd-label{display:block;margin:12px 0 4px;color:#7c9cbb;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
@@ -648,10 +677,10 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .wd-btn-submit{background:linear-gradient(135deg,#00d4ff,#a855f7);color:#fff}
 .wd-btn-submit:hover{opacity:.9}
 
-/* TX STATUS MODAL */
+/* ============ TX STATUS MODAL ============ */
 .tx-status{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility .3s}
 .tx-status.on{opacity:1;visibility:visible;pointer-events:auto}
-.tx-status-card{width:100%;max-width:380px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:20px;padding:40px 30px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.tx-status-card{width:100%;max-width:380px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:20px;padding:40px 30px;text-align:center;box-shadow:var(--shadow-lg)}
 .tx-status-icon{width:80px;height:80px;margin:0 auto 20px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative}
 .tx-status-icon.processing{background:linear-gradient(135deg,#00d4ff,#a855f7)}
 .tx-status-icon.verifying{background:linear-gradient(135deg,#f59e0b,#ef4444)}
@@ -665,10 +694,10 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .tx-status-step{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s}
 .tx-status-step.done{background:#47dcff}
 
-/* DEPOSIT VERIFICATION */
+/* ============ DEPOSIT VERIFICATION ============ */
 .dep-verify-overlay{position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:4000;padding:20px}
 .dep-verify-overlay.on{display:flex}
-.dep-verify-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(0,212,255,.25);border-radius:24px;padding:42px 38px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 40px 100px -20px rgba(0,0,0,.95);position:relative}
+.dep-verify-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(0,212,255,.25);border-radius:24px;padding:42px 38px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);position:relative}
 .dep-step{display:none;text-align:center}
 .dep-step.on{display:block}
 .dep-icon-big{font-size:4rem;margin-bottom:20px;filter:drop-shadow(0 0 30px rgba(0,212,255,.6))}
@@ -685,15 +714,15 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .dep-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));border-radius:3px;transition:width .5s ease}
 .dep-step-label{font-size:.78rem;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
 .dep-options{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-.dep-opt{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;font-family:inherit;color:var(--txt);text-align:left;transition:.2s;font-size:.95rem}
+.dep-opt{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;font-family:inherit;color:var(--txt);text-align:left;transition:border-color .2s,background .2s,transform .2s;font-size:.95rem}
 .dep-opt:hover{border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.05);transform:translateX(4px)}
 .dep-opt.on{border-color:var(--pri);background:rgba(0,212,255,.1);box-shadow:0 0 0 4px rgba(0,212,255,.12)}
 .dep-opt-icon{font-size:1.4rem;flex-shrink:0}
 .dep-opt-text{font-weight:600;line-height:1.3}
-.dep-checkbox{display:flex;align-items:flex-start;gap:14px;padding:18px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;margin-top:8px;transition:.2s;text-align:left}
+.dep-checkbox{display:flex;align-items:flex-start;gap:14px;padding:18px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;margin-top:8px;transition:border-color .2s;text-align:left}
 .dep-checkbox input{display:none}
-.dep-checkmark{width:24px;height:24px;border:2px solid var(--bd2);border-radius:7px;flex-shrink:0;position:relative;transition:.2s;margin-top:2px}
-.dep-checkmark::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#04121a;opacity:0;transition:.2s}
+.dep-checkmark{width:24px;height:24px;border:2px solid var(--bd2);border-radius:7px;flex-shrink:0;position:relative;transition:background .2s,border-color .2s,box-shadow .2s;margin-top:2px}
+.dep-checkmark::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#04121a;opacity:0;transition:opacity .2s}
 .dep-checkbox input:checked + .dep-checkmark{background:var(--pri);border-color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.15)}
 .dep-checkbox input:checked + .dep-checkmark::after{opacity:1}
 .dep-check-text{flex:1;font-size:.9rem;color:var(--txt);line-height:1.45}
@@ -706,7 +735,7 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 /* ============ ADMIN PANEL ============ */
 .admin-panel{position:fixed;inset:0;background:radial-gradient(900px 500px at 20% 0%,rgba(124,58,237,.1),transparent 60%),radial-gradient(800px 500px at 100% 100%,rgba(0,212,255,.08),transparent 60%),var(--bg);z-index:4500;display:none;flex-direction:column;overflow:hidden}
 .admin-panel.on{display:flex}
-.admin-top{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;background:rgba(13,18,25,.85);border-bottom:1px solid var(--bd);backdrop-filter:blur(20px);position:relative;z-index:10;flex:0 0 auto}
+.admin-top{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;background:rgba(13,18,25,.92);border-bottom:1px solid var(--bd);position:relative;z-index:10;flex:0 0 auto}
 .admin-brand{display:flex;align-items:center;gap:12px;font-size:1.1rem;font-weight:800}
 .admin-brand .blogo{width:38px;height:38px}
 .admin-brand span{color:var(--pri)}
@@ -724,13 +753,13 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .admin-section{display:none}
 .admin-section.active{display:block}
 .admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
-.admin-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:20px;transition:.25s;position:relative;overflow:hidden}
+.admin-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:20px;transition:border-color .25s,background .25s,transform .25s;position:relative;overflow:hidden}
 .admin-stat-card:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.04);transform:translateY(-3px)}
 .admin-stat-icon{font-size:1.5rem;margin-bottom:10px}
 .admin-stat-value{font-size:1.5rem;font-weight:800;font-family:ui-monospace,monospace;margin-bottom:4px;letter-spacing:-.02em}
 .admin-stat-label{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
 .admin-clients-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px}
-.admin-client-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:22px;transition:.2s}
+.admin-client-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:22px;transition:border-color .2s,background .2s}
 .admin-client-card:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.03)}
 .admin-client-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
 .admin-client-avatar{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#04121a;flex-shrink:0}
@@ -771,7 +800,7 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .awd-row b{color:#e8f4ff;font-family:monospace}
 .awd-date{font-size:11px;color:#5967fb;margin-bottom:10px}
 .awd-actions{display:flex;gap:10px;margin-top:12px}
-.awd-btn{flex:1;padding:12px 20px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;transition:all .2s}
+.awd-btn{flex:1;padding:12px 20px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;transition:transform .2s,box-shadow .2s,background .2s}
 .awd-approve{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;box-shadow:0 6px 16px rgba(16,185,129,.3)}
 .awd-approve:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(16,185,129,.45)}
 .awd-reject{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
@@ -804,7 +833,8 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .chat-welcome-avatar img{width:60px;height:60px;border-radius:50%;border:2px solid rgba(139,92,246,.4);margin-bottom:8px}
 .chat-welcome-name{color:#e7edf5;font-weight:600;font-size:14px}
 .chat-welcome-text{color:#8b95a5;font-size:12px;margin-top:6px;line-height:1.5}
-.chat-msg{display:flex;margin-bottom:12px}
+.chat-msg{display:flex;margin-bottom:12px;animation:msgIn .3s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .chat-msg.client{justify-content:flex-end}
 .chat-msg.admin{justify-content:flex-start}
 .chat-msg > div{min-width:0}
@@ -814,10 +844,10 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .chat-msg-meta{font-size:10px;color:#8b95a5;margin-top:4px;display:flex;gap:4px;align-items:center}
 .chat-msg.client .chat-msg-meta{justify-content:flex-end}
 .chat-input-wrap{padding:12px 14px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center}
-.chat-input{flex:1;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;font-family:inherit}
+.chat-input{flex:1;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;font-family:inherit;transition:border-color .2s,background .2s}
 .chat-input:focus{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.05)}
 .chat-input::placeholder{color:#5a6673}
-.chat-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.chat-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .2s}
 .chat-send:hover{transform:scale(1.05);box-shadow:0 6px 16px rgba(95,46,229,.5)}
 .chat-footer{padding:8px 14px;text-align:center;font-size:10px;color:#5a6673;border-top:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.2)}
 
@@ -832,7 +862,7 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
   #chatToggle{bottom:16px;right:16px;z-index:100000}
 }
 
-/* LIGHT THEME */
+/* ============ LIGHT THEME ============ */
 body.light-theme{--bg:#f5f7fb;--pan:#fff;--pan2:#f0f2f7;--txt:#0f172a;--mut:#64748b;--bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.14);--pri:#5b8def;--pri2:#8b5cf6;--nc3-bg:#f5f7fb;--nc3-surface:#fff;--nc3-surface2:#f0f2f7;--nc3-line:rgba(0,0,0,.08);--nc3-muted:#64748b;--nc3-text:#0f172a;--nc3-cyan:#0ea5e9;--nc3-violet:#7c3aed;background:#f5f7fb;color:#0f172a}
 body.light-theme .side{background:linear-gradient(180deg,#fff,#f0f2f7);border-right:1px solid rgba(0,0,0,.08)}
 body.light-theme .top{background:rgba(255,255,255,.9);border-bottom:1px solid rgba(0,0,0,.08)}
@@ -847,197 +877,18 @@ body.light-theme .top-search input{color:#0f172a}
 body.light-theme .top-icon,body.light-theme .settings-btn,body.light-theme .notif-bell{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:#0f172a}
 body.light-theme .recent-tx-item{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.06)}
 body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-color:rgba(91,141,239,.2)}
-/* PREMIUM CARD PULSE */
-.nc3-bank-card{position:relative}
-.nc3-bank-card::after{
-  content:'';
-  position:absolute;
-  inset:-2px;
-  border-radius:24px;
-  background:linear-gradient(120deg,
-    transparent 0%,
-    rgba(71,220,255,.4) 20%,
-    rgba(255,83,190,.5) 40%,
-    rgba(95,76,255,.5) 60%,
-    transparent 80%);
-  background-size:200% 200%;
-  z-index:-1;
-  animation:cardPulseBorder 4s ease-in-out infinite;
-  filter:blur(8px);
-  pointer-events:none;
-}
-@keyframes cardPulseBorder{
-  0%,100%{background-position:0% 50%;opacity:.6}
-  50%{background-position:100% 50%;opacity:1}
-}
-  
-/* GLASSMORPHISM UPGRADE */
-.side{
-  background:rgba(7,10,18,.55) !important;
-  backdrop-filter:blur(30px) saturate(180%);
-  -webkit-backdrop-filter:blur(30px) saturate(180%);
-}
-.top{
-  background:rgba(7,10,18,.55) !important;
-  backdrop-filter:blur(30px) saturate(180%);
-  -webkit-backdrop-filter:blur(30px) saturate(180%);
-}
-.admin-top{
-  background:rgba(13,18,25,.55) !important;
-  backdrop-filter:blur(30px) saturate(180%);
-  -webkit-backdrop-filter:blur(30px) saturate(180%);
-}
-.admin-sidebar{
-  background:rgba(10,15,25,.55) !important;
-  backdrop-filter:blur(30px) saturate(180%);
-  -webkit-backdrop-filter:blur(30px) saturate(180%);
-}
-  
- /* CARD DISSOLVE ANIMATION */
-.pay.card-deleting{
-  animation:cardDissolve .9s cubic-bezier(.4,0,.2,1) forwards;
-  pointer-events:none;
-}
-@keyframes cardDissolve{
-  0%{
-    opacity:1;
-    transform:perspective(1000px) rotateY(0deg) scale(1);
-    filter:brightness(1) blur(0);
-  }
-  40%{
-    opacity:.85;
-    transform:perspective(1000px) rotateY(20deg) scale(.95);
-    filter:brightness(1.4) blur(0);
-    box-shadow:0 0 60px rgba(255,84,112,.6),0 0 100px rgba(255,84,112,.4);
-  }
-  100%{
-    opacity:0;
-    transform:perspective(1000px) rotateY(60deg) scale(.7);
-    filter:brightness(0.4) blur(8px);
-    box-shadow:0 0 0 rgba(255,84,112,0);
-  }
-}
 
-/* NEW CARD MATERIALIZE */
-.pay.card-creating{
-  animation:cardMaterialize 1.1s cubic-bezier(.34,1.56,.64,1) forwards;
-}
-@keyframes cardMaterialize{
-  0%{
-    opacity:0;
-    transform:scale(.5) rotateY(-60deg);
-    filter:blur(20px) brightness(2);
-  }
-  60%{
-    opacity:1;
-    filter:blur(0) brightness(1.3);
-    box-shadow:0 0 80px rgba(71,220,255,.7);
-  }
-  100%{
-    opacity:1;
-    transform:scale(1) rotateY(0deg);
-    filter:blur(0) brightness(1);
-  }
-}
- /* AURORA BACKGROUND */
-body::after{
-  content:'';
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-  background:
-    radial-gradient(1200px 800px at 20% 10%, rgba(71,220,255,.08), transparent 50%),
-    radial-gradient(1000px 700px at 80% 90%, rgba(139,92,246,.08), transparent 50%),
-    radial-gradient(900px 600px at 50% 50%, rgba(255,83,190,.05), transparent 55%);
-  animation:auroraMove 20s ease-in-out infinite alternate;
-}
-@keyframes auroraMove{
-  0%{background-position:0% 0%,100% 100%,50% 50%}
-  50%{background-position:30% 20%,70% 80%,40% 60%}
-  100%{background-position:10% 30%,90% 70%,60% 40%}
-} 
- /* SKELETON SHIMMER */
-.skeleton{
-  background:linear-gradient(90deg,
-    rgba(255,255,255,.03) 0%,
-    rgba(255,255,255,.08) 50%,
-    rgba(255,255,255,.03) 100%);
-  background-size:200% 100%;
-  animation:shimmer 1.5s ease-in-out infinite;
-  border-radius:8px;
-}
-@keyframes shimmer{
-  0%{background-position:200% 0}
-  100%{background-position:-200% 0}
-} 
-  /* MENU GLOW */
-.mi.on svg{
-  filter:drop-shadow(0 0 6px rgba(71,220,255,.7));
-  animation:iconGlow 2.5s ease-in-out infinite;
-}
-@keyframes iconGlow{
-  0%,100%{filter:drop-shadow(0 0 6px rgba(71,220,255,.5))}
-  50%{filter:drop-shadow(0 0 14px rgba(71,220,255,1))}
-}
-  /* FLOATING ACTIONS — hover effect */
-.nc3-action:hover{
-  box-shadow:0 15px 40px -10px rgba(71,220,255,.4);
-}
-.nc3-action:hover .nc3-action-icon svg{
-  animation:iconSpin 0.6s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes iconSpin{
-  0%{transform:rotate(0deg) scale(1)}
-  50%{transform:rotate(180deg) scale(1.15)}
-  100%{transform:rotate(360deg) scale(1)}
-}
-/* CARD DETAILS ROWS — восстановлено */
-.iban-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:10px 0;
-  font-size:.9rem;
-  border-bottom:1px solid rgba(255,255,255,.04);
-  gap:16px;
-}
-.iban-row:last-child{border-bottom:none}
-.iban-row .l{color:var(--mut);flex-shrink:0}
-.iban-row .v{
-  font-family:ui-monospace,Menlo,monospace;
-  font-weight:600;
-  letter-spacing:.02em;
-  text-align:right;
-  word-break:break-all;
-}
-  /* CARD DETAILS ROWS */
-.iban-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:10px 0;
-  font-size:.9rem;
-  border-bottom:1px solid rgba(255,255,255,.04);
-  gap:16px;
-}
+/* ============ CARD DETAILS ROWS (единственный) ============ */
+.iban-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px}
 .iban-row:last-child{border-bottom:none}
 .iban-row .l{color:var(--mut);flex-shrink:0;font-size:13px}
-.iban-row .v{
-  font-family:ui-monospace,Menlo,monospace;
-  font-weight:600;
-  letter-spacing:.02em;
-  text-align:right;
-  word-break:break-all;
-  color:var(--txt);
-}
- </style>
+.iban-row .v{font-family:ui-monospace,Menlo,monospace;font-weight:600;letter-spacing:.02em;text-align:right;word-break:break-all;color:var(--txt)}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  // Приветствие по времени
   var greet = document.getElementById('nc3Greeting');
-  if(greet){
+  if (greet){
     var hour = new Date().getHours();
     var text;
     if (hour >= 5 && hour < 12) text = 'Good morning';
@@ -1046,20 +897,17 @@ document.addEventListener('DOMContentLoaded', function(){
     else text = 'Good night';
     greet.textContent = text;
   }
-
-  // Имя клиента
   var nameEl = document.getElementById('nc3HeroName');
-  if(nameEl){
+  if (nameEl){
     var n = localStorage.getItem('user_name');
-    if(n && n.trim() !== '' && n !== 'User' && n !== 'Admin'){
-      nameEl.textContent = ' ' + n.split(' ')[0];   // пробел + имя
+    if (n && n.trim() !== '' && n !== 'User' && n !== 'Admin'){
+      nameEl.textContent = ' ' + n.split(' ')[0];
     } else {
-      nameEl.textContent = '';                       // пусто, если нет имени
+      nameEl.textContent = '';
     }
   }
 });
 </script>
-
 </head>
 <body>
 
@@ -1070,16 +918,13 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
       <div class="login-logo-text">Nordic<span>Crypto</span></div>
     </div>
-
     <h1 class="login-title">Welcome back</h1>
     <p class="login-sub">Sign in to your account</p>
-
     <div class="login-form" id="loginForm">
       <div class="fg">
         <label>Email</label>
         <input type="email" class="fc" id="loginEmail" placeholder="your@email.com" autocomplete="email">
       </div>
-
       <div class="fg">
         <label>Password</label>
         <div class="pass-wrap">
@@ -1087,64 +932,57 @@ document.addEventListener('DOMContentLoaded', function(){
           <button type="button" class="pass-toggle" id="passToggle">👁</button>
         </div>
       </div>
-
       <div class="login-error" id="loginError" style="display:none"></div>
-
-      <button class="btn b1 login-btn" id="btnLogin">
-        Sign in →
-      </button>
-
+      <button class="btn b1 login-btn" id="btnLogin">Sign in →</button>
       <div class="login-divider"><span>or</span></div>
-
-      <button class="btn b2 login-btn-outline" id="btnGoToSignup" type="button">
-        Create new account
-      </button>
-
+      <button class="btn b2 login-btn-outline" id="btnGoToSignup" type="button">Create new account</button>
       <div class="login-hint">
         <span>Forgot password?</span> <a href="#" id="forgotPass">Contact support</a>
       </div>
     </div>
-
     <div class="login-loading" id="loginLoading" style="display:none">
       <div class="login-spinner"></div>
       <div>Signing in...</div>
     </div>
   </div>
-
-  <div class="login-footer">
-    🔒 Your data is secured with bank-level encryption
-  </div>
+  <div class="login-footer">🔒 Your data is secured with bank-level encryption</div>
 </div>
 
 <!-- ============ SIDEBAR ============ -->
 <div class="side" id="sideBar" style="display:none">
-<div class="brand">
-  <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-  <div class="nm">Nordic<span>Crypto</span></div>
-</div>
-<ul class="menu">
-<li class="mi on" data-p="dash">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
-  <span class="tx">Dashboard</span>
-</li>
-<li class="mi" data-p="cards">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
-  <span class="tx">My Cards</span>
-</li>
-<li class="mi" data-p="assets">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/><circle cx="7" cy="17" r="1"/></svg>
-  <span class="tx">Crypto Assets</span>
-</li>
-<li class="mi" data-p="tx">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-  <span class="tx">Transactions</span>
-</li>
-<li class="mi" data-p="order">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
-  <span class="tx">Order New Card</span>
-</li>
-</ul>
-<div class="umi"><div class="av" id="userAvatar">--</div><div class="inf"><h4 id="userName">User</h4><span style="font-size:11px;color:#8b95a5;">Premium Metal</span></div></div>
+  <div class="brand">
+    <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <div class="nm">Nordic<span>Crypto</span></div>
+  </div>
+  <ul class="menu">
+    <li class="mi on" data-p="dash">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+      <span class="tx">Dashboard</span>
+    </li>
+    <li class="mi" data-p="cards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+      <span class="tx">My Cards</span>
+    </li>
+    <li class="mi" data-p="assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/><circle cx="7" cy="17" r="1"/></svg>
+      <span class="tx">Crypto Assets</span>
+    </li>
+    <li class="mi" data-p="tx">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+      <span class="tx">Transactions</span>
+    </li>
+    <li class="mi" data-p="order">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+      <span class="tx">Order New Card</span>
+    </li>
+  </ul>
+  <div class="umi">
+    <div class="av" id="userAvatar">--</div>
+    <div class="inf">
+      <h4 id="userName">User</h4>
+      <span style="font-size:11px;color:#8b95a5;">Premium Metal</span>
+    </div>
+  </div>
 </div>
 
 <!-- ============ MAIN ============ -->
@@ -1155,40 +993,42 @@ document.addEventListener('DOMContentLoaded', function(){
     <input type="text" id="searchInput" placeholder="Search transactions, cards, assets...">
   </div>
   <div style="display:flex;align-items:center;gap:12px">
-    <!-- theme button removed -->
-  <div class="curr-switch" id="currSwitch">
-    <button class="curr-btn-top" id="currBtnTop">
-      <span id="currCode">USD</span>
-      <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    <div class="curr-menu" id="currMenu">
-      <div class="curr-opt on" data-cur="USD"><span>USD</span> <span class="curr-rate">$1.00</span></div>
-      <div class="curr-opt" data-cur="EUR"><span>EUR</span> <span class="curr-rate" id="rateEUR">—</span></div>
-      <div class="curr-opt" data-cur="SEK"><span>SEK</span> <span class="curr-rate" id="rateSEK">—</span></div>
-      <div class="curr-opt" data-cur="NOK"><span>NOK</span> <span class="curr-rate" id="rateNOK">—</span></div>
-      <div class="curr-opt" data-cur="DKK"><span>DKK</span> <span class="curr-rate" id="rateDKK">—</span></div>
-      <div class="curr-opt" data-cur="GBP"><span>GBP</span> <span class="curr-rate" id="rateGBP">—</span></div>
+    <div class="curr-switch" id="currSwitch">
+      <button class="curr-btn-top" id="currBtnTop">
+        <span id="currCode">USD</span>
+        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="curr-menu" id="currMenu">
+        <div class="curr-opt on" data-cur="USD"><span>USD</span> <span class="curr-rate">$1.00</span></div>
+        <div class="curr-opt" data-cur="EUR"><span>EUR</span> <span class="curr-rate" id="rateEUR">—</span></div>
+        <div class="curr-opt" data-cur="SEK"><span>SEK</span> <span class="curr-rate" id="rateSEK">—</span></div>
+        <div class="curr-opt" data-cur="NOK"><span>NOK</span> <span class="curr-rate" id="rateNOK">—</span></div>
+        <div class="curr-opt" data-cur="DKK"><span>DKK</span> <span class="curr-rate" id="rateDKK">—</span></div>
+        <div class="curr-opt" data-cur="GBP"><span>GBP</span> <span class="curr-rate" id="rateGBP">—</span></div>
+      </div>
     </div>
+    <button class="settings-btn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+    <button class="top-icon top-icon-refresh" id="btnRefreshBalance" title="Refresh balance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/>
+        <path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+    </button>
+    <div class="notif-bell" id="notifBell" title="Notifications">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+    </div>
+    <button class="sound-btn" id="soundBtn" title="Enable notification sound">
+      <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
+      <span>Enable sound</span>
+    </button>
+    <div class="st"><span class="dot"></span> Online</div>
   </div>
-  <button class="settings-btn" id="settingsBtn" title="Settings">
-  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-</button>
-          <button class="top-icon top-icon-refresh" id="btnRefreshBalance" title="Refresh balance">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 4v6h-6"/>
-            <path d="M1 20v-6h6"/>
-            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/>
-            <path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-          </svg>
-        </button>
-  <div class="notif-bell" id="notifBell" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></div>
-  <button class="sound-btn" id="soundBtn" title="Enable notification sound">
-  <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
-  <span>Enable sound</span>
-</button>
-  <div class="st"><span class="dot"></span> Online</div>
 </div>
-  </div>
+
 <div class="body">
 
 <!-- ============ DASHBOARD ============ -->
@@ -1222,25 +1062,14 @@ document.addEventListener('DOMContentLoaded', function(){
           <span id="pnlPct">(-0.00%)</span>
           <span>vs. deposits</span>
         </div>
-        <div id="pnlExplain" class="nc3-performance-note" style="display:none">
-          Your crypto value has changed since deposit
-        </div>
-              <div class="nc3-balance-chart">
-        <div class="nc3-mini-stats">
-          <div class="nc3-mini-stat">
-            <span class="nc3-mini-label">Income 30D</span>
-            <span class="nc3-mini-value" id="statIncome30">—</span>
-          </div>
-          <div class="nc3-mini-stat">
-            <span class="nc3-mini-label">Spending 30D</span>
-            <span class="nc3-mini-value" id="statSpending30">—</span>
-          </div>
-          <div class="nc3-mini-stat">
-            <span class="nc3-mini-label">Transactions</span>
-            <span class="nc3-mini-value" id="statTxCount">—</span>
+        <div id="pnlExplain" class="nc3-performance-note" style="display:none">Your crypto value has changed since deposit</div>
+        <div class="nc3-balance-chart">
+          <div class="nc3-mini-stats">
+            <div class="nc3-mini-stat"><span class="nc3-mini-label">Income 30D</span><span class="nc3-mini-value" id="statIncome30">—</span></div>
+            <div class="nc3-mini-stat"><span class="nc3-mini-label">Spending 30D</span><span class="nc3-mini-value" id="statSpending30">—</span></div>
+            <div class="nc3-mini-stat"><span class="nc3-mini-label">Transactions</span><span class="nc3-mini-value" id="statTxCount">—</span></div>
           </div>
         </div>
-      </div>
       </div>
 
       <div class="nc3-card-wrap">
@@ -1257,85 +1086,56 @@ document.addEventListener('DOMContentLoaded', function(){
               <div class="chip-contact"></div><div class="chip-contact"></div>
               <div class="chip-center"></div>
             </div>
-            <svg class="nfc-icon" viewBox="0 0 24 24">
-              <path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/>
-            </svg>
+            <svg class="nfc-icon" viewBox="0 0 24 24"><path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/></svg>
           </div>
           <div class="pn" id="cardNumDash">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
           <div class="pf">
-            <div>
-              <div class="pl">CARD HOLDER</div>
-              <div class="pv" id="cardNameDash">—</div>
-            </div>
-            <div>
-              <div class="pl">EXPIRES</div>
-              <div class="pv m" id="cardExpDash">—/—</div>
-            </div>
+            <div><div class="pl">CARD HOLDER</div><div class="pv" id="cardNameDash">—</div></div>
+            <div><div class="pl">EXPIRES</div><div class="pv m" id="cardExpDash">—/—</div></div>
             <div class="card-network" id="cardNetwork1"></div>
           </div>
         </div>
-       <div class="nc3-card-actions">
-  <button class="nc3-card-action" id="btnFreezeCard">
-    <span class="nc3-card-action-icon cyan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2 12h20"/></svg>
-    </span>
-    <span class="nc3-card-action-label">Freeze</span>
-  </button>
-  <button class="nc3-card-action" id="btnLimitsCard">
-    <span class="nc3-card-action-icon violet">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8"/></svg>
-    </span>
-    <span class="nc3-card-action-label">Limits</span>
-  </button>
-  <button class="nc3-card-action" id="btnSettingsCard">
-    <span class="nc3-card-action-icon orange">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </span>
-    <span class="nc3-card-action-label">Settings</span>
-  </button>
-</div>
+        <div class="nc3-card-actions">
+          <button class="nc3-card-action" id="btnFreezeCard">
+            <span class="nc3-card-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2 12h20"/></svg></span>
+            <span class="nc3-card-action-label">Freeze</span>
+          </button>
+          <button class="nc3-card-action" id="btnLimitsCard">
+            <span class="nc3-card-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8"/></svg></span>
+            <span class="nc3-card-action-label">Limits</span>
+          </button>
+          <button class="nc3-card-action" id="btnSettingsCard">
+            <span class="nc3-card-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+            <span class="nc3-card-action-label">Settings</span>
+          </button>
+        </div>
       </div>
     </section>
 
     <section class="nc3-assets">
       <div class="nc3-section-head">
-        <div>
-          <div class="nc3-kicker">Your portfolio</div>
-          <h2>Assets</h2>
-        </div>
+        <div><div class="nc3-kicker">Your portfolio</div><h2>Assets</h2></div>
         <a href="#" data-p="assets" class="nc3-link">View portfolio →</a>
       </div>
-         <div class="nc3-asset-grid">
-  <div class="nc3-asset">
-    <div class="nc3-asset-icon btc">
-      <svg viewBox="0 0 32 32" width="26" height="26">
-        <circle cx="16" cy="16" r="16" fill="#f7931a"/>
-        <path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/>
-      </svg>
-    </div>
-    <div class="nc3-asset-main">
-      <div class="nc3-asset-name">Bitcoin <span>BTC</span></div>
-      <div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div>
-    </div>
-    <div class="nc3-asset-value">
-      <strong id="btcPrice">$—</strong>
-      <span id="btcChange">—</span>
-    </div>
-    <div class="crypto-chart" id="btcChart" style="color:#f7931a"></div>
-  </div>
-       
+      <div class="nc3-asset-grid">
         <div class="nc3-asset">
-          <div class="nc3-asset-icon eth">
-  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg>
-</div>
+          <div class="nc3-asset-icon btc">
+            <svg viewBox="0 0 32 32" width="26" height="26"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg>
+          </div>
+          <div class="nc3-asset-main">
+            <div class="nc3-asset-name">Bitcoin <span>BTC</span></div>
+            <div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div>
+          </div>
+          <div class="nc3-asset-value"><strong id="btcPrice">$—</strong><span id="btcChange">—</span></div>
+          <div class="crypto-chart" id="btcChart" style="color:#f7931a"></div>
+        </div>
+        <div class="nc3-asset">
+          <div class="nc3-asset-icon eth"><svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg></div>
           <div class="nc3-asset-main">
             <div class="nc3-asset-name">Ethereum <span>ETH</span></div>
             <div class="nc3-asset-amount" id="ethB">0.00000000 ETH</div>
           </div>
-          <div class="nc3-asset-value">
-            <strong id="ethPrice">$—</strong>
-            <span id="ethChange">—</span>
-          </div>
+          <div class="nc3-asset-value"><strong id="ethPrice">$—</strong><span id="ethChange">—</span></div>
           <div class="crypto-chart" id="ethChart" style="color:#8c6cff"></div>
         </div>
       </div>
@@ -1343,70 +1143,48 @@ document.addEventListener('DOMContentLoaded', function(){
 
     <section class="nc3-actions-section">
       <div class="nc3-section-head">
-        <div>
-          <div class="nc3-kicker">Shortcuts</div>
-          <h2>Move money</h2>
-        </div>
+        <div><div class="nc3-kicker">Shortcuts</div><h2>Move money</h2></div>
       </div>
-      
       <div class="nc3-action-grid">
-  <button class="nc3-action" id="btnWithdrawV2">
-       <span class="nc3-action-icon orange">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
-        </span>
-        <span><b>Withdraw</b><small>Cash out to your account</small></span>
-        <i>↗</i>
-      </button>
+        <button class="nc3-action" id="btnWithdrawV2">
+          <span class="nc3-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span>
+          <span><b>Withdraw</b><small>Cash out to your account</small></span>
+          <i>↗</i>
+        </button>
         <button class="nc3-action" id="btnTransferV2">
-    <span class="nc3-action-icon violet">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 7h14"/><path d="m15 3 4 4-4 4"/><path d="M19 17H5"/><path d="m9 13-4 4 4 4"/></svg>
-    </span>
-    <span><b>Transfer</b><small>Send to another person</small></span>
-    <i>→</i>
-  </button>
-  <button class="nc3-action" id="btnExchangeV2">
-    <span class="nc3-action-icon pink">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-    </span>
-    <span><b>Exchange</b><small>Swap crypto instantly</small></span>
-    <i>→</i>
-  </button>
-  <button class="nc3-action" id="btnCopyCardV2">
-    <span class="nc3-action-icon green">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-    </span>
-    <span><b>Copy card</b><small>Card number</small></span>
-    <i>→</i>
-  </button>
-  <button class="nc3-action" id="btnReceiveMoney">
-    <span class="nc3-action-icon cyan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
-    </span>
-    <span><b>Receive money</b><small>Your IBAN</small></span>
-    <i>→</i>
-  </button>
-              
-</div>
-        </section>
+          <span class="nc3-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 7h14"/><path d="m15 3 4 4-4 4"/><path d="M19 17H5"/><path d="m9 13-4 4 4 4"/></svg></span>
+          <span><b>Transfer</b><small>Send to another person</small></span>
+          <i>→</i>
+        </button>
+        <button class="nc3-action" id="btnExchangeV2">
+          <span class="nc3-action-icon pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
+          <span><b>Exchange</b><small>Swap crypto instantly</small></span>
+          <i>→</i>
+        </button>
+        <button class="nc3-action" id="btnCopyCardV2">
+          <span class="nc3-action-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>
+          <span><b>Copy card</b><small>Card number</small></span>
+          <i>→</i>
+        </button>
+        <button class="nc3-action" id="btnReceiveMoney">
+          <span class="nc3-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg></span>
+          <span><b>Receive money</b><small>Your IBAN</small></span>
+          <i>→</i>
+        </button>
+      </div>
+    </section>
 
-        <section class="nc3-lower">
+    <section class="nc3-lower">
       <div class="nc3-chart-panel">
         <div class="nc3-panel-head">
-          <div>
-            <div class="nc3-kicker">Balance history</div>
-            <h2>Last 7 days</h2>
-          </div>
+          <div><div class="nc3-kicker">Balance history</div><h2>Last 7 days</h2></div>
           <strong id="balanceCurrent">$0.00</strong>
         </div>
         <div class="nc3-large-chart" id="balanceChartSecondary"></div>
       </div>
-
       <div class="nc3-transactions">
         <div class="nc3-panel-head">
-          <div>
-            <div class="nc3-kicker">Activity</div>
-            <h2>Recent transactions</h2>
-          </div>
+          <div><div class="nc3-kicker">Activity</div><h2>Recent transactions</h2></div>
           <a href="#" id="viewAllTx">View all</a>
         </div>
         <div class="recent-tx-list" id="recentTxList">
@@ -1440,202 +1218,156 @@ document.addEventListener('DOMContentLoaded', function(){
           <div><span>Country</span><b id="myCountry">—</b></div>
         </div>
         <button class="nc3-copy-iban" id="btnCopyIban">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-  <span>Copy details</span>
-</button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          <span>Copy details</span>
+        </button>
       </div>
 
-    <div class="nc3-stat-strip" id="statsGrid">
-  <div class="nc3-stat">
-    <div class="nc3-stat-icon green">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-    </div>
-    <div class="nc3-stat-body">
-      <span>Deposited</span>
-      <strong id="statIncome">$0.00</strong>
-      <small id="statIncomeChange">↑ +12.4%</small>
-    </div>
-    <div class="nc3-stat-spark" data-trend="up"></div>
-  </div>
-  <div class="nc3-stat">
-    <div class="nc3-stat-icon red">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
-    </div>
-    <div class="nc3-stat-body">
-      <span>Spent</span>
-      <strong id="statSpending">$0.00</strong>
-      <small id="statSpendingChange">↓ 0.0%</small>
-    </div>
-    <div class="nc3-stat-spark" data-trend="down"></div>
-  </div>
-  <div class="nc3-stat">
-    <div class="nc3-stat-icon cyan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-4 4"/></svg>
-    </div>
-    <div class="nc3-stat-body">
-      <span>Transactions</span>
-      <strong id="statTxCount">0</strong>
-      <small id="statTxChange">↑ +100%</small>
-    </div>
-    <div class="nc3-stat-spark" data-trend="up"></div>
-  </div>
-  <div class="nc3-stat">
-    <div class="nc3-stat-icon violet">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    </div>
-    <div class="nc3-stat-body">
-      <span>Days with us</span>
-      <strong id="statDays">1</strong>
-      <small id="statDaysChange">↑ +100%</small>
-    </div>
-    <div class="nc3-stat-spark" data-trend="up"></div>
-  </div>
-</div>
+      <div class="nc3-stat-strip" id="statsGrid">
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+          <div class="nc3-stat-body"><span>Deposited</span><strong id="statIncome">$0.00</strong><small id="statIncomeChange">↑ +12.4%</small></div>
+          <div class="nc3-stat-spark" data-trend="up"></div>
+        </div>
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
+          <div class="nc3-stat-body"><span>Spent</span><strong id="statSpending">$0.00</strong><small id="statSpendingChange">↓ 0.0%</small></div>
+          <div class="nc3-stat-spark" data-trend="down"></div>
+        </div>
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-4 4"/></svg></div>
+          <div class="nc3-stat-body"><span>Transactions</span><strong id="statTxCount2">0</strong><small id="statTxChange">↑ +100%</small></div>
+          <div class="nc3-stat-spark" data-trend="up"></div>
+        </div>
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          <div class="nc3-stat-body"><span>Days with us</span><strong id="statDays">1</strong><small id="statDaysChange">↑ +100%</small></div>
+          <div class="nc3-stat-spark" data-trend="up"></div>
+        </div>
+      </div>
     </section>
   </div>
 </div>
 
 <!-- ============ MY CARDS ============ -->
 <div id="cards" class="pg">
-<div class="sh"><h2>My Payment Cards</h2><p>Manage your NordicCrypto card</p></div>
-
-<div id="cardDetails">
-<div class="pay" style="max-width:420px" id="cardFull">
-  <div class="pay-shine"></div>
-  <div class="ptop">
-    <div class="pb" id="cardBrandFull">NORDIC CRYPTO</div>
-    <div class="pt" id="cardTypeFull">METAL VISA</div>
-  </div>
-  <div class="chip-row">
-    <div class="chip-real">
-      <div class="chip-contact"></div><div class="chip-contact"></div>
-      <div class="chip-contact"></div><div class="chip-contact"></div>
-      <div class="chip-center"></div>
+  <div class="sh"><h2>My Payment Cards</h2><p>Manage your NordicCrypto card</p></div>
+  <div id="cardDetails">
+    <div class="pay" style="max-width:420px" id="cardFull">
+      <div class="pay-shine"></div>
+      <div class="ptop">
+        <div class="pb" id="cardBrandFull">NORDIC CRYPTO</div>
+        <div class="pt" id="cardTypeFull">METAL VISA</div>
+      </div>
+      <div class="chip-row">
+        <div class="chip-real">
+          <div class="chip-contact"></div><div class="chip-contact"></div>
+          <div class="chip-contact"></div><div class="chip-contact"></div>
+          <div class="chip-center"></div>
+        </div>
+        <svg class="nfc-icon" viewBox="0 0 24 24"><path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/></svg>
+      </div>
+      <div class="pn" id="cardNumFull">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
+      <div class="pf">
+        <div><div class="pl">CARD HOLDER</div><div class="pv" id="cardNameFull">—</div></div>
+        <div style="text-align:right"><div class="pl">EXPIRES</div><div class="pv m" id="cardExpFull">—/—</div></div>
+        <div class="card-network" id="cardNetwork2"></div>
+      </div>
     </div>
-    <svg class="nfc-icon" viewBox="0 0 24 24">
-      <path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/>
-    </svg>
-  </div>
-  <div class="pn" id="cardNumFull">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
-  <div class="pf">
-    <div>
-      <div class="pl">CARD HOLDER</div>
-      <div class="pv" id="cardNameFull">—</div>
+    <div class="bar" style="margin-top:20px">
+      <button class="btn b2" id="btnChangeDesign">🎨 Change Design</button>
+      <button class="btn b2" id="btnShowCvv">👁 Show CVV</button>
+      <button class="btn b2" id="btnFreeze">❄ Freeze Card</button>
+      <button class="btn b3" id="btnDeleteCard">🗑 Delete Card</button>
     </div>
-    <div style="text-align:right">
-      <div class="pl">EXPIRES</div>
-      <div class="pv m" id="cardExpFull">—/—</div>
+    <div class="panel" style="margin-top:24px;max-width:520px">
+      <h4 style="margin-bottom:16px">Card Details</h4>
+      <div class="iban-row"><span class="l">Card Number</span><span class="v" id="detNum">—</span></div>
+      <div class="iban-row"><span class="l">CVV</span><span class="v" id="detCvv">●●●</span></div>
+      <div class="iban-row"><span class="l">Expires</span><span class="v" id="detExp">—</span></div>
+      <div class="iban-row"><span class="l">Cardholder</span><span class="v" id="detName">—</span></div>
+      <div class="iban-row"><span class="l">Type</span><span class="v" id="detType">—</span></div>
+      <div class="iban-row"><span class="l">Currency</span><span class="v" id="detCur">—</span></div>
+      <div class="iban-row"><span class="l">Status</span><span class="v" id="detStatus">Active</span></div>
     </div>
-    <div class="card-network" id="cardNetwork2"></div>
+    <div class="panel" style="margin-top:24px;max-width:520px">
+      <h4 style="margin-bottom:12px">Want a physical card?</h4>
+      <p style="color:var(--mut);font-size:.88rem;margin-bottom:16px">Order a premium metal card shipped to your address.</p>
+      <button class="btn b1" id="btnGoOrder">Order Physical Card →</button>
+    </div>
   </div>
-</div>
-
-<div class="bar" style="margin-top:20px">
-<button class="btn b2" id="btnChangeDesign">🎨 Change Design</button>
-<button class="btn b2" id="btnShowCvv">👁 Show CVV</button>
-<button class="btn b2" id="btnFreeze">❄ Freeze Card</button>
-<button class="btn b3" id="btnDeleteCard">🗑 Delete Card</button>
-</div>
-
-<div class="panel" style="margin-top:24px;max-width:520px">
-<h4 style="margin-bottom:16px">Card Details</h4>
-<div class="iban-row"><span class="l">Card Number</span><span class="v" id="detNum">—</span></div>
-<div class="iban-row"><span class="l">CVV</span><span class="v" id="detCvv">●●●</span></div>
-<div class="iban-row"><span class="l">Expires</span><span class="v" id="detExp">—</span></div>
-<div class="iban-row"><span class="l">Cardholder</span><span class="v" id="detName">—</span></div>
-<div class="iban-row"><span class="l">Type</span><span class="v" id="detType">—</span></div>
-<div class="iban-row"><span class="l">Currency</span><span class="v" id="detCur">—</span></div>
-<div class="iban-row"><span class="l">Status</span><span class="v" id="detStatus">Active</span></div>
-</div>
-
-<div class="panel" style="margin-top:24px;max-width:520px">
-<h4 style="margin-bottom:12px">Want a physical card?</h4>
-<p style="color:var(--mut);font-size:.88rem;margin-bottom:16px">Order a premium metal card shipped to your address.</p>
-<button class="btn b1" id="btnGoOrder">Order Physical Card →</button>
-</div>
-</div>
 </div>
 
 <!-- ============ ASSETS ============ -->
 <div id="assets" class="pg">
-<div class="sh"><h2>Crypto Portfolio</h2><p>Your crypto holdings</p></div>
-<div class="ma" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
-<div class="panel"><div style="font-size:.72rem;color:var(--mut);letter-spacing:.08em">BITCOIN (BTC)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aBtc">0.00000000</div><div style="color:var(--mut);font-size:.85rem;margin-top:6px" id="aBtcU">≈ $0.00</div></div>
-<div class="panel"><div style="font-size:.72rem;color:var(--mut);letter-spacing:.08em">ETHEREUM (ETH)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aEth">0.00000000</div><div style="color:var(--mut);font-size:.85rem;margin-top:6px" id="aEthU">≈ $0.00</div></div>
-</div>
+  <div class="sh"><h2>Crypto Portfolio</h2><p>Your crypto holdings</p></div>
+  <div class="ma" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+    <div class="panel"><div style="font-size:.72rem;color:var(--mut);letter-spacing:.08em">BITCOIN (BTC)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aBtc">0.00000000</div><div style="color:var(--mut);font-size:.85rem;margin-top:6px" id="aBtcU">≈ $0.00</div></div>
+    <div class="panel"><div style="font-size:.72rem;color:var(--mut);letter-spacing:.08em">ETHEREUM (ETH)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aEth">0.00000000</div><div style="color:var(--mut);font-size:.85rem;margin-top:6px" id="aEthU">≈ $0.00</div></div>
+  </div>
 </div>
 
 <!-- ============ TRANSACTIONS ============ -->
 <div id="tx" class="pg">
-<div class="sh"><h2>Transaction History</h2><p>All activity on your account</p></div>
-<div class="tbl"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead><tbody id="txB"></tbody></table></div>
+  <div class="sh"><h2>Transaction History</h2><p>All activity on your account</p></div>
+  <div class="tbl"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead><tbody id="txB"></tbody></table></div>
 </div>
 
 <!-- ============ ORDER NEW CARD ============ -->
 <div id="order" class="pg">
-<div id="orderForm">
-<div class="sh"><h2>Order Physical Metal Card</h2><p>Premium NordicCrypto Metal shipped from Stockholm, Sweden</p></div>
-<div class="panel" style="max-width:640px">
-<h3 style="margin-bottom:18px;font-size:1.05rem">Shipping Details</h3>
-<div class="fr">
-<div class="fg" style="flex:2"><label>Full Name</label><input class="fc" id="oName" placeholder="Satoshi Sat Nakamoto"></div>
-<div class="fg" style="flex:1"><label>Card Type</label><select class="fc" id="oType"><option>Metal (Free)</option><option>Gold (+$100)</option></select></div>
-</div>
-<div class="fg"><label>Country</label><select class="fc" id="oCountry"><option>Sweden</option><option>Norway</option><option>Finland</option><option>Denmark</option><option>Germany</option><option>United Kingdom</option><option>United States</option><option>France</option><option>Spain</option><option>Netherlands</option></select></div>
-<div class="fg"><label>City</label><input class="fc" id="oCity" placeholder="e.g. Stockholm"></div>
-<div class="fg"><label>Street Address</label><input class="fc" id="oStreet" placeholder="e.g. Drottninggatan 1"></div>
-<div class="fr">
-<div class="fg" style="flex:1"><label>Postal Code</label><input class="fc" id="oZip" placeholder="111 51"></div>
-<div class="fg" style="flex:1"><label>Phone</label><input class="fc" id="oPhone" placeholder="+46 ..."></div>
-</div>
-<button class="btn b1" style="width:100%;justify-content:center" id="btnOrder">Place Order</button>
-</div>
-</div>
-
-<div id="orderTrack" class="hidden">
-<div class="track-wrap">
-<div class="track-head">
-<div class="sh" style="margin-bottom:0"><h2>Track Your Card</h2><p>Live tracking from Stockholm to your door</p></div>
-<div class="track-id-box"><div class="l">Tracking ID</div><div class="v" id="trackId">—</div></div>
-</div>
-<div class="panel">
-<div class="progress-steps" id="stepsWrap">
-<div class="step" data-i="0"><div class="step-dot">1</div><div class="step-label">Order Received</div></div>
-<div class="step" data-i="1"><div class="step-dot">2</div><div class="step-label">Card Minted</div></div>
-<div class="step" data-i="2"><div class="step-dot">3</div><div class="step-label">Packed</div></div>
-<div class="step" data-i="3"><div class="step-dot">4</div><div class="step-label">In Transit</div></div>
-<div class="step" data-i="4"><div class="step-dot">5</div><div class="step-label">Out for Delivery</div></div>
-<div class="step" data-i="5"><div class="step-dot">6</div><div class="step-label">Delivered</div></div>
-</div>
-<div class="progress-bar-bg"><div class="progress-bar-fill" id="trackBar"></div></div>
-<div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--mut);margin-bottom:16px">
-<span id="trackStatus">Processing...</span>
-<span id="trackPct">0%</span>
-</div>
-<div class="info-grid">
-<div class="info-box"><div class="l">Current Location</div><div class="v" id="trackLoc">NordicCrypto HQ, Stockholm</div></div>
-<div class="info-box"><div class="l">Destination</div><div class="v" id="trackDest">—</div></div>
-<div class="info-box"><div class="l">Recipient</div><div class="v" id="trackName">—</div></div>
-<div class="info-box"><div class="l">Estimated Delivery</div><div class="v" id="trackEta">—</div></div>
-</div>
-<div class="track-actions" id="trackActions">
-  <button class="btn b2" id="btnContactSupport">
-    <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
-    Contact Support
-  </button>
-  <button class="btn b2" id="btnOrderAnother">
-    <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
-    Order Another Card
-  </button>
-  <button class="btn b3" id="btnCancelOrder">
-    <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    Cancel Order
-  </button>
-</div>
-<div class="log" id="trackLog"></div>
-</div>
-</div>
-</div>
+  <div id="orderForm">
+    <div class="sh"><h2>Order Physical Metal Card</h2><p>Premium NordicCrypto Metal shipped from Stockholm, Sweden</p></div>
+    <div class="panel" style="max-width:640px">
+      <h3 style="margin-bottom:18px;font-size:1.05rem">Shipping Details</h3>
+      <div class="fr">
+        <div class="fg" style="flex:2"><label>Full Name</label><input class="fc" id="oName" placeholder="Satoshi Sat Nakamoto"></div>
+        <div class="fg" style="flex:1"><label>Card Type</label><select class="fc" id="oType"><option>Metal (Free)</option><option>Gold (+$100)</option></select></div>
+      </div>
+      <div class="fg"><label>Country</label><select class="fc" id="oCountry"><option>Sweden</option><option>Norway</option><option>Finland</option><option>Denmark</option><option>Germany</option><option>United Kingdom</option><option>United States</option><option>France</option><option>Spain</option><option>Netherlands</option></select></div>
+      <div class="fg"><label>City</label><input class="fc" id="oCity" placeholder="e.g. Stockholm"></div>
+      <div class="fg"><label>Street Address</label><input class="fc" id="oStreet" placeholder="e.g. Drottninggatan 1"></div>
+      <div class="fr">
+        <div class="fg" style="flex:1"><label>Postal Code</label><input class="fc" id="oZip" placeholder="111 51"></div>
+        <div class="fg" style="flex:1"><label>Phone</label><input class="fc" id="oPhone" placeholder="+46 ..."></div>
+      </div>
+      <button class="btn b1" style="width:100%;justify-content:center" id="btnOrder">Place Order</button>
+    </div>
+  </div>
+  <div id="orderTrack" class="hidden">
+    <div class="track-wrap">
+      <div class="track-head">
+        <div class="sh" style="margin-bottom:0"><h2>Track Your Card</h2><p>Live tracking from Stockholm to your door</p></div>
+        <div class="track-id-box"><div class="l">Tracking ID</div><div class="v" id="trackId">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="progress-steps" id="stepsWrap">
+          <div class="step" data-i="0"><div class="step-dot">1</div><div class="step-label">Order Received</div></div>
+          <div class="step" data-i="1"><div class="step-dot">2</div><div class="step-label">Card Minted</div></div>
+          <div class="step" data-i="2"><div class="step-dot">3</div><div class="step-label">Packed</div></div>
+          <div class="step" data-i="3"><div class="step-dot">4</div><div class="step-label">In Transit</div></div>
+          <div class="step" data-i="4"><div class="step-dot">5</div><div class="step-label">Out for Delivery</div></div>
+          <div class="step" data-i="5"><div class="step-dot">6</div><div class="step-label">Delivered</div></div>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="trackBar"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--mut);margin-bottom:16px">
+          <span id="trackStatus">Processing...</span>
+          <span id="trackPct">0%</span>
+        </div>
+        <div class="info-grid">
+          <div class="info-box"><div class="l">Current Location</div><div class="v" id="trackLoc">NordicCrypto HQ, Stockholm</div></div>
+          <div class="info-box"><div class="l">Destination</div><div class="v" id="trackDest">—</div></div>
+          <div class="info-box"><div class="l">Recipient</div><div class="v" id="trackName">—</div></div>
+          <div class="info-box"><div class="l">Estimated Delivery</div><div class="v" id="trackEta">—</div></div>
+        </div>
+        <div class="track-actions" id="trackActions">
+          <button class="btn b2" id="btnContactSupport"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Contact Support</button>
+          <button class="btn b2" id="btnOrderAnother"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>Order Another Card</button>
+          <button class="btn b3" id="btnCancelOrder"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg>Cancel Order</button>
+        </div>
+        <div class="log" id="trackLog"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 </div>
@@ -1646,12 +1378,7 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="box">
     <h2 id="mTitle">Add Funds</h2>
     <p class="d" id="mDesc">Enter the amount you wish to add.</p>
-
-    <div class="fg">
-      <label>Amount (USD)</label>
-      <input type="number" class="fc" id="mAmount" placeholder="0.00" min="1">
-    </div>
-
+    <div class="fg"><label>Amount (USD)</label><input type="number" class="fc" id="mAmount" placeholder="0.00" min="1"></div>
     <div class="fg">
       <label>Method</label>
       <select class="fc" id="mMethod" onchange="refreshDest()">
@@ -1662,21 +1389,15 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="Credit Card">Credit Card</option>
       </select>
     </div>
-
-    <!-- Add Funds: crypto address (readonly) -->
     <div class="fg" id="mDestWrap" style="display:none">
       <label id="mDestLabel">Recipient details</label>
       <input class="fc" id="mDest" placeholder="">
     </div>
-
-    <!-- Transfer SEPA fields -->
     <div id="mTransferSepa" style="display:none">
       <div class="fg"><label>Recipient name</label><input class="fc" id="mRecipientName" placeholder="Full name"></div>
       <div class="fg"><label>IBAN</label><input class="fc" id="mRecipientIban" placeholder="XX00 0000 0000 0000 0000 00"></div>
       <div class="fg"><label>Purpose</label><input class="fc" id="mRecipientPurpose" placeholder="Payment for..."></div>
     </div>
-
-    <!-- Transfer SWIFT fields -->
     <div id="mTransferSwift" style="display:none">
       <div class="fg"><label>Recipient name</label><input class="fc" id="mSwiftName" placeholder="Full name"></div>
       <div class="fg"><label>IBAN / Account</label><input class="fc" id="mSwiftIban" placeholder="XX00..."></div>
@@ -1685,14 +1406,11 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="fg"><label>Country</label><input class="fc" id="mSwiftCountry" placeholder="Country"></div>
       <div class="fg"><label>Purpose</label><input class="fc" id="mSwiftPurpose" placeholder="Payment for..."></div>
     </div>
-
-    <!-- Transfer Card fields -->
     <div id="mTransferCard" style="display:none">
       <div class="fg"><label>Card holder</label><input class="fc" id="mCardHolder" placeholder="Name on card"></div>
       <div class="fg"><label>Card number</label><input class="fc" id="mCardNum" placeholder="0000 0000 0000 0000" maxlength="19"></div>
       <div class="fg"><label>Expiry</label><input class="fc" id="mCardExp" placeholder="MM/YY" maxlength="5"></div>
     </div>
-
     <div class="mact">
       <button class="btn b1" style="flex:1;justify-content:center" id="mOk">Confirm</button>
       <button class="btn b2" style="flex:1;justify-content:center" id="mCancel">Cancel</button>
@@ -1700,14 +1418,11 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ ONBOARDING (3 steps) ============ -->
+<!-- ============ ONBOARDING ============ -->
 <div class="onboard" id="onboard">
   <div class="onb-step onb-step-1 on" id="onbStep1">
     <div class="onb-box onb-welcome">
-      <div class="onb-logo">
-        <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-        Nordic<span style="color:var(--pri)">Crypto</span>
-      </div>
+      <div class="onb-logo"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <div class="welcome-icon">💎</div>
       <h1>Welcome to your<br>personal crypto banking</h1>
       <p class="welcome-sub">Your secure gateway to digital assets. Set up your account in just 1 minute.</p>
@@ -1719,40 +1434,22 @@ document.addEventListener('DOMContentLoaded', function(){
       <button class="btn b1 onb-next" id="onbNext1" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:24px">Get started →</button>
     </div>
   </div>
-
   <div class="onb-step onb-step-2" id="onbStep2">
     <div class="onb-box">
-      <div class="onb-logo">
-        <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-        Nordic<span style="color:var(--pri)">Crypto</span>
-      </div>
+      <div class="onb-logo"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <h1>Enter your name</h1>
       <p>This will appear on your card. You can change it later.</p>
-      <div class="fg">
-        <label>First name</label>
-        <input class="fc" id="onbFirst" placeholder="Satoshi" maxlength="20" autofocus>
-      </div>
-      <div class="fg">
-        <label>Middle name <span style="color:var(--mut);font-weight:400">(optional)</span></label>
-        <input class="fc" id="onbMiddle" placeholder="N" maxlength="20">
-      </div>
-      <div class="fg">
-        <label>Last name</label>
-        <input class="fc" id="onbLast" placeholder="Nakamoto" maxlength="20">
-      </div>
+      <div class="fg"><label>First name</label><input class="fc" id="onbFirst" placeholder="Satoshi" maxlength="20" autofocus></div>
+      <div class="fg"><label>Middle name <span style="color:var(--mut);font-weight:400">(optional)</span></label><input class="fc" id="onbMiddle" placeholder="N" maxlength="20"></div>
+      <div class="fg"><label>Last name</label><input class="fc" id="onbLast" placeholder="Nakamoto" maxlength="20"></div>
       <div class="fg">
         <label>Country</label>
         <select class="fc" id="onbCountry">
-          <option value="SE">🇸🇪 Sweden (SEK)</option>
-          <option value="NO">🇳🇴 Norway (NOK)</option>
-          <option value="DK">🇩🇰 Denmark (DKK)</option>
-          <option value="FI">🇫🇮 Finland (EUR)</option>
-          <option value="DE">🇩🇪 Germany (EUR)</option>
-          <option value="FR">🇫🇷 France (EUR)</option>
-          <option value="ES">🇪🇸 Spain (EUR)</option>
-          <option value="IT">🇮🇹 Italy (EUR)</option>
-          <option value="NL">🇳🇱 Netherlands (EUR)</option>
-          <option value="GB">🇬🇧 United Kingdom (GBP)</option>
+          <option value="SE">🇸🇪 Sweden (SEK)</option><option value="NO">🇳🇴 Norway (NOK)</option>
+          <option value="DK">🇩🇰 Denmark (DKK)</option><option value="FI">🇫🇮 Finland (EUR)</option>
+          <option value="DE">🇩🇪 Germany (EUR)</option><option value="FR">🇫🇷 France (EUR)</option>
+          <option value="ES">🇪🇸 Spain (EUR)</option><option value="IT">🇮🇹 Italy (EUR)</option>
+          <option value="NL">🇳🇱 Netherlands (EUR)</option><option value="GB">🇬🇧 United Kingdom (GBP)</option>
           <option value="US">🇺🇸 United States (USD)</option>
         </select>
       </div>
@@ -1762,13 +1459,9 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
   </div>
-
   <div class="onb-step onb-step-3" id="onbStep3">
     <div class="onb-box">
-      <div class="onb-logo">
-        <div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-        Nordic<span style="color:var(--pri)">Crypto</span>
-      </div>
+      <div class="onb-logo"><div class="blogo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <h1 id="onbStep3Title">Almost done!</h1>
       <p>Choose your card type and currency to finish.</p>
       <div class="onb-preview">
@@ -1826,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-  <!-- ============ VERIFICATION ============ -->
+<!-- ============ VERIFICATION ============ -->
 <div class="verify-screen" id="verifyScreen">
   <div class="verify-step on" id="verifyStep1">
     <div class="verify-box">
@@ -1854,7 +1547,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <button class="btn b1 verify-next" id="verifyNext1" disabled>Continue →</button>
     </div>
   </div>
-
   <div class="verify-step" id="verifyStep2">
     <div class="verify-box">
       <div class="verify-icon">🤳</div>
@@ -1884,16 +1576,12 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
   </div>
-
   <div class="verify-step" id="verifyStep3">
     <div class="verify-box">
       <div class="verify-icon">🏠</div>
       <h1>Your address</h1>
       <p class="verify-sub">Step 3 of 3 — Where do you live?</p>
-      <div class="fg">
-        <label>Street address</label>
-        <input class="fc" id="vStreet" placeholder="Drottninggatan 1">
-      </div>
+      <div class="fg"><label>Street address</label><input class="fc" id="vStreet" placeholder="Drottninggatan 1"></div>
       <div class="fr">
         <div class="fg" style="flex:1"><label>City</label><input class="fc" id="vCity" placeholder="Stockholm"></div>
         <div class="fg" style="flex:1"><label>Postal code</label><input class="fc" id="vZip" placeholder="111 51"></div>
@@ -1911,7 +1599,6 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
   </div>
-
   <div class="verify-step" id="verifyStep4">
     <div class="verify-box verify-checking">
       <div class="verify-spinner">🔍</div>
@@ -1927,15 +1614,12 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
   </div>
-
   <div class="verify-step" id="verifyStep5">
     <div class="verify-box verify-success">
       <div class="success-circle">✓</div>
       <h1>You're verified!</h1>
       <p class="verify-sub" id="verifySuccessName">Congratulations!</p>
-      <div class="verify-success-note">
-        Your identity has been successfully verified. You now have full access to all NordicCrypto features.
-      </div>
+      <div class="verify-success-note">Your identity has been successfully verified. You now have full access to all NordicCrypto features.</div>
       <button class="btn b1" id="verifyFinish" style="width:100%;justify-content:center;padding:16px;font-size:1rem">Continue to dashboard →</button>
     </div>
   </div>
@@ -1978,7 +1662,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <p class="dep-note">To complete your deposit, please answer 3 quick questions.</p>
       <button class="btn b1" id="depBtnStart" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:16px">Start verification →</button>
     </div>
-
     <div class="dep-step" id="depStep1">
       <div class="dep-progress"><div class="dep-progress-bar" style="width:33%"></div></div>
       <div class="dep-step-label">Step 1 of 3</div>
@@ -1990,7 +1673,6 @@ document.addEventListener('DOMContentLoaded', function(){
         <button class="dep-opt" data-value="other"><span class="dep-opt-icon">📦</span><span class="dep-opt-text">Other</span></button>
       </div>
     </div>
-
     <div class="dep-step" id="depStep2">
       <div class="dep-progress"><div class="dep-progress-bar" style="width:66%"></div></div>
       <div class="dep-step-label">Step 2 of 3</div>
@@ -2002,7 +1684,6 @@ document.addEventListener('DOMContentLoaded', function(){
         <button class="dep-opt" data-value="business"><span class="dep-opt-icon">🏢</span><span class="dep-opt-text">Business income</span></button>
       </div>
     </div>
-
     <div class="dep-step" id="depStep3">
       <div class="dep-progress"><div class="dep-progress-bar" style="width:100%"></div></div>
       <div class="dep-step-label">Step 3 of 3</div>
@@ -2015,7 +1696,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="dep-legal">By confirming, you agree that the funds belong to you and are from a legitimate source.</div>
       <button class="btn b1" id="depBtnConfirm" disabled style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:16px">Confirm & credit →</button>
     </div>
-
     <div class="dep-step" id="depStep4">
       <div class="dep-success-icon">✓</div>
       <h1>Deposit confirmed!</h1>
@@ -2060,9 +1740,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <button class="btn b1" style="flex:1;justify-content:center" id="suSubmit">Create account</button>
         <button class="btn b2" style="flex:1;justify-content:center" id="suCancel">Cancel</button>
       </div>
-      <div class="login-hint" style="margin-top:16px">
-        Already have an account? <a href="#" id="suGoToLogin">Sign in</a>
-      </div>
+      <div class="login-hint" style="margin-top:16px">Already have an account? <a href="#" id="suGoToLogin">Sign in</a></div>
     </div>
     <div class="login-loading" id="signupLoading" style="display:none">
       <div class="login-spinner"></div>
@@ -2071,7 +1749,7 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ PASSWORD CONFIRM MODAL ============ -->
+<!-- ============ PASSWORD CONFIRM ============ -->
 <div class="mask" id="passwordConfirmMask">
   <div class="box" style="width:420px">
     <h2>Confirm with password</h2>
@@ -2091,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ INACTIVITY MODAL ============ -->
+<!-- ============ INACTIVITY ============ -->
 <div class="inactivity-overlay" id="inactivityOverlay">
   <div class="inactivity-box">
     <div class="inactivity-icon">⏱</div>
@@ -2105,39 +1783,29 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ SETTINGS MODAL ============ -->
+<!-- ============ SETTINGS ============ -->
 <div class="mask" id="settingsMask">
   <div class="box" style="width:480px;max-width:calc(100vw - 40px)">
     <h2 style="margin-bottom:4px">Settings</h2>
     <p class="d" style="margin-bottom:24px">Manage your account preferences</p>
-
     <div class="settings-section">
-  <div class="settings-label">Profile</div>
-  <div class="settings-row">
-    <div>
-      <div class="settings-name" id="settingsName">—</div>
-      <div class="settings-email" id="settingsEmail">—</div>
-      <div class="settings-role" id="settingsRole">—</div>
+      <div class="settings-label">Profile</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-name" id="settingsName">—</div>
+          <div class="settings-email" id="settingsEmail">—</div>
+          <div class="settings-role" id="settingsRole">—</div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-
     <div class="settings-section">
       <div class="settings-label">Security</div>
-      <button class="settings-btn-row" id="btnChangePassword">
-        <span>🔐 Change password</span>
-        <span>→</span>
-      </button>
+      <button class="settings-btn-row" id="btnChangePassword"><span>🔐 Change password</span><span>→</span></button>
     </div>
-
     <div class="settings-section">
       <div class="settings-label" style="color:#ff5470">Danger zone</div>
-      <button class="settings-btn-row danger" id="btnDeleteAccount">
-        <span>🗑 Delete account</span>
-        <span>→</span>
-      </button>
+      <button class="settings-btn-row danger" id="btnDeleteAccount"><span>🗑 Delete account</span><span>→</span></button>
     </div>
-
     <div class="mact">
       <button class="btn b2" style="flex:1;justify-content:center" id="btnLogout">🚪 Log out</button>
       <button class="btn b1" style="flex:1;justify-content:center" id="btnSettingsClose">Close</button>
@@ -2145,35 +1813,15 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ CHANGE PASSWORD MODAL ============ -->
+<!-- ============ CHANGE PASSWORD ============ -->
 <div class="mask" id="changePassMask">
   <div class="box">
-    <button class="back-btn" id="cpBack">
-      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </button>
+    <button class="back-btn" id="cpBack"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <h2 style="margin-top:8px">Change password</h2>
     <p class="d">Enter your current password and choose a new one.</p>
-    <div class="fg">
-      <label>Current password</label>
-      <div class="pass-wrap">
-        <input type="password" class="fc" id="cpOld" placeholder="Current password">
-        <button type="button" class="pass-toggle" data-target="cpOld">👁</button>
-      </div>
-    </div>
-    <div class="fg">
-      <label>New password</label>
-      <div class="pass-wrap">
-        <input type="password" class="fc" id="cpNew" placeholder="New password">
-        <button type="button" class="pass-toggle" data-target="cpNew">👁</button>
-      </div>
-    </div>
-    <div class="fg">
-      <label>Confirm new password</label>
-      <div class="pass-wrap">
-        <input type="password" class="fc" id="cpConfirm" placeholder="Repeat new password">
-        <button type="button" class="pass-toggle" data-target="cpConfirm">👁</button>
-      </div>
-    </div>
+    <div class="fg"><label>Current password</label><div class="pass-wrap"><input type="password" class="fc" id="cpOld" placeholder="Current password"><button type="button" class="pass-toggle" data-target="cpOld">👁</button></div></div>
+    <div class="fg"><label>New password</label><div class="pass-wrap"><input type="password" class="fc" id="cpNew" placeholder="New password"><button type="button" class="pass-toggle" data-target="cpNew">👁</button></div></div>
+    <div class="fg"><label>Confirm new password</label><div class="pass-wrap"><input type="password" class="fc" id="cpConfirm" placeholder="Repeat new password"><button type="button" class="pass-toggle" data-target="cpConfirm">👁</button></div></div>
     <div class="login-error" id="cpError" style="display:none"></div>
     <div class="login-error" id="cpSuccess" style="display:none;background:rgba(0,224,138,.1);border-color:rgba(0,224,138,.3);color:#00e08a"></div>
     <div class="mact">
@@ -2195,151 +1843,86 @@ document.addEventListener('DOMContentLoaded', function(){
       <button class="btn b2" id="adminLogoutBtn">🚪 Log out</button>
     </div>
   </div>
-
-          <div class="admin-body">
-          <!-- SIDEBAR -->
-          <aside class="admin-sidebar">
-            <div class="admin-nav-item active" onclick="showAdminTab('stats')" data-tab="stats">
-              <span>📊</span> Dashboard
-            </div>
-            <div class="admin-nav-item" onclick="showAdminTab('clients')" data-tab="clients">
-              <span>👥</span> Clients
-              <span class="admin-nav-badge" id="navClientsCount" style="background:rgba(255,255,255,0.1);color:#8b95a5;">0</span>
-            </div>
-            <div class="admin-nav-item" onclick="showAdminTab('chats')" data-tab="chats">
-              <span>💬</span> Live chats
-              <span class="admin-nav-badge" id="navChatsCount" style="display:none;">0</span>
-            </div>
-            <div class="admin-nav-item" onclick="showAdminTab('withdrawals')" data-tab="withdrawals">
-              <span>💸</span> Withdrawals
-              <span class="admin-nav-badge warn" id="navWdsCount" style="display:none;">0</span>
-            </div>
-            <div class="admin-nav-item" onclick="showAdminTab('deleted')" data-tab="deleted">
-              <span>🗑️</span> Deleted
-            </div>
-            <div class="admin-nav-item" onclick="showAdminTab('system')" data-tab="system">
-              <span>⚙️</span> System
-            </div>
-          </aside>
-
-          <!-- CONTENT -->
-          <main class="admin-content">
-
-            <!-- TAB: Dashboard -->
-            <div class="admin-section active" data-section="stats">
-              <div class="admin-stats">
-                <div class="admin-stat-card">
-                  <div class="admin-stat-icon">👥</div>
-                  <div class="admin-stat-value" id="admnStatClients">0</div>
-                  <div class="admin-stat-label">Total Clients</div>
-                </div>
-                <div class="admin-stat-card">
-                  <div class="admin-stat-icon">💰</div>
-                  <div class="admin-stat-value" id="admnStatBalance">$0.00</div>
-                  <div class="admin-stat-label">Total Balance</div>
-                </div>
-                <div class="admin-stat-card">
-                  <div class="admin-stat-icon">📊</div>
-                  <div class="admin-stat-value" id="admnStatTx">0</div>
-                  <div class="admin-stat-label">Transactions</div>
-                </div>
-                <div class="admin-stat-card">
-                  <div class="admin-stat-icon">🪙</div>
-                  <div class="admin-stat-value" id="admnStatCrypto">0</div>
-                  <div class="admin-stat-label">Crypto Holdings</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- TAB: Clients -->
-            <div class="admin-section" data-section="clients">
-              <div style="display:flex;gap:12px;margin-bottom:16px;">
-                <input type="text" id="clientSearch" placeholder="🔍 Search by email or name..." oninput="filterClients(this.value)" style="flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:14px;outline:none;">
-                <button class="btn b2" id="adminRefreshBtn" onclick="loadAdminUsers()">🔄 Refresh</button>
-              </div>
-              <div class="admin-clients-list" id="adminClientsList">
-                <div class="admin-empty">
-                  <div style="font-size:2.5rem;opacity:.4;margin-bottom:12px;">👥</div>
-                  <div>Loading clients...</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- TAB: Chats -->
-            <div class="admin-section" data-section="chats">
-              <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">
-                <button class="btn b2" id="adminRefreshChatsBtn" onclick="loadAdminChats()">🔄 Refresh</button>
-                <button class="btn b2" onclick="clearAllChats()" style="background:rgba(255,80,80,0.15);color:#ff6b6b;">🗑️ Clear all</button>
-              </div>
-              <div id="adminChatsList" style="min-height:80px;">
-                <div class="admin-empty">Loading chats...</div>
-              </div>
-            </div>
-
-            <!-- TAB: Withdrawals -->
-            <div class="admin-section" data-section="withdrawals">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-                <button class="btn b2" id="adminRefreshWithdrawals" onclick="loadAdminWithdrawals()">🔄 Refresh</button>
-              </div>
-              <div class="admin-section-sub" id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
-              <div class="admin-withdrawals-list" id="adminWithdrawalsList">
-                <div class="admin-empty">Loading withdrawals...</div>
-              </div>
-            </div>
-
-            <!-- TAB: Deleted -->
-            <div class="admin-section" data-section="deleted">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-                <button class="btn b2" id="adminRefreshDeleted" onclick="loadAdminDeleted()">🔄 Refresh</button>
-              </div>
-              <div class="admin-clients-list" id="adminDeletedList">
-                <div class="admin-empty">Loading deleted...</div>
-              </div>
-            </div>
-
-            <!-- TAB: System -->
-            <div class="admin-section" data-section="system">
-              <div class="admin-system">
-                <div class="admin-system-row">
-                  <div>
-                    <div class="admin-system-label">Current version</div>
-                    <div class="admin-system-value" id="adminVersion">1.0.0</div>
-                  </div>
-                  <button class="btn b1" id="adminPushUpdate">🚀 Push new version</button>
-                </div>
-                <div class="admin-system-row">
-                  <div>
-                    <div class="admin-system-label">Send notification to all</div>
-                    <div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem;">Send a message to <b id="notifTargetName">all clients</b>'s notification bell</div>
-                  </div>
-                  <button class="btn b2" id="adminSendNotif">📨 Send message</button>
-                </div>
-              </div>
-            </div>
-
-          </main>
+  <div class="admin-body">
+    <aside class="admin-sidebar">
+      <div class="admin-nav-item active" onclick="showAdminTab('stats')" data-tab="stats"><span>📊</span> Dashboard</div>
+      <div class="admin-nav-item" onclick="showAdminTab('clients')" data-tab="clients"><span>👥</span> Clients <span class="admin-nav-badge" id="navClientsCount" style="background:rgba(255,255,255,0.1);color:#8b95a5;">0</span></div>
+      <div class="admin-nav-item" onclick="showAdminTab('chats')" data-tab="chats"><span>💬</span> Live chats <span class="admin-nav-badge" id="navChatsCount" style="display:none;">0</span></div>
+      <div class="admin-nav-item" onclick="showAdminTab('withdrawals')" data-tab="withdrawals"><span>💸</span> Withdrawals <span class="admin-nav-badge warn" id="navWdsCount" style="display:none;">0</span></div>
+      <div class="admin-nav-item" onclick="showAdminTab('deleted')" data-tab="deleted"><span>🗑️</span> Deleted</div>
+      <div class="admin-nav-item" onclick="showAdminTab('system')" data-tab="system"><span>⚙️</span> System</div>
+    </aside>
+    <main class="admin-content">
+      <div class="admin-section active" data-section="stats">
+        <div class="admin-stats">
+          <div class="admin-stat-card"><div class="admin-stat-icon">👥</div><div class="admin-stat-value" id="admnStatClients">0</div><div class="admin-stat-label">Total Clients</div></div>
+          <div class="admin-stat-card"><div class="admin-stat-icon">💰</div><div class="admin-stat-value" id="admnStatBalance">$0.00</div><div class="admin-stat-label">Total Balance</div></div>
+          <div class="admin-stat-card"><div class="admin-stat-icon">📊</div><div class="admin-stat-value" id="admnStatTx">0</div><div class="admin-stat-label">Transactions</div></div>
+          <div class="admin-stat-card"><div class="admin-stat-icon">🪙</div><div class="admin-stat-value" id="admnStatCrypto">0</div><div class="admin-stat-label">Crypto Holdings</div></div>
         </div>
+      </div>
+      <div class="admin-section" data-section="clients">
+        <div style="display:flex;gap:12px;margin-bottom:16px;">
+          <input type="text" id="clientSearch" placeholder="🔍 Search by email or name..." oninput="filterClients(this.value)" style="flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:14px;outline:none;">
+          <button class="btn b2" id="adminRefreshBtn" onclick="loadAdminUsers()">🔄 Refresh</button>
+        </div>
+        <div class="admin-clients-list" id="adminClientsList">
+          <div class="admin-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:12px;">👥</div><div>Loading clients...</div></div>
+        </div>
+      </div>
+      <div class="admin-section" data-section="chats">
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">
+          <button class="btn b2" id="adminRefreshChatsBtn" onclick="loadAdminChats()">🔄 Refresh</button>
+          <button class="btn b2" onclick="clearAllChats()" style="background:rgba(255,80,80,0.15);color:#ff6b6b;">🗑️ Clear all</button>
+        </div>
+        <div id="adminChatsList" style="min-height:80px;"><div class="admin-empty">Loading chats...</div></div>
+      </div>
+      <div class="admin-section" data-section="withdrawals">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <button class="btn b2" id="adminRefreshWithdrawals" onclick="loadAdminWithdrawals()">🔄 Refresh</button>
+        </div>
+        <div class="admin-section-sub" id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
+        <div class="admin-withdrawals-list" id="adminWithdrawalsList"><div class="admin-empty">Loading withdrawals...</div></div>
+      </div>
+      <div class="admin-section" data-section="deleted">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <button class="btn b2" id="adminRefreshDeleted" onclick="loadDeletedUsers()">🔄 Refresh</button>
+        </div>
+        <div class="admin-clients-list" id="adminDeletedList"><div class="admin-empty">Loading deleted...</div></div>
+      </div>
+      <div class="admin-section" data-section="system">
+        <div class="admin-system">
+          <div class="admin-system-row">
+            <div><div class="admin-system-label">Current version</div><div class="admin-system-value" id="adminVersion">1.0.0</div></div>
+            <button class="btn b1" id="adminPushUpdate">🚀 Push new version</button>
+          </div>
+          <div class="admin-system-row">
+            <div><div class="admin-system-label">Send notification to all</div><div class="admin-system-value" style="color:var(--mut);font-weight:400;font-size:.82rem;">Send a message to all clients' notification bell</div></div>
+            <button class="btn b2" id="adminSendNotif">📨 Send message</button>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
-<!-- ============ ADMIN: MODAL — Balance ============ -->
+</div>
+
+<!-- ============ ADMIN MODAL Balance ============ -->
 <div class="mask" id="adminBalanceMask">
   <div class="box">
     <h2>Adjust Balance</h2>
     <p class="d" id="adminBalanceDesc">—</p>
+    <div class="fg"><label>Amount (positive to add, negative to subtract)</label><input type="number" class="fc" id="adminBalanceAmount" placeholder="e.g. 100 or -50"></div>
     <div class="fg">
-      <label>Amount (positive to add, negative to subtract)</label>
-      <input type="number" class="fc" id="adminBalanceAmount" placeholder="e.g. 100 or -50">
-    </div>
-    <div class="fg">
-              <div class="fg">
-          <label>Type</label>
-          <select class="fc" id="adminBalanceType">
-            <option value="bonus">🎁 Bonus</option>
-            <option value="bank">🏦 Bank deposit</option>
-            <option value="crypto">₿ Crypto deposit</option>
-            <option value="card">💳 Card deposit</option>
-            <option value="correction">🔧 Correction</option>
-          </select>
-        </div>
+      <div class="fg">
+        <label>Type</label>
+        <select class="fc" id="adminBalanceType">
+          <option value="bonus">🎁 Bonus</option>
+          <option value="bank">🏦 Bank deposit</option>
+          <option value="crypto">₿ Crypto deposit</option>
+          <option value="card">💳 Card deposit</option>
+          <option value="correction">🔧 Correction</option>
+        </select>
+      </div>
       <label>Note (optional)</label>
       <input type="text" class="fc" id="adminBalanceNote" placeholder="e.g. Bonus, Correction">
     </div>
@@ -2350,19 +1933,13 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- ============ ADMIN: MODAL — Message ============ -->
+<!-- ============ ADMIN MODAL Message ============ -->
 <div class="mask" id="adminMsgMask">
   <div class="box">
     <h2>Send Notification</h2>
-    <p class="d">This message appears in Eva's notification bell</p>
-    <div class="fg">
-      <label>Message</label>
-      <textarea class="fc" id="adminMsgText" rows="3" placeholder="e.g. Your card has been approved!" style="resize:vertical;font-family:inherit"></textarea>
-    </div>
-    <div class="fg">
-      <label>Icon (emoji)</label>
-      <input type="text" class="fc" id="adminMsgIcon" placeholder="📩" value="📩" maxlength="4">
-    </div>
+    <p class="d">This message appears in the client's notification bell</p>
+    <div class="fg"><label>Message</label><textarea class="fc" id="adminMsgText" rows="3" placeholder="e.g. Your card has been approved!" style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="fg"><label>Icon (emoji)</label><input type="text" class="fc" id="adminMsgIcon" placeholder="📩" value="📩" maxlength="4"></div>
     <div class="mact">
       <button class="btn b1" style="flex:1;justify-content:center" id="adminMsgSave">Send</button>
       <button class="btn b2" style="flex:1;justify-content:center" id="adminMsgCancel">Cancel</button>
@@ -2370,10 +1947,10 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-  <!-- ============ TOAST ============ -->
+<!-- ============ TOAST ============ -->
 <div class="toast" id="toast"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span id="tMsg">OK</span></div>
 
-<!-- ============ CARD CREATION ANIMATION STAGE ============ -->
+<!-- ============ CARD ANIMATION STAGE ============ -->
 <div class="onb-anim-stage" id="animStage">
   <div class="ready-text" id="readyText">✓ Your card is ready!</div>
   <div class="anim-card" id="animCard">
@@ -2384,19 +1961,13 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="chip"></div>
     <div class="card-num-line" id="animNum"></div>
     <div class="card-footer">
-      <div>
-        <div class="lbl">CARD HOLDER</div>
-        <div class="val" id="animName">—</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="lbl">EXPIRES</div>
-        <div class="val" id="animExp">—/—</div>
-      </div>
+      <div><div class="lbl">CARD HOLDER</div><div class="val" id="animName">—</div></div>
+      <div style="text-align:right;"><div class="lbl">EXPIRES</div><div class="val" id="animExp">—/—</div></div>
     </div>
   </div>
 </div>
 
-<!-- ============ CONFETTI LAYER ============ -->
+<!-- ============ CONFETTI ============ -->
 <div class="confetti-wrap" id="confettiWrap"></div>
 
 <!-- ============ APP.JS ============ -->
@@ -2410,66 +1981,47 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="notif-title">Notifications</div>
       <div class="notif-sub" id="notifSub">0 unread</div>
     </div>
-    <button class="notif-close" id="notifClose">
-      <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
+    <button class="notif-close" id="notifClose"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="notif-list" id="notifList">
-    <div class="notif-empty">
-      <div style="font-size:2.5rem;opacity:.4;margin-bottom:8px">🔔</div>
-      <div>No notifications yet</div>
-    </div>
+    <div class="notif-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:8px">🔔</div><div>No notifications yet</div></div>
   </div>
 </div>
 
-<!-- Withdraw Modal -->
+<!-- ============ WITHDRAW MODAL ============ -->
 <div id="withdrawModal" class="wd-modal" style="display:none;">
   <div class="wd-modal-bg" onclick="closeWithdraw()"></div>
   <div class="wd-modal-card">
     <h3>Withdraw funds</h3>
     <p class="wd-sub">Available: <span id="wdAvailable">—</span></p>
-
     <label class="wd-label">Amount</label>
     <input type="number" id="wdAmount" class="wd-input" placeholder="0.00" min="1" step="0.01">
-
     <label class="wd-label">Method</label>
     <select id="wdMethod" class="wd-input" onchange="wdSwitchMethod()">
       <option value="iban">Bank transfer (IBAN)</option>
       <option value="card">Card payout</option>
       <option value="crypto">Crypto</option>
     </select>
-
-    <!-- IBAN -->
     <div id="wdFieldsIban" class="wd-fields">
       <label class="wd-label">Recipient name</label>
       <input type="text" id="wdIbanName" class="wd-input" placeholder="Full name as on bank account">
-
       <label class="wd-label">IBAN</label>
       <input type="text" id="wdIbanNumber" class="wd-input" placeholder="XX00 0000 0000 0000 0000 00">
-
       <label class="wd-label">SWIFT / BIC</label>
       <input type="text" id="wdIbanSwift" class="wd-input" placeholder="XXXXXXXX">
-
       <label class="wd-label">Bank name</label>
       <input type="text" id="wdIbanBank" class="wd-input" placeholder="Bank name">
-
       <label class="wd-label">Country</label>
       <input type="text" id="wdIbanCountry" class="wd-input" placeholder="Country">
     </div>
-
-    <!-- Card -->
     <div id="wdFieldsCard" class="wd-fields" style="display:none;">
       <label class="wd-label">Card holder name</label>
       <input type="text" id="wdCardName" class="wd-input" placeholder="Name on card">
-
       <label class="wd-label">Card number</label>
       <input type="text" id="wdCardNumber" class="wd-input" placeholder="0000 0000 0000 0000" maxlength="19">
-
       <label class="wd-label">Expiry (MM/YY)</label>
       <input type="text" id="wdCardExpiry" class="wd-input" placeholder="MM/YY" maxlength="5">
     </div>
-
-    <!-- Crypto -->
     <div id="wdFieldsCrypto" class="wd-fields" style="display:none;">
       <label class="wd-label">Destination</label>
       <select id="wdCryptoDest" class="wd-input" onchange="wdSwitchCryptoDest()">
@@ -2479,7 +2031,6 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="coinbase">Coinbase</option>
         <option value="kraken">Kraken</option>
       </select>
-
       <label class="wd-label">Network</label>
       <select id="wdCryptoNetwork" class="wd-input">
         <option value="ERC20">Ethereum (ERC-20)</option>
@@ -2489,7 +2040,6 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="SOL">Solana</option>
         <option value="TON">TON</option>
       </select>
-
       <label class="wd-label">Coin</label>
       <select id="wdCryptoCoin" class="wd-input">
         <option value="USDT">USDT</option>
@@ -2497,30 +2047,25 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="BTC">BTC</option>
         <option value="ETH">ETH</option>
       </select>
-
       <label class="wd-label">Wallet address</label>
       <input type="text" id="wdCryptoAddress" class="wd-input" placeholder="0x0000...0000">
-
       <div id="wdMemoWrap" style="display:none;">
         <label class="wd-label">Memo / Tag</label>
         <input type="text" id="wdCryptoMemo" class="wd-input" placeholder="Required for some networks">
       </div>
     </div>
-
     <p class="wd-error" id="wdError" style="display:none;"></p>
-
     <div class="wd-actions">
       <button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Cancel</button>
       <button class="wd-btn wd-btn-submit" onclick="submitWithdraw()">Submit request</button>
     </div>
   </div>
 </div>
-<!-- Transfer Status Modal -->
+
+<!-- ============ TX STATUS MODAL ============ -->
 <div class="tx-status" id="txStatus">
   <div class="tx-status-card">
-    <div class="tx-status-icon processing" id="txStatusIcon">
-      <div class="tx-spinner"></div>
-    </div>
+    <div class="tx-status-icon processing" id="txStatusIcon"><div class="tx-spinner"></div></div>
     <h3 id="txStatusTitle">Processing transfer...</h3>
     <p id="txStatusDesc">Please wait while we process your transaction.</p>
     <div class="tx-status-steps">
@@ -2530,16 +2075,14 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
 </div>
-<!-- LIVE CHAT — кнопка и панель -->
+
+<!-- ============ LIVE CHAT ============ -->
 <button id="chatToggle" aria-label="Open support chat">
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   <span id="chatBadge" style="display:none;"></span>
 </button>
 
 <div id="chatPanel">
-  <!-- ФОРМА ТИКЕТА -->
   <div id="chatTicketForm" style="display:flex;flex-direction:column;height:100%;">
     <div class="chat-header">
       <div class="chat-agent">
@@ -2550,50 +2093,38 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="chat-agent-info">
           <div class="chat-agent-name">Elena Bergström</div>
           <div class="chat-agent-role">Senior Client Advisor</div>
-          <div class="chat-agent-status">
-            <span class="chat-dot"></span> Online • replies in ~2 min
-          </div>
+          <div class="chat-agent-status"><span class="chat-dot"></span> Online • replies in ~2 min</div>
         </div>
       </div>
       <button class="chat-close" onclick="toggleChat()">×</button>
     </div>
-
     <div style="flex:1;overflow-y:auto;padding:20px 18px;">
       <div style="font-size:15px;font-weight:600;color:#e7edf5;margin-bottom:6px;">Start a support ticket</div>
       <div style="font-size:12px;color:#8b95a5;margin-bottom:18px;">Tell us what's happening — we usually reply within 2 minutes.</div>
-
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Your email</label>
       <input id="tkEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;">
-
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Topic</label>
       <select id="tkTopic" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;">
-  <option value="withdrawal">💸 Withdrawal issue</option>
-  <option value="deposit">💰 Deposit issue</option>
-  <option value="kyc">🆔 KYC / Verification</option>
-  <option value="card">💳 Card issue</option>
-  <option value="account">🔐 Account & security</option>
-  <option value="other">❓ Other</option>
-</select>
-
+        <option value="withdrawal">💸 Withdrawal issue</option>
+        <option value="deposit">💰 Deposit issue</option>
+        <option value="kyc">🆔 KYC / Verification</option>
+        <option value="card">💳 Card issue</option>
+        <option value="account">🔐 Account & security</option>
+        <option value="other">❓ Other</option>
+      </select>
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Priority</label>
       <select id="tkPriority" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;">
-  <option value="normal">⭐ Normal</option>
-  <option value="high">🔥 High — urgent</option>
-  <option value="low">⚪ Low</option>
-</select>
-
+        <option value="normal">⭐ Normal</option>
+        <option value="high">🔥 High — urgent</option>
+        <option value="low">⚪ Low</option>
+      </select>
       <label style="display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Describe your issue</label>
       <textarea id="tkDesc" placeholder="Tell us more about your problem..." rows="4" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;resize:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"></textarea>
-
-      <button onclick="startTicket()" style="width:100%;padding:13px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);border:none;color:#fff;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;">
-        Start chat →
-      </button>
+      <button onclick="startTicket()" style="width:100%;padding:13px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);border:none;color:#fff;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;">Start chat →</button>
     </div>
-
     <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 
-  <!-- ЧАТ ПОСЛЕ СОЗДАНИЯ ТИКЕТА -->
   <div id="chatConversation" style="display:none;flex-direction:column;height:100%;">
     <div class="chat-header">
       <div class="chat-agent">
@@ -2604,21 +2135,16 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="chat-agent-info">
           <div class="chat-agent-name">Elena Bergström</div>
           <div class="chat-agent-role" id="chatTicketTopic">Support</div>
-          <div class="chat-agent-status">
-            <span class="chat-dot"></span> Online
-          </div>
+          <div class="chat-agent-status"><span class="chat-dot"></span> Online</div>
         </div>
       </div>
       <button class="chat-close" onclick="toggleChat()">×</button>
     </div>
-
     <div id="chatMessages" class="chat-messages"></div>
-
     <div class="chat-input-wrap">
       <input id="chatInput" class="chat-input" placeholder="Type your message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChatMsg();}">
       <button class="chat-send" onclick="sendChatMsg()">→</button>
     </div>
-
     <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 </div>
