@@ -5977,3 +5977,350 @@ async function scanAllDeposits() {
   console.log('[hover-spin-2] ✅ JS применён — Refresh + ripple');
 
 })();
+/* ============================================================
+   PREMIUM UI — ФИНАЛЬНАЯ ВЕРСИЯ
+   Кручение иконок при hover + красивые эффекты БЕЗ ломки layout
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* Убираем старые конфликтующие стили */
+  ['icon-spin-style','premium-ui-style','premium-ui-style-v4',
+   'premium-ui-style-v5','premium-ui-style-v6','premium-ui-style-v7'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.remove();
+  });
+
+  /* ============================================================
+     1. CSS
+     ============================================================ */
+  var style = document.createElement('style');
+  style.id = 'premium-ui-final';
+  style.textContent = `
+
+    /* ==========================================================
+       ★ ГЛАВНОЕ: КРУЧЕНИЕ ИКОНКИ ПРИ HOVER ★
+       ========================================================== */
+    .btn svg,
+    .btn i,
+    .btn img,
+    .btn .icon,
+    .btn .btn-icon,
+    .mi svg,
+    .mi i,
+    .mi .mi-icon {
+      transition: transform .3s ease;
+      transform-origin: center center;
+      display: inline-block;
+      will-change: transform;
+    }
+
+    @keyframes iconSpinHover {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .btn:hover svg,
+    .btn:hover i,
+    .btn:hover img,
+    .btn:hover .icon,
+    .btn:hover .btn-icon,
+    .mi:hover svg,
+    .mi:hover i,
+    .mi:hover .mi-icon {
+      animation: iconSpinHover .8s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* data-no-spin отключает */
+    .btn[data-no-spin="true"]:hover svg,
+    .btn[data-no-spin="true"]:hover i,
+    .btn[data-no-spin="true"]:hover .icon {
+      animation: none;
+    }
+
+    /* ==========================================================
+       СВЕЧЕНИЕ КНОПКИ — БЕЗ движения, БЕЗ scale
+       ========================================================== */
+    .btn {
+      position: relative;
+      transition: box-shadow .3s ease, background .25s ease, color .2s ease;
+    }
+    .btn:hover {
+      box-shadow:
+        0 10px 24px rgba(0,212,255,.22),
+        inset 0 0 0 1px rgba(0,212,255,.20);
+    }
+    /* Активация — едва заметное сжатие, чтобы не ломать layout */
+    .btn:active {
+      transform: scale(.985);
+      transition: transform .08s ease;
+    }
+
+    /* ==========================================================
+       ПАНЕЛИ — только свечение
+       ========================================================== */
+    .panel {
+      transition: box-shadow .35s ease, border-color .3s ease;
+    }
+    .panel:hover {
+      box-shadow:
+        0 14px 32px rgba(0,212,255,.10),
+        0 4px 14px rgba(0,0,0,.32);
+      border-color: rgba(0,212,255,.22);
+    }
+
+    /* ==========================================================
+       STAT-КАРТОЧКИ — лёгкий подъём
+       ========================================================== */
+    .stat-card,
+    .crypto-card {
+      transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+    }
+    .stat-card:hover,
+    .crypto-card:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 26px rgba(0,212,255,.10),
+        0 4px 12px rgba(0,0,0,.32);
+      border-color: rgba(0,212,255,.22);
+    }
+
+    /* ==========================================================
+       КАРТА — ТОЛЬКО свечение (никаких transform!)
+       ========================================================== */
+    .pay {
+      transition: box-shadow .4s ease;
+    }
+    .pay:hover {
+      box-shadow:
+        0 22px 46px rgba(0,212,255,.22),
+        0 8px 22px rgba(0,0,0,.42);
+    }
+
+    /* ==========================================================
+       МЕНЮ СЛЕВА — мягкий сдвиг
+       ========================================================== */
+    .mi {
+      transition: transform .25s ease, background .25s ease;
+    }
+    .mi:hover {
+      transform: translateX(3px);
+      background: rgba(0,212,255,.06);
+    }
+
+    /* ==========================================================
+       ТРАНЗАКЦИИ
+       ========================================================== */
+    .recent-tx-item {
+      transition: transform .25s ease, background .25s ease, border-color .25s ease;
+    }
+    .recent-tx-item:hover {
+      transform: translateX(4px);
+      background: rgba(0,212,255,.05);
+      border-color: rgba(0,212,255,.20);
+    }
+
+    /* ==========================================================
+       УВЕДОМЛЕНИЯ
+       ========================================================== */
+    .notif-item {
+      transition: transform .25s ease, background .25s ease;
+    }
+    .notif-item:hover {
+      transform: translateX(3px);
+      background: rgba(0,212,255,.05);
+    }
+
+    /* ==========================================================
+       АДМИН-КАРТОЧКИ
+       ========================================================== */
+    .admin-client-card {
+      transition: transform .3s ease, box-shadow .3s ease;
+    }
+    .admin-client-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(139,92,246,.15);
+    }
+
+    /* ==========================================================
+       КРИПТО-ИКОНКИ
+       ========================================================== */
+    .crypto-card .icon,
+    .crypto-card .crypto-icon {
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+    }
+    .crypto-card:hover .icon,
+    .crypto-card:hover .crypto-icon {
+      transform: scale(1.15) rotate(-5deg);
+    }
+
+    /* ==========================================================
+       БАЛАНС — пульс
+       ========================================================== */
+    @keyframes balanceGlow {
+      0%   { text-shadow: 0 0 0 rgba(0,212,255,0); }
+      50%  { text-shadow: 0 0 26px rgba(0,212,255,.75); }
+      100% { text-shadow: 0 0 0 rgba(0,212,255,0); }
+    }
+    .balance-updating {
+      animation: balanceGlow 1s ease;
+      display: inline-block;
+    }
+
+    /* ==========================================================
+       BUSY-ПУЛЬС (только opacity — размер не меняется!)
+       ========================================================== */
+    @keyframes softPulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: .7; }
+    }
+    .btn-busy {
+      animation: softPulse 1.1s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    /* ==========================================================
+       RIPPLE
+       ========================================================== */
+    .btn { position: relative; overflow: hidden; }
+    .btn .ripple-fx {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,.35);
+      transform: scale(0);
+      animation: rippleAnim .6s cubic-bezier(.4,0,.2,1) forwards;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes rippleAnim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* ==========================================================
+       ЗАГОЛОВОК — shimmer
+       ========================================================== */
+    @keyframes shimmer {
+      to { background-position: -200% center; }
+    }
+    #ttl {
+      background: linear-gradient(90deg,
+        #e7edf5 0%, #e7edf5 30%,
+        #00d4ff 50%,
+        #e7edf5 70%, #e7edf5 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 6s linear infinite;
+    }
+
+    /* ==========================================================
+       СКРОЛЛБАР
+       ========================================================== */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0,212,255,.18);
+      border-radius: 4px;
+      transition: background .3s;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,212,255,.42);
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* ============================================================
+     2. JS — Ripple для кнопок без иконок + Refresh-логика
+     ============================================================ */
+  function findIcon(btn){
+    if (!btn) return null;
+    return btn.querySelector('svg, i.icon, i.btn-icon, img.icon, .btn-icon, .icon');
+  }
+
+  function playClickSound(){
+    if (typeof playTone !== 'function') return;
+    try { playTone(880, 0.05, 'sine', 0.08); } catch(e){}
+  }
+
+  function addRipple(btn, e){
+    var rect = btn.getBoundingClientRect();
+    var size = Math.max(rect.width, rect.height);
+    var x = e ? (e.clientX - rect.left - size / 2) : (rect.width / 2 - size / 2);
+    var y = e ? (e.clientY - rect.top - size / 2) : (rect.height / 2 - size / 2);
+
+    var ripple = document.createElement('span');
+    ripple.className = 'ripple-fx';
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+
+    btn.appendChild(ripple);
+    setTimeout(function(){ if (ripple.parentNode) ripple.remove(); }, 700);
+  }
+
+  var ACTION_BUTTONS = [
+    'btnRefreshBalance', 'btnWithdrawV2', 'btnAdd', 'btnTransferV2',
+    'btnExchangeV2', 'btnScanDeposits', 'btnCopyIban', 'btnCopyCardV2',
+    'btnReceiveHero', 'btnReceiveMoney', 'btnOrder',
+    'btnShowCvv', 'btnFreeze', 'btnDeleteCard', 'btnGoOrder',
+    'btnFreezeCard', 'btnLimitsCard', 'btnSettingsCard'
+  ];
+
+  function attachButtons(){
+    ACTION_BUTTONS.forEach(function(id){
+      var btn = document.getElementById(id);
+      if (!btn || btn._premiumFinal) return;
+      btn._premiumFinal = true;
+
+      btn.addEventListener('click', function(e){
+        playClickSound();
+        if (!findIcon(btn)) addRipple(btn, e);
+
+        // Особый эффект для Refresh
+        if (id === 'btnRefreshBalance'){
+          btn.classList.add('btn-busy');
+          setTimeout(function(){ btn.classList.remove('btn-busy'); }, 1200);
+
+          var bal = document.getElementById('bal');
+          if (bal){
+            bal.classList.remove('balance-updating');
+            void bal.offsetWidth;
+            bal.classList.add('balance-updating');
+            setTimeout(function(){ bal.classList.remove('balance-updating'); }, 1000);
+          }
+
+          if (typeof refreshBalanceFromServer === 'function') {
+            refreshBalanceFromServer();
+          }
+        }
+      }, true);
+    });
+  }
+
+  function attachRippleAll(){
+    document.querySelectorAll('.btn').forEach(function(btn){
+      if (btn._rippleFinal) return;
+      btn._rippleFinal = true;
+      btn.addEventListener('click', function(e){
+        if (findIcon(btn)) return;
+        addRipple(btn, e);
+      });
+    });
+  }
+
+  function applyAll(){
+    attachButtons();
+    attachRippleAll();
+  }
+
+  document.addEventListener('DOMContentLoaded', applyAll);
+  setTimeout(applyAll, 400);
+  setTimeout(applyAll, 1500);
+  setTimeout(applyAll, 4000);
+
+  var observer = new MutationObserver(function(){ applyAll(); });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  console.log('[premium-ui-final] ✅ Готово. Кручение при hover, без багов.');
+})();
