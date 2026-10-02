@@ -1048,6 +1048,22 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
   .chat-msg > div{max-width:90% !important}
   .chat-bubble{max-width:100% !important}
 }
+  /* CHAT BUBBLE — правильные переносы */
+.chat-bubble{
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+  hyphens:none !important;
+  max-width:80% !important;
+  width:fit-content !important;
+}
+.chat-msg > div{
+  max-width:85% !important;
+  min-width:0 !important;
+}
+@media (max-width:400px){
+  .chat-msg > div{max-width:90% !important}
+  .chat-bubble{max-width:100% !important}
+}
 </style>
 
 <script>
