@@ -2146,8 +2146,12 @@ function applyCardDesign(){
 
   for (var i = 0; i < cards.length; i++){
     var c = cards[i];
+    // Не трогаем превью в онбординге
     if (c.closest('.onb-preview') || c.closest('.onb-step')) continue;
-    c.classList.remove('design-cosmic', 'design-purple', 'design-silver', 'design-black', 'design-gold', 'design-ocean', 'design-mountain', 'design-aurora', 'design-city');
+    c.classList.remove(
+      'design-cosmic','design-purple','design-silver','design-black',
+      'design-gold','design-ocean','design-mountain','design-aurora','design-city'
+    );
     c.classList.add('design-' + design);
   }
 
@@ -2712,12 +2716,18 @@ function genExpiry(){
   var mm = m < 10 ? '0' + m : '' + m;
   return mm + '/' + String(y).slice(2);
 }
-
 function createVirtualCard(name, type, cur){
   var prefix = type === 'Mastercard' ? '5399' : '4921';
   var num = genCardNumber(prefix);
   var expiry = genExpiry();
   var cvv = genCvv();
+
+  var hueSlider = document.getElementById('hueSlider');
+  var hueValue = null;
+  if (hueSlider && hueSlider.dataset.touched === '1') {
+    hueValue = Number(hueSlider.value);
+  }
+
   st.card = {
     num: num,
     cvv: cvv,
@@ -2726,19 +2736,16 @@ function createVirtualCard(name, type, cur){
     type: type,
     cur: cur,
     status: 'Active',
-    design: selectedDesign,
-      hue: (function(){
-  var hs = document.getElementById('hueSlider');
-  return (hs && hs.dataset.touched === '1') ? Number(hs.value) : null;
-})(),  // ← НОВОЕ
-        country: (document.getElementById('onbCountry') ? document.getElementById('onbCountry').value : 'SE'),
+    design: selectedDesign || 'cosmic',
+    hue: hueValue,
+    country: (document.getElementById('onbCountry') ? document.getElementById('onbCountry').value : 'SE'),
     createdAt: Date.now()
   };
-    if (!st.user) st.user = {};
+  if (!st.user) st.user = {};
   st.user.country = st.card.country;
   saveToServer();
+  renderCard();   // ← сразу отрисовываем
 }
-
 function checkOnboarding(){
   // Если не залогинен — не показываем онбординг
   var email = localStorage.getItem('user_email');
@@ -2755,29 +2762,33 @@ function checkOnboarding(){
 }
 
 function renderCard(){
+  // ===== НЕТ КАРТЫ =====
   if (!st.card){
-    $('cardDash').classList.add('frozen');
-    $('cardNumDash').textContent = '— — — —   — — — —   — — — —   — — — —';
-    $('cardNameDash').textContent = '—';
-    $('cardExpDash').textContent = '—/—';
-    $('cardTypeDash').textContent = 'NO CARD';
-    $('cardNumFull').textContent = '— — — —   — — — —   — — — —   — — — —';
-    $('cardNameFull').textContent = '—';
-    $('cardExpFull').textContent = '—/—';
-    $('cardTypeFull').textContent = 'NO CARD';
-    $('detNum').textContent = '—';
-    $('detCvv').textContent = '●●●';
-    $('detExp').textContent = '—';
-    $('detName').textContent = '—';
-    $('detType').textContent = '—';
-    $('detCur').textContent = '—';
-    $('detStatus').textContent = 'No Card';
+    if ($('cardDash')) $('cardDash').classList.add('frozen');
+    if ($('cardNumDash')) $('cardNumDash').textContent = '— — — —   — — — —   — — — —   — — — —';
+    if ($('cardNameDash')) $('cardNameDash').textContent = '—';
+    if ($('cardExpDash')) $('cardExpDash').textContent = '—/—';
+    if ($('cardTypeDash')) $('cardTypeDash').textContent = 'NO CARD';
+    if ($('cardNumFull')) $('cardNumFull').textContent = '— — — —   — — — —   — — — —   — — — —';
+    if ($('cardNameFull')) $('cardNameFull').textContent = '—';
+    if ($('cardExpFull')) $('cardExpFull').textContent = '—/—';
+    if ($('cardTypeFull')) $('cardTypeFull').textContent = 'NO CARD';
+    if ($('detNum')) $('detNum').textContent = '—';
+    if ($('detCvv')) $('detCvv').textContent = '●●●';
+    if ($('detExp')) $('detExp').textContent = '—';
+    if ($('detName')) $('detName').textContent = '—';
+    if ($('detType')) $('detType').textContent = '—';
+    if ($('detCur')) $('detCur').textContent = '—';
+    if ($('detStatus')) $('detStatus').textContent = 'No Card';
     return;
   }
 
+  // ===== ЕСТЬ КАРТА =====
   var c = st.card;
   var frozen = (c.status === 'Frozen');
-    // Показать правильный логотип сети (Visa или Mastercard)
+  var numFormatted = fmtCard(c.num);
+
+  // Сеть (Visa / Mastercard)
   var networkHTML;
   if (c.type === 'Mastercard') {
     networkHTML = '<svg viewBox="0 0 100 40">' +
@@ -2794,35 +2805,37 @@ function renderCard(){
   if (net1) net1.innerHTML = networkHTML;
   var net2 = document.getElementById('cardNetwork2');
   if (net2) net2.innerHTML = networkHTML;
-  var numFormatted = fmtCard(c.num);
 
-  // Dash
-  $('cardDash').classList.toggle('frozen', frozen);
-  $('cardNumDash').textContent = numFormatted;
-  $('cardNameDash').textContent = c.name;
-  $('cardExpDash').textContent = c.expiry;
-  $('cardTypeDash').textContent = (c.type + ' ' + c.cur).toUpperCase();
+  // ===== DASHBOARD CARD =====
+  if ($('cardDash')) $('cardDash').classList.toggle('frozen', frozen);
+  if ($('cardNumDash')) $('cardNumDash').textContent = numFormatted;
+  if ($('cardNameDash')) $('cardNameDash').textContent = c.name || '—';
+  if ($('cardExpDash')) $('cardExpDash').textContent = c.expiry || '—/—';
+  if ($('cardTypeDash')) $('cardTypeDash').textContent = ((c.type || 'Visa') + ' ' + (c.cur || 'USD')).toUpperCase();
 
-  // Full
-  $('cardFull').classList.toggle('frozen', frozen);
-  $('cardNumFull').textContent = numFormatted;
-  $('cardNameFull').textContent = c.name;
-  $('cardExpFull').textContent = c.expiry;
-  $('cardTypeFull').textContent = (c.type + ' ' + c.cur).toUpperCase();
+  // ===== MY CARDS PAGE =====
+  if ($('cardFull')) $('cardFull').classList.toggle('frozen', frozen);
+  if ($('cardNumFull')) $('cardNumFull').textContent = numFormatted;
+  if ($('cardNameFull')) $('cardNameFull').textContent = c.name || '—';
+  if ($('cardExpFull')) $('cardExpFull').textContent = c.expiry || '—/—';
+  if ($('cardTypeFull')) $('cardTypeFull').textContent = ((c.type || 'Visa') + ' ' + (c.cur || 'USD')).toUpperCase();
 
-  // Details
-  $('detNum').textContent = numFormatted;
-  $('detCvv').textContent = cvvVisible ? c.cvv : '●●●';
-  $('detExp').textContent = c.expiry;
-  $('detName').textContent = c.name;
-  $('detType').textContent = c.type;
-  $('detCur').textContent = c.cur;
-  $('detStatus').textContent = c.status;
-  $('detStatus').style.color = frozen ? 'var(--warn)' : 'var(--ok)';
+  // ===== CARD DETAILS (нижняя панель) =====
+  if ($('detNum')) $('detNum').textContent = numFormatted;
+  if ($('detCvv')) $('detCvv').textContent = cvvVisible ? (c.cvv || '●●●') : '●●●';
+  if ($('detExp')) $('detExp').textContent = c.expiry || '—';
+  if ($('detName')) $('detName').textContent = c.name || '—';
+  if ($('detType')) $('detType').textContent = c.type || '—';
+  if ($('detCur')) $('detCur').textContent = c.cur || '—';
+  if ($('detStatus')) {
+    $('detStatus').textContent = c.status || 'Active';
+    $('detStatus').style.color = frozen ? 'var(--warn)' : 'var(--ok)';
+  }
 
-  // Buttons state
-  $('btnShowCvv').textContent = cvvVisible ? '🙈 Hide CVV' : '👁 Show CVV';
-  $('btnFreeze').textContent = frozen ? '🔥 Unfreeze Card' : '❄ Freeze Card';
+  // ===== Кнопки =====
+  if ($('btnShowCvv')) $('btnShowCvv').textContent = cvvVisible ? '🙈 Hide CVV' : '👁 Show CVV';
+  if ($('btnFreeze')) $('btnFreeze').textContent = frozen ? '🔥 Unfreeze Card' : '❄ Freeze Card';
+
   applyCardDesign();
 }
 
