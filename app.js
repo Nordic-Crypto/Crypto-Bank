@@ -2589,9 +2589,9 @@ function doAutoCheck(){
         for (var j = 0; j < st.txs.length; j++){ if (st.txs[j].hash === id){ already = true; break; } }
         if (already){ autoCheckKnown[id] = true; continue; }
         autoCheckKnown[id] = true;
-        var cryptoAmt = isBtc ? tx.amount : tx.value;
-        var symbol    = isBtc ? 'BTC' : 'ETH';
-        var credit    = isBtc ? (tx.amount * st.btcP) : (tx.value * st.ethP);
+       var cryptoAmt = tx.amount;
+       var symbol    = isBtc ? 'BTC' : 'ETH';
+       var credit    = tx.amount * (isBtc ? st.btcP : st.ethP);
         if (!credit || credit <= 0) {
           console.log('[autoCheck] skip tx — zero credit');
           continue;
