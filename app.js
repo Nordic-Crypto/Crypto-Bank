@@ -4627,3 +4627,62 @@ setInterval(updateUserUI, 5000);
     }).catch(function(){});
   };
 })();
+/* ========== MERGE CONSECUTIVE MESSAGES ========== */
+(function(){
+  // Переписываем renderChatMessages с объединением подряд идущих
+  var _origRender = window.renderChatMessages;
+
+  window.renderChatMessages = function(){
+    var box = document.getElementById('chatMessages');
+    if (!box) return;
+    var chat = (st.chat || []).slice().sort(function(a,b){ return a.ts - b.ts; });
+
+    var html = '';
+    if (!chat.length){
+      html = '<div class="chat-welcome">' +
+        '<div class="chat-welcome-name">Elena Bergström</div>' +
+        '<div class="chat-welcome-text">Hi! How can I help you today?</div>' +
+      '</div>';
+    } else {
+      var prevFrom = null;
+      var prevTs = 0;
+
+      chat.forEach(function(m){
+        var isClient = m.from === 'client';
+        var sameAuthor = (prevFrom === m.from) && (m.ts - prevTs < 60000); // 60 сек
+
+        var metaHtml = sameAuthor ? '' :
+          '<div class="chat-msg-meta">' +
+            (isClient ? 'You' : 'Elena') + ' • ' +
+            new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
+          '</div>';
+
+        html += '<div class="chat-msg ' + (isClient ? 'client' : 'admin') + (sameAuthor ? ' same-author' : '') + '">' +
+          '<div>' +
+            '<div class="chat-bubble">' + escapeHtml(m.text) + '</div>' +
+            metaHtml +
+          '</div>' +
+        '</div>';
+
+        prevFrom = m.from;
+        prevTs = m.ts;
+      });
+    }
+
+    if (window._adminTyping){
+      html += '<div class="chat-msg admin chat-typing">' +
+        '<div>' +
+          '<div class="chat-bubble">' +
+            '<span class="typing-dot"></span>' +
+            '<span class="typing-dot"></span>' +
+            '<span class="typing-dot"></span>' +
+          '</div>' +
+          '<div class="chat-msg-meta">Elena печатает...</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  };
+})();
