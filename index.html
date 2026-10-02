@@ -883,6 +883,44 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
 .iban-row:last-child{border-bottom:none}
 .iban-row .l{color:var(--mut);flex-shrink:0;font-size:13px}
 .iban-row .v{font-family:ui-monospace,Menlo,monospace;font-weight:600;letter-spacing:.02em;text-align:right;word-break:break-all;color:var(--txt)}
+/* ============ PNL UPGRADE ============ */
+
+/* Профит — зелёный, как Revolut */
+.nc3-performance{
+  font-weight:700;
+}
+.pnl-line.positive,
+.nc3-performance.pnl-line.positive{
+  color:#00ffa3 !important;
+  text-shadow:0 0 12px rgba(0,255,163,.35);
+}
+.pnl-line.negative,
+.nc3-performance.pnl-line.negative{
+  color:#ff5470 !important;
+  text-shadow:0 0 12px rgba(255,84,112,.3);
+}
+
+/* Иконка ▲ ▼ — ярче */
+.pnl-line.positive span:first-child,
+.nc3-performance .pnl-icon-up{
+  color:#00ffa3 !important;
+}
+.pnl-line.negative span:first-child{
+  color:#ff5470 !important;
+}
+
+/* Процент — жирнее */
+.pnl-line strong{
+  font-weight:800;
+  font-family:ui-monospace,Menlo,monospace;
+}
+
+/* Текст объяснения — ярче */
+#pnlExplain{
+  font-weight:600;
+  font-size:.72rem;
+  margin-top:8px;
+}
 </style>
 
 <script>
