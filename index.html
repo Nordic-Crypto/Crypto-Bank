@@ -936,6 +936,90 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-6px); opacity: 1; }
 }
+/* ============ CHAT BUBBLES POLISH ============ */
+
+/* Пузырь — ограниченная ширина, красивый перенос */
+.chat-bubble{
+  max-width:78% !important;
+  width:fit-content;
+  min-width:50px;
+  padding:11px 15px;
+  border-radius:18px;
+  font-size:13.5px;
+  line-height:1.5;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+  hyphens:auto;
+}
+
+/* Убираем огромные пузыри от длинных сообщений */
+.chat-msg > div{
+  max-width:80%;
+}
+
+/* Свои сообщения — синий градиент с тенью */
+.chat-msg.client .chat-bubble{
+  background:linear-gradient(135deg,#5f2ee5,#8b5cf6);
+  color:#fff;
+  border-bottom-right-radius:6px;
+  box-shadow:0 4px 12px -4px rgba(95,46,229,.4);
+}
+
+/* Сообщения Елены — тёмно-серые */
+.chat-msg.admin .chat-bubble{
+  background:rgba(255,255,255,.07);
+  color:#e7edf5;
+  border:1px solid rgba(255,255,255,.06);
+  border-bottom-left-radius:6px;
+}
+
+/* Мета под пузырём — компактнее */
+.chat-msg-meta{
+  font-size:10px;
+  color:#8b95a5;
+  margin-top:5px;
+  padding:0 6px;
+  display:flex;
+  gap:5px;
+  align-items:center;
+}
+.chat-msg.client .chat-msg-meta{justify-content:flex-end}
+
+/* Отступы между сообщениями */
+.chat-msg{margin-bottom:14px}
+
+/* Если подряд идут сообщения от одного автора — уменьшить отступ */
+.chat-msg.same-author{margin-top:-6px}
+.chat-msg.same-author .chat-msg-meta{display:none}
+
+/* Точка возле "печатает" */
+.chat-msg.admin.chat-typing .chat-bubble{
+  padding:13px 18px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-width:52px;
+}
+
+/* Скроллбар чата — тонкий */
+.chat-messages::-webkit-scrollbar{width:6px}
+.chat-messages::-webkit-scrollbar-thumb{
+  background:rgba(139,92,246,.3);
+  border-radius:3px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover{
+  background:rgba(139,92,246,.5);
+}
+
+/* Анимация появления сообщения */
+.chat-msg{
+  animation:msgSlideIn .25s ease-out;
+}
+@keyframes msgSlideIn{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
 </style>
 
 <script>
