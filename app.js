@@ -3467,15 +3467,21 @@ function showAdminPanel() {
   var main = document.getElementById('mainApp');
   if (side) side.style.display = 'none';
   if (main) main.style.display = 'none';
+
   var userEl = document.getElementById('adminUser');
   if (userEl) userEl.textContent = localStorage.getItem('user_email') || '';
+
   initAdminPanel();
-  loadAdminUsers();
-  loadAdminStats();
-  loadDeletedUsers();
+
+  // ПАРАЛЛЕЛЬНО — всё сразу
+  Promise.all([
+    loadAdminUsers(),
+    loadAdminStats(),
+    loadDeletedUsers()
+  ]).catch(function(){});
+
   setTimeout(function(){ showAdminTab('stats'); }, 100);
 }
-
 function hideAdminPanel() {
   var panel = document.getElementById('adminPanel');
   if (panel) panel.classList.remove('on');
@@ -3484,6 +3490,10 @@ function hideAdminPanel() {
 async function loadAdminUsers() {
   var listEl = document.getElementById('adminClientsList');
   if (!listEl) return;
+  if (!listEl.querySelector('.admin-client-card')) {
+    listEl.innerHTML = '<div class="admin-empty">Loading...</div>';
+  }
+
   try {
     var res = await fetch(WORKER_LOGIN_URL + '?action=listUsers', {
       method: 'POST',
@@ -3491,11 +3501,15 @@ async function loadAdminUsers() {
       body: JSON.stringify({ token: getSessionToken() })
     });
     var data = await res.json();
-    if (!data.ok) { listEl.innerHTML = '<div class="admin-empty">Error</div>'; return; }
-    if (!data.users || data.users.length === 0) {
-      listEl.innerHTML = '<div class="admin-empty"><div>No clients yet</div></div>';
+    if (!data.ok) {
+      listEl.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>';
       return;
     }
+    if (!data.users || data.users.length === 0) {
+      listEl.innerHTML = '<div class="admin-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:12px">📭</div><div>No clients yet</div></div>';
+      return;
+    }
+
     var html = '';
     for (var i = 0; i < data.users.length; i++) {
       var u = data.users[i];
@@ -3503,6 +3517,7 @@ async function loadAdminUsers() {
       var cardInfo = u.card ? (u.card.type + ' •••• ' + String(u.card.num).slice(-4)) : 'No card';
       var statusBadge = u.card ? u.card.status : 'No card';
       var statusClass = (u.card && u.card.status === 'Active') ? '' : ' style="background:rgba(255,176,32,.14);color:#ffb020"';
+
       html += '<div class="admin-client-card">' +
         '<div class="admin-client-top">' +
           '<div class="admin-client-avatar">' + initials + '</div>' +
@@ -3527,7 +3542,14 @@ async function loadAdminUsers() {
       '</div>';
     }
     listEl.innerHTML = html;
-  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Connection error</div>'; }
+
+    // Обновить счётчик в сайдбаре
+    var cnt = document.getElementById('navClientsCount');
+    if (cnt) cnt.textContent = data.users.length;
+
+  } catch (e) {
+    listEl.innerHTML = '<div class="admin-empty">Connection error</div>';
+  }
 }
 
 async function loadAdminWithdrawals() {
@@ -3536,46 +3558,68 @@ async function loadAdminWithdrawals() {
   if (!listEl) return;
   listEl.innerHTML = '<div class="admin-empty">Loading...</div>';
   if (countEl) countEl.textContent = 'Loading...';
+
   try {
     var token = getSessionToken();
     if (!token) { listEl.innerHTML = '<div class="admin-empty">No token</div>'; return; }
+
+    // 1. Список клиентов
     var res = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token })
     });
     var data = await res.json();
-    if (!data.ok || !data.users) { listEl.innerHTML = '<div class="admin-empty">Failed</div>'; return; }
-    var allWd = [];
-    for (var i = 0; i < data.users.length; i++) {
-      var u = data.users[i];
-      try {
-        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, email: u.email })
-        });
-        var d2 = await r2.json();
-        if (!d2 || !Array.isArray(d2.withdrawals)) continue;
-        for (var j = 0; j < d2.withdrawals.length; j++) {
-          var w = d2.withdrawals[j];
-          if (!w) continue;
+    if (!data.ok || !data.users) {
+      listEl.innerHTML = '<div class="admin-empty">Failed to load users</div>';
+      return;
+    }
+
+    // 2. ПАРАЛЛЕЛЬНО запросить у всех клиентов getUserState
+    var promises = data.users.map(function(u) {
+      return fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: u.email })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d2){
+        if (!d2 || !Array.isArray(d2.withdrawals)) return [];
+        return d2.withdrawals.map(function(w){
+          if (!w) return null;
           w.userEmail = u.email;
           w.userName = u.name || u.email;
-          allWd.push(w);
-        }
-      } catch (e) {}
-    }
+          return w;
+        }).filter(Boolean);
+      })
+      .catch(function(){ return []; });
+    });
+
+    // Ждём ВСЕ запросы одновременно
+    var results = await Promise.all(promises);
+    var allWd = [];
+    results.forEach(function(arr){ allWd = allWd.concat(arr); });
+
     allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
     var pending = allWd.filter(function(w) { return w.status === 'pending'; }).length;
     if (countEl) countEl.textContent = pending + ' pending • ' + allWd.length + ' total';
-    if (!allWd.length) { listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>'; return; }
+
+    if (!allWd.length) {
+      listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>';
+      return;
+    }
+
     var html = '';
     for (var k = 0; k < allWd.length; k++) {
       html += renderAdminWithdrawalCard(allWd[k]);
     }
     listEl.innerHTML = html;
-  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>'; }
+
+  } catch (e) {
+    console.error('[loadAdminWithdrawals] FAILED:', e);
+    listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+  }
 }
 
 function renderAdminWithdrawalCard(w) {
