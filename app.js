@@ -1529,6 +1529,7 @@ function setSelectedDesign(design){
 }
 
 function initDesignPicker(){
+  // ===== ОНБОРДИНГ =====
   var picker = document.getElementById('designPicker');
   if (picker){
     var opts = picker.querySelectorAll('.design-opt');
@@ -1540,6 +1541,8 @@ function initDesignPicker(){
       };
     }
   }
+
+  // ===== МОДАЛКА =====
   var modalPicker = document.getElementById('designPickerModal');
   if (modalPicker){
     var mopts = modalPicker.querySelectorAll('.design-opt');
@@ -1551,13 +1554,38 @@ function initDesignPicker(){
       };
     }
   }
+
+  // ===== КНОПКА CHANGE DESIGN =====
+  var btnChange = document.getElementById('btnChangeDesign');
+  if (btnChange){
+    btnChange.onclick = function(){
+      if (!st.card){
+        toast('No card yet', true);
+        return;
+      }
+      var current = st.card.design || 'cosmic';
+      var all = document.querySelectorAll('#designPickerModal .design-opt');
+      for (var k = 0; k < all.length; k++){
+        all[k].classList.toggle('on', all[k].getAttribute('data-design') === current);
+      }
+      var mask = document.getElementById('designMask');
+      if (mask) mask.classList.add('on');
+    };
+  } else {
+    console.warn('[initDesignPicker] btnChangeDesign не найден в HTML');
+  }
+
+  // ===== КНОПКА SAVE =====
   var btnSave = document.getElementById('designSave');
   if (btnSave){
     btnSave.onclick = function(){
       var active = document.querySelector('#designPickerModal .design-opt.on');
       if (!active){ toast('Please choose a design', true); return; }
       var d = active.getAttribute('data-design');
-      document.getElementById('designMask').classList.remove('on');
+
+      var mask = document.getElementById('designMask');
+      if (mask) mask.classList.remove('on');
+
       openPasswordConfirm('Confirm changing card design to "' + d + '"', function(){
         if (!st.card) st.card = {};
         st.card.hue = null;
@@ -1570,7 +1598,11 @@ function initDesignPicker(){
         toast('Card design updated');
       });
     };
+  } else {
+    console.warn('[initDesignPicker] designSave не найден в HTML');
   }
+
+  // ===== HUE SLIDER =====
   var hueSlider = document.getElementById('hueSlider');
   var huePreview = document.getElementById('huePreview');
   if (hueSlider) {
@@ -1586,12 +1618,17 @@ function initDesignPicker(){
       }
     };
   }
+
+  // ===== КНОПКА CANCEL =====
   var btnCancel = document.getElementById('designCancel');
   if (btnCancel){
     btnCancel.onclick = function(){
-      document.getElementById('designMask').classList.remove('on');
+      var mask = document.getElementById('designMask');
+      if (mask) mask.classList.remove('on');
     };
   }
+
+  console.log('[initDesignPicker] ✅ initialized');
 }
 
 /* ========== IBAN ========== */
