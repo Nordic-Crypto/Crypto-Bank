@@ -5580,6 +5580,7 @@ async function scanAllDeposits() {
   };
 
   console.log('[patch] ✅ Все фиксы применены');
+   })();
 /* ============================================================
    PREMIUM UI FINAL — единственный рабочий патч
    Кручение при hover + ripple + красиво, БЕЗ ломки layout
