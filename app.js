@@ -5580,455 +5580,72 @@ async function scanAllDeposits() {
   };
 
   console.log('[patch] ✅ Все фиксы применены');
-})();
-  /* ============================================================
-   HOVER ICON SPIN — ЧАСТЬ 1/2 (CSS)
-   Иконки внутри кнопок крутятся при наведении мыши
-   ============================================================ */
-(function(){
-  'use strict';
-
-  // Удаляем старые стили, если остались
-  ['icon-spin-style', 'premium-ui-style',
-   'premium-ui-style-v4', 'premium-ui-style-v5',
-   'premium-ui-style-v6', 'premium-ui-style-v7'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.remove();
-  });
-
-  var style = document.createElement('style');
-  style.id = 'icon-spin-style';
-  style.textContent = `
-
-    /* ==========================================================
-       ★★★ ГЛАВНОЕ: КРУЧЕНИЕ ИКОНКИ ПРИ НАВЕДЕНИИ ★★★
-       ========================================================== */
-
-    /* Все иконки внутри кнопок — готовы к анимации */
-    .btn svg,
-    .btn i,
-    .btn img,
-    .btn .icon,
-    .btn .btn-icon,
-    .mi svg,
-    .mi i,
-    .mi .mi-icon {
-      transition: transform .3s ease;
-      transform-origin: center center;
-      display: inline-block;
-      will-change: transform;
-    }
-
-    /* Анимация кручения */
-    @keyframes iconSpinHover {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* ★ HOVER — крутим иконку внутри кнопки */
-    .btn:hover > svg,
-    .btn:hover > i,
-    .btn:hover > img,
-    .btn:hover > .icon,
-    .btn:hover > .btn-icon,
-    .btn:hover svg,
-    .btn:hover i.icon,
-    .btn:hover i.btn-icon,
-    .btn:hover .btn-icon,
-    .btn:hover .icon {
-      animation: iconSpinHover .8s cubic-bezier(.4,0,.2,1);
-    }
-
-    /* Кручение в меню слева */
-    .mi:hover svg,
-    .mi:hover i,
-    .mi:hover .mi-icon {
-      animation: iconSpinHover .8s cubic-bezier(.4,0,.2,1);
-    }
-
-    /* Кнопка с data-no-spin — НЕ крутится */
-    .btn[data-no-spin="true"]:hover svg,
-    .btn[data-no-spin="true"]:hover i,
-    .btn[data-no-spin="true"]:hover .icon {
-      animation: none;
-    }
-
-    /* ==========================================================
-       СВЕЧЕНИЕ КНОПКИ при hover (БЕЗ изменения размера!)
-       ========================================================== */
-    .btn {
-      transition: box-shadow .3s ease, background .25s ease, color .2s ease;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn:hover {
-      box-shadow:
-        0 10px 24px rgba(0,212,255,.22),
-        inset 0 0 0 1px rgba(0,212,255,.20);
-    }
-    .btn:active {
-      transform: scale(.985);
-      transition: transform .08s ease;
-    }
-
-    /* ==========================================================
-       ПАНЕЛИ — только свечение (без движения)
-       ========================================================== */
-    .panel {
-      transition: box-shadow .35s ease, border-color .3s ease;
-    }
-    .panel:hover {
-      box-shadow:
-        0 14px 32px rgba(0,212,255,.10),
-        0 4px 14px rgba(0,0,0,.32);
-      border-color: rgba(0,212,255,.22);
-    }
-
-    /* ==========================================================
-       STAT-КАРТОЧКИ — лёгкий подъём (безопасно)
-       ========================================================== */
-    .stat-card,
-    .crypto-card {
-      transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
-    }
-    .stat-card:hover,
-    .crypto-card:hover {
-      transform: translateY(-2px);
-      box-shadow:
-        0 12px 26px rgba(0,212,255,.10),
-        0 4px 12px rgba(0,0,0,.32);
-      border-color: rgba(0,212,255,.22);
-    }
-
-    /* ==========================================================
-       КАРТА — только свечение (БЕЗ движения)
-       ========================================================== */
-    .pay {
-      transition: box-shadow .4s ease;
-    }
-    .pay:hover {
-      box-shadow:
-        0 22px 46px rgba(0,212,255,.22),
-        0 8px 22px rgba(0,0,0,.42);
-    }
-
-    /* ==========================================================
-       МЕНЮ СЛЕВА
-       ========================================================== */
-    .mi {
-      transition: transform .25s ease, background .25s ease;
-    }
-    .mi:hover {
-      transform: translateX(3px);
-      background: rgba(0,212,255,.06);
-    }
-
-    /* ==========================================================
-       ТРАНЗАКЦИИ
-       ========================================================== */
-    .recent-tx-item {
-      transition: transform .25s ease, background .25s ease, border-color .25s ease;
-    }
-    .recent-tx-item:hover {
-      transform: translateX(4px);
-      background: rgba(0,212,255,.05);
-      border-color: rgba(0,212,255,.20);
-    }
-
-    /* ==========================================================
-       УВЕДОМЛЕНИЯ
-       ========================================================== */
-    .notif-item {
-      transition: transform .25s ease, background .25s ease;
-    }
-    .notif-item:hover {
-      transform: translateX(3px);
-      background: rgba(0,212,255,.05);
-    }
-
-    /* ==========================================================
-       АДМИН-КАРТОЧКИ
-       ========================================================== */
-    .admin-client-card {
-      transition: transform .3s ease, box-shadow .3s ease;
-    }
-    .admin-client-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 30px rgba(139,92,246,.15);
-    }
-
-    /* ==========================================================
-       КРИПТО-ИКОНКИ (отдельно)
-       ========================================================== */
-    .crypto-card .icon,
-    .crypto-card .crypto-icon {
-      transition: transform .35s cubic-bezier(.4,0,.2,1);
-    }
-    .crypto-card:hover .icon,
-    .crypto-card:hover .crypto-icon {
-      transform: scale(1.15) rotate(-5deg);
-    }
-
-    /* ==========================================================
-       БАЛАНС — ПУЛЬС при обновлении
-       ========================================================== */
-    @keyframes balanceGlow {
-      0%   { text-shadow: 0 0 0 rgba(0,212,255,0); }
-      50%  { text-shadow: 0 0 26px rgba(0,212,255,.75); }
-      100% { text-shadow: 0 0 0 rgba(0,212,255,0); }
-    }
-    .balance-updating {
-      animation: balanceGlow 1s ease;
-      display: inline-block;
-    }
-
-    /* ==========================================================
-       BUSY-ПУЛЬС (для Refresh пока грузит)
-       ========================================================== */
-    @keyframes softPulse {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: .7; }
-    }
-    .btn-busy {
-      animation: softPulse 1.1s ease-in-out infinite;
-      pointer-events: none;
-    }
-
-    /* ==========================================================
-       RIPPLE (для кнопок без иконки)
-       ========================================================== */
-    .btn .ripple-fx {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(255,255,255,.35);
-      transform: scale(0);
-      animation: rippleAnim .6s cubic-bezier(.4,0,.2,1) forwards;
-      pointer-events: none;
-    }
-    @keyframes rippleAnim {
-      to { transform: scale(4); opacity: 0; }
-    }
-
-    /* ==========================================================
-       ПОЯВЛЕНИЕ СТРАНИЦ
-       ========================================================== */
-    @keyframes fadeUpPage {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .pg.on > * {
-      animation: fadeUpPage .4s cubic-bezier(.4,0,.2,1) backwards;
-    }
-    .pg.on > *:nth-child(1) { animation-delay: .02s; }
-    .pg.on > *:nth-child(2) { animation-delay: .06s; }
-    .pg.on > *:nth-child(3) { animation-delay: .10s; }
-
-    /* ==========================================================
-       ЗАГОЛОВОК — SHIMMER
-       ========================================================== */
-    @keyframes shimmer {
-      to { background-position: -200% center; }
-    }
-    #ttl {
-      background: linear-gradient(90deg,
-        #e7edf5 0%, #e7edf5 30%,
-        #00d4ff 50%,
-        #e7edf5 70%, #e7edf5 100%);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: shimmer 6s linear infinite;
-    }
-
-    /* ==========================================================
-       СКРОЛЛБАР
-       ========================================================== */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0,212,255,.18);
-      border-radius: 4px;
-      transition: background .3s;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,212,255,.42);
-    }
-  `;
-  document.head.appendChild(style);
-
-  console.log('[hover-spin-1] ✅ CSS применён — кручение при наведении');
-
-})();
 /* ============================================================
-   HOVER ICON SPIN — ЧАСТЬ 2/2 (JS)
-   Клик по кнопкам, ripple для кнопок без иконки, Refresh-логика
+   PREMIUM UI FINAL — единственный рабочий патч
+   Кручение при hover + ripple + красиво, БЕЗ ломки layout
    ============================================================ */
 (function(){
   'use strict';
 
-  /* ============================================================
-     ХЕЛПЕРЫ
-     ============================================================ */
-  function findIcon(btn){
-    if (!btn) return null;
-    return btn.querySelector('svg, i.icon, i.btn-icon, img.icon, .btn-icon, .icon');
-  }
-
-  function playClickSound(){
-    if (typeof playTone !== 'function') return;
-    try { playTone(880, 0.05, 'sine', 0.08); } catch(e){}
-  }
-
-  /* ============================================================
-     RIPPLE — только для кнопок БЕЗ иконки
-     ============================================================ */
-  function addRipple(btn, e){
-    var rect = btn.getBoundingClientRect();
-    var size = Math.max(rect.width, rect.height);
-    var x = e ? (e.clientX - rect.left - size / 2) : (rect.width / 2 - size / 2);
-    var y = e ? (e.clientY - rect.top - size / 2) : (rect.height / 2 - size / 2);
-
-    var ripple = document.createElement('span');
-    ripple.className = 'ripple-fx';
-    ripple.style.width = ripple.style.height = size + 'px';
-    ripple.style.left = x + 'px';
-    ripple.style.top = y + 'px';
-
-    btn.appendChild(ripple);
-    setTimeout(function(){ if (ripple.parentNode) ripple.remove(); }, 700);
-  }
-
-  /* ============================================================
-     КЛИК ПО КНОПКАМ — звук, ripple, Refresh-логика
-     ============================================================ */
-  var ACTION_BUTTONS = [
-    'btnRefreshBalance', 'btnWithdrawV2', 'btnAdd', 'btnTransferV2',
-    'btnExchangeV2', 'btnScanDeposits', 'btnCopyIban', 'btnCopyCardV2',
-    'btnReceiveHero', 'btnReceiveMoney', 'btnOrder',
-    'btnShowCvv', 'btnFreeze', 'btnDeleteCard', 'btnGoOrder',
-    'btnFreezeCard', 'btnLimitsCard', 'btnSettingsCard'
-  ];
-
-  function attachButtons(){
-    ACTION_BUTTONS.forEach(function(id){
-      var btn = document.getElementById(id);
-      if (!btn || btn._spinClickV9) return;
-      btn._spinClickV9 = true;
-
-      btn.addEventListener('click', function(e){
-        playClickSound();
-
-        // Ripple если нет иконки
-        if (!findIcon(btn)) addRipple(btn, e);
-
-        // Особый эффект для Refresh
-        if (id === 'btnRefreshBalance'){
-          btn.classList.add('btn-busy');
-          setTimeout(function(){ btn.classList.remove('btn-busy'); }, 1200);
-
-          var bal = document.getElementById('bal');
-          if (bal){
-            bal.classList.remove('balance-updating');
-            void bal.offsetWidth;
-            bal.classList.add('balance-updating');
-            setTimeout(function(){ bal.classList.remove('balance-updating'); }, 1000);
-          }
-
-          // Обновляем баланс
-          if (typeof refreshBalanceFromServer === 'function') {
-            refreshBalanceFromServer();
-          }
-        }
-      }, true);
-    });
-  }
-
-  /* ============================================================
-     RIPPLE для всех .btn без иконки
-     ============================================================ */
-  function attachRippleAll(){
-    document.querySelectorAll('.btn').forEach(function(btn){
-      if (btn._rippleV9) return;
-      btn._rippleV9 = true;
-      btn.addEventListener('click', function(e){
-        if (findIcon(btn)) return;
-        addRipple(btn, e);
-      });
-    });
-  }
-
-  /* ============================================================
-     ПРИМЕНЕНИЕ
-     ============================================================ */
-  function applyAll(){
-    attachButtons();
-    attachRippleAll();
-  }
-
-  document.addEventListener('DOMContentLoaded', applyAll);
-  setTimeout(applyAll, 400);
-  setTimeout(applyAll, 1500);
-  setTimeout(applyAll, 4000);
-
-  var observer = new MutationObserver(function(){ applyAll(); });
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  console.log('[hover-spin-2] ✅ JS применён — Refresh + ripple');
-
-})();
-/* ============================================================
-   PREMIUM UI — ФИНАЛЬНАЯ ВЕРСИЯ
-   Кручение иконок при hover + красивые эффекты БЕЗ ломки layout
-   ============================================================ */
-(function(){
-  'use strict';
-
-  /* Убираем старые конфликтующие стили */
+  /* ---------- Удаляем все старые стили, чтобы не конфликтовали ---------- */
   ['icon-spin-style','premium-ui-style','premium-ui-style-v4',
-   'premium-ui-style-v5','premium-ui-style-v6','premium-ui-style-v7'].forEach(function(id){
+   'premium-ui-style-v5','premium-ui-style-v6','premium-ui-style-v7',
+   'premium-ui-final'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.remove();
   });
 
   /* ============================================================
-     1. CSS
+     CSS
      ============================================================ */
   var style = document.createElement('style');
-  style.id = 'premium-ui-final';
+  style.id = 'premium-final';
   style.textContent = `
-
-    /* ==========================================================
-       ★ ГЛАВНОЕ: КРУЧЕНИЕ ИКОНКИ ПРИ HOVER ★
-       ========================================================== */
+    /* ИКОНКИ ВНУТРИ КНОПОК */
     .btn svg,
     .btn i,
     .btn img,
     .btn .icon,
     .btn .btn-icon,
+    .nc3-ghost svg,
+    .nc3-primary svg,
+    .nc3-action svg,
+    .nc3-card-action svg,
     .mi svg,
     .mi i,
-    .mi .mi-icon {
+    .mi .mi-icon,
+    .nc3-copy-iban svg,
+    .top-icon svg,
+    .settings-btn svg,
+    .notif-bell svg {
       transition: transform .3s ease;
       transform-origin: center center;
       display: inline-block;
       will-change: transform;
     }
 
-    @keyframes iconSpinHover {
+    @keyframes spin360 {
       0%   { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
+    /* ★★★ КРУЧЕНИЕ ПРИ HOVER ★★★ */
     .btn:hover svg,
     .btn:hover i,
     .btn:hover img,
     .btn:hover .icon,
     .btn:hover .btn-icon,
+    .nc3-ghost:hover svg,
+    .nc3-primary:hover svg,
+    .nc3-action:hover svg,
+    .nc3-card-action:hover svg,
     .mi:hover svg,
     .mi:hover i,
-    .mi:hover .mi-icon {
-      animation: iconSpinHover .8s cubic-bezier(.4,0,.2,1);
+    .mi:hover .mi-icon,
+    .nc3-copy-iban:hover svg,
+    .top-icon:hover svg,
+    .settings-btn:hover svg {
+      animation: spin360 .8s cubic-bezier(.4,0,.2,1);
     }
 
     /* data-no-spin отключает */
@@ -6038,68 +5655,50 @@ async function scanAllDeposits() {
       animation: none;
     }
 
-    /* ==========================================================
-       СВЕЧЕНИЕ КНОПКИ — БЕЗ движения, БЕЗ scale
-       ========================================================== */
-    .btn {
-      position: relative;
-      transition: box-shadow .3s ease, background .25s ease, color .2s ease;
+    /* Свечение кнопки БЕЗ движения */
+    .btn, .nc3-ghost, .nc3-primary, .nc3-action, .nc3-card-action {
+      transition: box-shadow .3s ease, background .25s ease;
     }
-    .btn:hover {
-      box-shadow:
-        0 10px 24px rgba(0,212,255,.22),
-        inset 0 0 0 1px rgba(0,212,255,.20);
+    .btn:hover, .nc3-ghost:hover, .nc3-primary:hover {
+      box-shadow: 0 10px 24px rgba(0,212,255,.22),
+                  inset 0 0 0 1px rgba(0,212,255,.20);
     }
-    /* Активация — едва заметное сжатие, чтобы не ломать layout */
-    .btn:active {
-      transform: scale(.985);
-      transition: transform .08s ease;
+    .nc3-action:hover, .nc3-card-action:hover {
+      box-shadow: 0 10px 24px rgba(0,212,255,.15);
+      background: rgba(0,212,255,.06);
     }
 
-    /* ==========================================================
-       ПАНЕЛИ — только свечение
-       ========================================================== */
+    /* Панели — свечение */
     .panel {
       transition: box-shadow .35s ease, border-color .3s ease;
     }
     .panel:hover {
-      box-shadow:
-        0 14px 32px rgba(0,212,255,.10),
-        0 4px 14px rgba(0,0,0,.32);
+      box-shadow: 0 14px 32px rgba(0,212,255,.10),
+                  0 4px 14px rgba(0,0,0,.32);
       border-color: rgba(0,212,255,.22);
     }
 
-    /* ==========================================================
-       STAT-КАРТОЧКИ — лёгкий подъём
-       ========================================================== */
-    .stat-card,
-    .crypto-card {
+    /* Stat-карточки — подъём */
+    .stat-card, .crypto-card, .nc3-asset {
       transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
     }
-    .stat-card:hover,
-    .crypto-card:hover {
+    .stat-card:hover, .crypto-card:hover, .nc3-asset:hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 12px 26px rgba(0,212,255,.10),
-        0 4px 12px rgba(0,0,0,.32);
+      box-shadow: 0 12px 26px rgba(0,212,255,.10),
+                  0 4px 12px rgba(0,0,0,.32);
       border-color: rgba(0,212,255,.22);
     }
 
-    /* ==========================================================
-       КАРТА — ТОЛЬКО свечение (никаких transform!)
-       ========================================================== */
+    /* Карта — ТОЛЬКО свечение */
     .pay {
       transition: box-shadow .4s ease;
     }
     .pay:hover {
-      box-shadow:
-        0 22px 46px rgba(0,212,255,.22),
-        0 8px 22px rgba(0,0,0,.42);
+      box-shadow: 0 22px 46px rgba(0,212,255,.22),
+                  0 8px 22px rgba(0,0,0,.42);
     }
 
-    /* ==========================================================
-       МЕНЮ СЛЕВА — мягкий сдвиг
-       ========================================================== */
+    /* Меню слева */
     .mi {
       transition: transform .25s ease, background .25s ease;
     }
@@ -6108,9 +5707,7 @@ async function scanAllDeposits() {
       background: rgba(0,212,255,.06);
     }
 
-    /* ==========================================================
-       ТРАНЗАКЦИИ
-       ========================================================== */
+    /* Транзакции */
     .recent-tx-item {
       transition: transform .25s ease, background .25s ease, border-color .25s ease;
     }
@@ -6120,9 +5717,7 @@ async function scanAllDeposits() {
       border-color: rgba(0,212,255,.20);
     }
 
-    /* ==========================================================
-       УВЕДОМЛЕНИЯ
-       ========================================================== */
+    /* Уведомления */
     .notif-item {
       transition: transform .25s ease, background .25s ease;
     }
@@ -6131,9 +5726,7 @@ async function scanAllDeposits() {
       background: rgba(0,212,255,.05);
     }
 
-    /* ==========================================================
-       АДМИН-КАРТОЧКИ
-       ========================================================== */
+    /* Админ-карточки */
     .admin-client-card {
       transition: transform .3s ease, box-shadow .3s ease;
     }
@@ -6142,21 +5735,7 @@ async function scanAllDeposits() {
       box-shadow: 0 14px 30px rgba(139,92,246,.15);
     }
 
-    /* ==========================================================
-       КРИПТО-ИКОНКИ
-       ========================================================== */
-    .crypto-card .icon,
-    .crypto-card .crypto-icon {
-      transition: transform .35s cubic-bezier(.4,0,.2,1);
-    }
-    .crypto-card:hover .icon,
-    .crypto-card:hover .crypto-icon {
-      transform: scale(1.15) rotate(-5deg);
-    }
-
-    /* ==========================================================
-       БАЛАНС — пульс
-       ========================================================== */
+    /* Баланс — пульс */
     @keyframes balanceGlow {
       0%   { text-shadow: 0 0 0 rgba(0,212,255,0); }
       50%  { text-shadow: 0 0 26px rgba(0,212,255,.75); }
@@ -6167,9 +5746,7 @@ async function scanAllDeposits() {
       display: inline-block;
     }
 
-    /* ==========================================================
-       BUSY-ПУЛЬС (только opacity — размер не меняется!)
-       ========================================================== */
+    /* Busy — ТОЛЬКО opacity (без scale!) */
     @keyframes softPulse {
       0%, 100% { opacity: 1; }
       50%      { opacity: .7; }
@@ -6179,11 +5756,9 @@ async function scanAllDeposits() {
       pointer-events: none;
     }
 
-    /* ==========================================================
-       RIPPLE
-       ========================================================== */
-    .btn { position: relative; overflow: hidden; }
-    .btn .ripple-fx {
+    /* Ripple */
+    .btn, .nc3-action, .nc3-card-action { position: relative; overflow: hidden; }
+    .ripple-fx {
       position: absolute;
       border-radius: 50%;
       background: rgba(255,255,255,.35);
@@ -6196,16 +5771,13 @@ async function scanAllDeposits() {
       to { transform: scale(4); opacity: 0; }
     }
 
-    /* ==========================================================
-       ЗАГОЛОВОК — shimmer
-       ========================================================== */
+    /* Заголовок — shimmer */
     @keyframes shimmer {
       to { background-position: -200% center; }
     }
     #ttl {
       background: linear-gradient(90deg,
-        #e7edf5 0%, #e7edf5 30%,
-        #00d4ff 50%,
+        #e7edf5 0%, #e7edf5 30%, #00d4ff 50%,
         #e7edf5 70%, #e7edf5 100%);
       background-size: 200% auto;
       -webkit-background-clip: text;
@@ -6214,9 +5786,7 @@ async function scanAllDeposits() {
       animation: shimmer 6s linear infinite;
     }
 
-    /* ==========================================================
-       СКРОЛЛБАР
-       ========================================================== */
+    /* Скроллбар */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
@@ -6231,11 +5801,11 @@ async function scanAllDeposits() {
   document.head.appendChild(style);
 
   /* ============================================================
-     2. JS — Ripple для кнопок без иконок + Refresh-логика
+     JS: Ripple + Refresh
      ============================================================ */
-  function findIcon(btn){
-    if (!btn) return null;
-    return btn.querySelector('svg, i.icon, i.btn-icon, img.icon, .btn-icon, .icon');
+  function findIcon(el){
+    if (!el) return null;
+    return el.querySelector('svg, i.icon, i.btn-icon, img.icon, .btn-icon, .icon');
   }
 
   function playClickSound(){
@@ -6243,8 +5813,8 @@ async function scanAllDeposits() {
     try { playTone(880, 0.05, 'sine', 0.08); } catch(e){}
   }
 
-  function addRipple(btn, e){
-    var rect = btn.getBoundingClientRect();
+  function addRipple(el, e){
+    var rect = el.getBoundingClientRect();
     var size = Math.max(rect.width, rect.height);
     var x = e ? (e.clientX - rect.left - size / 2) : (rect.width / 2 - size / 2);
     var y = e ? (e.clientY - rect.top - size / 2) : (rect.height / 2 - size / 2);
@@ -6255,32 +5825,31 @@ async function scanAllDeposits() {
     ripple.style.left = x + 'px';
     ripple.style.top = y + 'px';
 
-    btn.appendChild(ripple);
+    el.appendChild(ripple);
     setTimeout(function(){ if (ripple.parentNode) ripple.remove(); }, 700);
   }
 
-  var ACTION_BUTTONS = [
-    'btnRefreshBalance', 'btnWithdrawV2', 'btnAdd', 'btnTransferV2',
-    'btnExchangeV2', 'btnScanDeposits', 'btnCopyIban', 'btnCopyCardV2',
-    'btnReceiveHero', 'btnReceiveMoney', 'btnOrder',
-    'btnShowCvv', 'btnFreeze', 'btnDeleteCard', 'btnGoOrder',
-    'btnFreezeCard', 'btnLimitsCard', 'btnSettingsCard'
+  var ACTION_IDS = [
+    'btnRefreshBalance','btnWithdrawV2','btnAdd','btnTransferV2',
+    'btnExchangeV2','btnScanDeposits','btnCopyIban','btnCopyCardV2',
+    'btnReceiveHero','btnReceiveMoney','btnOrder',
+    'btnShowCvv','btnFreeze','btnDeleteCard','btnGoOrder',
+    'btnFreezeCard','btnLimitsCard','btnSettingsCard'
   ];
 
-  function attachButtons(){
-    ACTION_BUTTONS.forEach(function(id){
-      var btn = document.getElementById(id);
-      if (!btn || btn._premiumFinal) return;
-      btn._premiumFinal = true;
+  function attachActions(){
+    ACTION_IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el || el._finalPatched) return;
+      el._finalPatched = true;
 
-      btn.addEventListener('click', function(e){
+      el.addEventListener('click', function(e){
         playClickSound();
-        if (!findIcon(btn)) addRipple(btn, e);
+        if (!findIcon(el)) addRipple(el, e);
 
-        // Особый эффект для Refresh
         if (id === 'btnRefreshBalance'){
-          btn.classList.add('btn-busy');
-          setTimeout(function(){ btn.classList.remove('btn-busy'); }, 1200);
+          el.classList.add('btn-busy');
+          setTimeout(function(){ el.classList.remove('btn-busy'); }, 1200);
 
           var bal = document.getElementById('bal');
           if (bal){
@@ -6290,7 +5859,7 @@ async function scanAllDeposits() {
             setTimeout(function(){ bal.classList.remove('balance-updating'); }, 1000);
           }
 
-          if (typeof refreshBalanceFromServer === 'function') {
+          if (typeof refreshBalanceFromServer === 'function'){
             refreshBalanceFromServer();
           }
         }
@@ -6298,20 +5867,20 @@ async function scanAllDeposits() {
     });
   }
 
-  function attachRippleAll(){
-    document.querySelectorAll('.btn').forEach(function(btn){
-      if (btn._rippleFinal) return;
-      btn._rippleFinal = true;
-      btn.addEventListener('click', function(e){
-        if (findIcon(btn)) return;
-        addRipple(btn, e);
+  function attachRipple(){
+    document.querySelectorAll('.btn, .nc3-action, .nc3-card-action, .nc3-ghost, .nc3-primary').forEach(function(el){
+      if (el._rippleFinalPatched) return;
+      el._rippleFinalPatched = true;
+      el.addEventListener('click', function(e){
+        if (findIcon(el)) return;
+        addRipple(el, e);
       });
     });
   }
 
   function applyAll(){
-    attachButtons();
-    attachRippleAll();
+    attachActions();
+    attachRipple();
   }
 
   document.addEventListener('DOMContentLoaded', applyAll);
@@ -6322,5 +5891,5 @@ async function scanAllDeposits() {
   var observer = new MutationObserver(function(){ applyAll(); });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  console.log('[premium-ui-final] ✅ Готово. Кручение при hover, без багов.');
+  console.log('%c[premium-final] ✅ ЕДИНСТВЕННЫЙ РАБОЧИЙ ПАТЧ ЗАГРУЖЕН','color:#00d4ff;font-weight:bold;font-size:13px');
 })();
