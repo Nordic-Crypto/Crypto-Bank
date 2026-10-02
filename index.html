@@ -1020,6 +1020,34 @@ body.light-theme .recent-tx-item:hover{background:rgba(91,141,239,.05);border-co
   from{opacity:0;transform:translateY(6px)}
   to{opacity:1;transform:translateY(0)}
 }
+/* ============ CHAT BUBBLE WORD BREAK FIX ============ */
+.chat-bubble{
+  max-width:80% !important;
+  width:fit-content !important;
+  min-width:40px !important;
+  padding:11px 15px !important;
+  border-radius:18px !important;
+  font-size:13.5px !important;
+  line-height:1.5 !important;
+  
+  /* ✅ Правильные правила переноса: */
+  word-break:normal !important;        /* НЕ ломаем посреди слова */
+  overflow-wrap:break-word !important; /* ломаем ТОЛЬКО длинные слова (>ширины пузыря) */
+  hyphens:none !important;             /* без автоматических дефисов */
+  white-space:pre-wrap !important;     /* сохраняем \n */
+}
+
+/* Родитель — даём больше места */
+.chat-msg > div{
+  max-width:85% !important;
+  min-width:0 !important;
+}
+
+/* Очень узкий чат — пузырь почти всю ширину */
+@media (max-width:400px){
+  .chat-msg > div{max-width:90% !important}
+  .chat-bubble{max-width:100% !important}
+}
 </style>
 
 <script>
