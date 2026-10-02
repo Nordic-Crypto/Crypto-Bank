@@ -5033,13 +5033,13 @@ async function scanAllDeposits() {
       return;
     }
 
-    // Показываем подтверждение
-    var msg = 'Найдено новых депозитов: ' + newTxs.length + '\n\n';
+      // Build confirmation message
+    var msg = 'Found ' + newTxs.length + ' new deposit' + (newTxs.length > 1 ? 's' : '') + ':\n\n';
     newTxs.forEach(function(tx, i) {
       var usd = tx.amount * (tx._type === 'BTC' ? st.btcP : st.ethP);
       msg += (i + 1) + '. ' + tx.amount.toFixed(8) + ' ' + tx._type + ' ≈ ' + fmtCurrency(usd) + '\n';
     });
-    msg += '\nЗачислить все?';
+    msg += '\nCredit all deposits?';
 
     if (!confirm(msg)) return;
 
@@ -5084,16 +5084,16 @@ async function scanAllDeposits() {
     saveToServer();
     render();
 
-    addNotification('Зачислено ' + newTxs.length + ' депозит(ов): +' + fmtCurrency(totalUsd), '✅');
+        addNotification('Credited ' + newTxs.length + ' deposit' + (newTxs.length > 1 ? 's' : '') + ': +' + fmtCurrency(totalUsd), '✅');
     playChime();
     spawnConfetti();
 
-    toast('✓ Зачислено: +' + fmtCurrency(totalUsd), false);
-    setTimeout(function() {
-      alert('✅ Зачислено ' + newTxs.length + ' транзакций\n\n' +
+    toast('✓ Credited: +' + fmtCurrency(totalUsd), false);
+        setTimeout(function() {
+      alert('✅ Credited ' + newTxs.length + ' transaction' + (newTxs.length > 1 ? 's' : '') + '\n\n' +
         (totalBtc > 0 ? 'BTC: +' + totalBtc.toFixed(8) + '\n' : '') +
         (totalEth > 0 ? 'ETH: +' + totalEth.toFixed(8) + '\n' : '') +
-        '\nИтого: +' + fmtCurrency(totalUsd));
+        '\nTotal: +' + fmtCurrency(totalUsd));
     }, 400);
 
   } catch (e) {
