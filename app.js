@@ -3374,33 +3374,33 @@ async function sendAdminChatMsg(email) {
   if (!text) return;
   input.value = '';
 
-  try {
-    var token = getSessionToken();
-    if (!token) { alert('No session'); return; }
+  var token = getSessionToken();
+  if (!token) { alert('No session'); return; }
 
-    // 1. Загружаем СВЕЖИЙ state клиента
+  try {
+    // 1. Тянем state клиента
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token, email: email })
     });
     var state = await r.json();
-    if (!state || state.error) { alert('Failed to load client state'); return; }
+    if (!state || state.error) { alert('Failed to load'); return; }
 
-    // 2. Добавляем сообщение от админа
+    // 2. Добавляем сообщение
     if (!state.chat) state.chat = [];
     state.chat.push({
-      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      id: 'msg_' + Date.now(),
       from: 'admin',
       text: text,
       ts: Date.now(),
       read: false
     });
 
-    // 3. СОХРАНЯЕМ с force:true и email клиента
-    var sr = await fetch(WORKER_URL + '?action=setUserState', {
+    // 3. Сохраняем
+    await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token: token,
         email: email,
@@ -3408,13 +3408,6 @@ async function sendAdminChatMsg(email) {
         force: true
       })
     });
-    var saveRes = await sr.json();
-    console.log('[sendAdminChatMsg] saved:', saveRes);
-
-    if (!saveRes.ok) {
-      alert('Save failed: ' + (saveRes.error || 'unknown'));
-      return;
-    }
 
     // 4. Перерисовываем модалку
     var modal = document.getElementById('adminChatModal');
@@ -3423,7 +3416,6 @@ async function sendAdminChatMsg(email) {
 
   } catch(e) {
     console.error('[sendAdminChatMsg] error:', e);
-    alert('Error: ' + e.message);
   }
 }
 
