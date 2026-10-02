@@ -4114,28 +4114,65 @@ function filterClients(query) {
   });
 }
 
-async function updateAdminBadges() {
+async function updateAdminBadges(){
   try {
     var token = getSessionToken();
     if (!token) return;
+
     var r = await fetch(WORKER_URL + '?action=listUsers', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify({token: token})
     });
     var d = await r.json();
+
     if (d.ok && d.users) {
       var cnt = document.getElementById('navClientsCount');
       if (cnt) cnt.textContent = d.users.length;
-    }
-    var wdsEl = document.getElementById('navWdsCount');
-    var wdsCount = document.getElementById('adminWithdrawalsCount');
-    if (wdsCount && wdsEl) {
-      var m = (wdsCount.textContent || '').match(/(\d+)\s*pending/);
-      if (m && m[1] > 0) {
-        wdsEl.textContent = m[1];
-        wdsEl.style.display = 'inline-block';
-      } else {
-        wdsEl.style.display = 'none';
+
+      // Параллельно — getUserState × N
+      var promises = d.users.map(function(u) {
+        return fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({token: token, email: u.email})
+        })
+        .then(function(r2){ return r2.json(); })
+        .then(function(s){
+          if (!s || !Array.isArray(s.withdrawals)) return {wdPending: 0, chatUnread: 0};
+          var wdPending = s.withdrawals.filter(function(w){ return w.status === 'pending'; }).length;
+          var chatUnread = (s.chat || []).filter(function(m){ return m.from === 'client' && !m.read; }).length;
+          return {wdPending: wdPending, chatUnread: chatUnread};
+        })
+        .catch(function(){ return {wdPending: 0, chatUnread: 0}; });
+      });
+
+      var results = await Promise.all(promises);
+      var totalWd = 0;
+      var totalChats = 0;
+      results.forEach(function(res){
+        totalWd += res.wdPending;
+        totalChats += res.chatUnread;
+      });
+
+      var wdsEl = document.getElementById('navWdsCount');
+      if (wdsEl) {
+        if (totalWd > 0) {
+          wdsEl.textContent = totalWd;
+          wdsEl.style.display = 'inline-block';
+        } else {
+          wdsEl.style.display = 'none';
+        }
+      }
+
+      var chatsEl = document.getElementById('navChatsCount');
+      if (chatsEl) {
+        if (totalChats > 0) {
+          chatsEl.textContent = totalChats;
+          chatsEl.style.display = 'inline-block';
+        } else {
+          chatsEl.style.display = 'none';
+        }
       }
     }
   } catch(e) {}
