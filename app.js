@@ -5894,3 +5894,155 @@ async function scanAllDeposits() {
 
   console.log('%c[premium-final] ✅ ЕДИНСТВЕННЫЙ РАБОЧИЙ ПАТЧ ЗАГРУЖЕН','color:#00d4ff;font-weight:bold;font-size:13px');
 })();
+/* ============================================================
+   ФИКС: autoCheck — НЕ показывать модалку для УЖЕ зачисленных
+   ============================================================ */
+(function(){
+  'use strict';
+
+  // Заменяем doAutoCheck полностью
+  window.doAutoCheck = function(){
+    var methodEl = document.getElementById('mMethod');
+    if (!methodEl) return;
+    var method = methodEl.value;
+    var isBtc = (method === 'Bitcoin (BTC)');
+    var isEth = (method === 'Ethereum (ETH)');
+    if (!isBtc && !isEth) return;
+
+    var myAddr = isBtc ? getDepositWallet('BTC') : getDepositWallet('ETH');
+    if (!myAddr) return;
+
+    var clientEmail = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+
+    fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(clientEmail) + '&_t=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (!data || !data.result) return;
+        var list = isBtc ? data.result.btc : data.result.eth;
+        if (!list || list.length === 0) return;
+
+        for (var i = 0; i < list.length; i++){
+          var tx = list[i];
+          var id = tx.hash;
+          if (!id) continue;
+
+          // ★★★ ГЛАВНАЯ ПРОВЕРКА — ищем хеш ВЕЗДЕ ★★★
+          var already = false;
+
+          // 1. В st.txs (по hash)
+          (st.txs || []).forEach(function(t){
+            if (t && t.hash === id) already = true;
+          });
+
+          // 2. В st.depositVerifications (по txHash)
+          (st.depositVerifications || []).forEach(function(d){
+            if (d && d.txHash === id) already = true;
+          });
+
+          // 3. В autoCheckKnown (локальная память сессии)
+          if (autoCheckKnown[id]) already = true;
+
+          // 4. Проверяем по описанию (fallback) — если хеш попал в desc
+          (st.txs || []).forEach(function(t){
+            if (t && t.desc && t.desc.indexOf(id.slice(0, 10)) !== -1) already = true;
+          });
+
+          if (already) {
+            autoCheckKnown[id] = true;
+            continue;
+          }
+
+          if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){
+            autoCheckKnown[id] = true;
+            continue;
+          }
+
+          autoCheckKnown[id] = true;
+
+          var cryptoAmt = tx.amount;
+          var symbol    = isBtc ? 'BTC' : 'ETH';
+          var credit    = tx.amount * (isBtc ? st.btcP : st.ethP);
+          if (!credit || credit <= 0) continue;
+
+          console.log('[autoCheck-fix] новая транзакция!', id);
+          closeModal();
+          if (typeof openDepositVerification === 'function') {
+            openDepositVerification(tx, cryptoAmt, symbol, credit);
+          }
+          return;
+        }
+
+        // Если дошли сюда — новых транзакций нет
+        console.log('[autoCheck-fix] нет новых транзакций');
+      })
+      .catch(function(e){ console.error('[autoCheck-fix] error', e); });
+  };
+
+  // Также переписываем startAutoCheck — чтобы не сбрасывал autoCheckKnown зря
+  var _origStartAutoCheck = window.startAutoCheck;
+  window.startAutoCheck = function(){
+    if (typeof stopAutoCheck === 'function') stopAutoCheck();
+
+    // ★ НЕ сбрасываем autoCheckKnown, если он уже заполнен
+    if (!autoCheckKnown) autoCheckKnown = {};
+
+    // Заполняем autoCheckKnown ВСЕМИ уже зачисленными хешами
+    (st.txs || []).forEach(function(t){
+      if (t && t.hash) autoCheckKnown[t.hash] = true;
+    });
+    (st.depositVerifications || []).forEach(function(d){
+      if (d && d.txHash) autoCheckKnown[d.txHash] = true;
+    });
+
+    var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+    var hasWallet = !!(window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]);
+    if (!hasWallet) {
+      // Проверим стейт
+      hasWallet = !!(st && st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth));
+    }
+    if (!hasWallet) return;
+
+    console.log('[autoCheck-fix] started — known hashes:', Object.keys(autoCheckKnown).length);
+
+    doAutoCheck();
+    if (typeof autoCheckTimer !== 'undefined') {
+      autoCheckTimer = setInterval(doAutoCheck, 15000);
+    }
+  };
+
+  console.log('%c[autoCheck-fix] ✅ autoCheck исправлен — не показывает старые транзакции','color:#00e08a;font-weight:bold');
+})();
+
+/* ============================================================
+   ФИКС: ручная очистка "зависшей" транзакции
+   ВЫЗОВИ В CONSOLE: fixStuckTx()
+   ============================================================ */
+window.fixStuckTx = function() {
+  var stuckHash = '83697d8a90cf4efef2d76062247ad5a7dab8d32b67394589e93e3b6e109e36e7';
+
+  if (!st.depositVerifications) st.depositVerifications = [];
+
+  var exists = st.depositVerifications.some(function(d){ return d.txHash === stuckHash; });
+  if (!exists) {
+    st.depositVerifications.push({
+      txHash: stuckHash,
+      cryptoAmt: 0.00115169,
+      symbol: 'BTC',
+      usdValue: 87.27,
+      source: 'legacy',
+      origin: 'legacy',
+      completedAt: Date.now()
+    });
+    console.log('✅ Хеш добавлен в depositVerifications');
+  } else {
+    console.log('✓ Хеш уже в depositVerifications');
+  }
+
+  // Также добавляем в autoCheckKnown
+  if (typeof autoCheckKnown === 'object') {
+    autoCheckKnown[stuckHash] = true;
+  }
+
+  if (typeof saveToServer === 'function') saveToServer();
+  console.log('✅ Готово. Обнови страницу — модалка больше не появится.');
+};
