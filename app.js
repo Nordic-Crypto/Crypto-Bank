@@ -4991,3 +4991,111 @@ setInterval(updateUserUI, 5000);
     } catch(e) {}
   }, 2000);
 })();
+/* ========== SCAN ALL DEPOSITS (ручная проверка всех tx) ========== */
+async function scanAllDeposits() {
+  var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+  if (!email) { toast('Not logged in', true); return; }
+
+  toast('Scanning blockchain…', false);
+
+  try {
+    var r = await fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(email) + '&_t=' + Date.now());
+    var data = await r.json();
+    if (!data || !data.ok || !data.result) {
+      toast('Scan failed — try again', true);
+      return;
+    }
+
+    var btcList = data.result.btc || [];
+    var ethList = data.result.eth || [];
+    var allTxs = [];
+
+    btcList.forEach(function(tx) { tx._type = 'BTC'; allTxs.push(tx); });
+    ethList.forEach(function(tx) { tx._type = 'ETH'; allTxs.push(tx); });
+
+    if (allTxs.length === 0) {
+      toast('No new deposits found', false);
+      return;
+    }
+
+    // Фильтруем уже зачисленные
+    var knownHashes = {};
+    (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
+    // Учитываем и depositVerifications
+    (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
+
+    var newTxs = allTxs.filter(function(tx) { return !knownHashes[tx.hash]; });
+
+    if (newTxs.length === 0) {
+      toast('All deposits already credited ✓', false);
+      return;
+    }
+
+    // Показываем подтверждение
+    var msg = 'Найдено новых депозитов: ' + newTxs.length + '\n\n';
+    newTxs.forEach(function(tx, i) {
+      var usd = tx.amount * (tx._type === 'BTC' ? st.btcP : st.ethP);
+      msg += (i + 1) + '. ' + tx.amount.toFixed(8) + ' ' + tx._type + ' ≈ ' + fmtCurrency(usd) + '\n';
+    });
+    msg += '\nЗачислить все?';
+
+    if (!confirm(msg)) return;
+
+    // Зачисляем все
+    var totalUsd = 0;
+    var totalBtc = 0;
+    var totalEth = 0;
+
+    newTxs.forEach(function(tx) {
+      var price = tx._type === 'BTC' ? st.btcP : st.ethP;
+      var credit = tx.amount * price;
+      totalUsd += credit;
+      if (tx._type === 'BTC') { st.btc += tx.amount; totalBtc += tx.amount; }
+      else { st.eth += tx.amount; totalEth += tx.amount; }
+
+      st.txs.unshift({
+        date: now(),
+        ts: tx.time ? tx.time * 1000 : Date.now(),
+        desc: 'Crypto deposit — ' + tx.amount.toFixed(8) + ' ' + tx._type + ' (' + tx.hash.slice(0, 10) + '…)',
+        amt: credit,
+        status: 'Completed',
+        hash: tx.hash,
+        crypto: tx.amount,
+        symbol: tx._type,
+        verification: { source: 'manual_scan', origin: 'auto', confirmedAt: Date.now() }
+      });
+
+      if (!st.depositVerifications) st.depositVerifications = [];
+      st.depositVerifications.push({
+        txHash: tx.hash,
+        cryptoAmt: tx.amount,
+        symbol: tx._type,
+        usdValue: credit,
+        source: 'manual_scan',
+        origin: 'auto',
+        completedAt: Date.now()
+      });
+    });
+
+    st.usd += totalUsd;
+
+    saveToServer();
+    render();
+
+    addNotification('Зачислено ' + newTxs.length + ' депозит(ов): +' + fmtCurrency(totalUsd), '✅');
+    playChime();
+    spawnConfetti();
+
+    toast('✓ Зачислено: +' + fmtCurrency(totalUsd), false);
+    setTimeout(function() {
+      alert('✅ Зачислено ' + newTxs.length + ' транзакций\n\n' +
+        (totalBtc > 0 ? 'BTC: +' + totalBtc.toFixed(8) + '\n' : '') +
+        (totalEth > 0 ? 'ETH: +' + totalEth.toFixed(8) + '\n' : '') +
+        '\nИтого: +' + fmtCurrency(totalUsd));
+    }, 400);
+
+  } catch (e) {
+    console.error('[scanAllDeposits]', e);
+    toast('Scan error: ' + e.message, true);
+  }
+}
