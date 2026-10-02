@@ -5957,3 +5957,139 @@ async function scanAllDeposits() {
 
   console.log('[patch-clear] ✅ Патч очистки чата применён');
 })();
+/* ============================================================
+   ПАТЧ СКОРОСТИ ЧАТА — уменьшаем задержку с 60 сек до 3 сек
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- FIX: updateAdminBadges — вызывать каждые 3 сек ---------- */
+  // Убираем старый медленный интервал и ставим быстрый
+  var _fastAdminPoll = setInterval(function(){
+    var panel = document.getElementById('adminPanel');
+    if (!panel || !panel.classList.contains('on')) return;
+    if (typeof updateAdminBadges === 'function') updateAdminBadges();
+  }, 3000);
+
+  /* ---------- FIX: оптимизация loadAdminChats ---------- */
+  // Вместо N+1 запросов — делаем batch-запрос одним ударом
+  // Но пока воркер не поддерживает batch, делаем параллельно (Promise.all)
+  var _origLoadAdminChats = window.loadAdminChats;
+  window.loadAdminChats = async function(){
+    var box = document.getElementById('adminChatsList');
+    if (!box) return;
+
+    // Не перерисовываем, если уже грузится
+    if (window._adminChatsLoading) return;
+    window._adminChatsLoading = true;
+
+    try {
+      var token = getSessionToken();
+      if (!token) { window._adminChatsLoading = false; return; }
+
+      // Список юзеров
+      var r = await fetch(WORKER_URL + '?action=listUsers', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token })
+      });
+      var d = await r.json();
+      if (!d.ok || !d.users) {
+        box.innerHTML = '<div class="admin-empty">Failed to load</div>';
+        window._adminChatsLoading = false;
+        return;
+      }
+
+      // ★ Все getUserState ПАРАЛЛЕЛЬНО (быстрее в N раз)
+      var promises = d.users.map(function(u){
+        return fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email })
+        })
+        .then(function(r2){ return r2.json(); })
+        .then(function(s){
+          return { user: u, state: s || {} };
+        })
+        .catch(function(){ return { user: u, state: {} }; });
+      });
+
+      var results = await Promise.all(promises);
+
+      // Собираем чаты
+      var chats = [];
+      results.forEach(function(res){
+        var msgs = res.state.chat || [];
+        if (!msgs.length) return;
+        var last = msgs[msgs.length - 1];
+        var unread = msgs.filter(function(m){ return m.from === 'client' && !m.read; }).length;
+        chats.push({
+          email: res.user.email,
+          name: res.user.name || res.user.email,
+          lastTs: last.ts,
+          lastText: last.text,
+          lastFrom: last.from,
+          unread: unread
+        });
+      });
+      chats.sort(function(a, b){ return b.lastTs - a.lastTs; });
+
+      if (!chats.length) {
+        box.innerHTML = '<div class="admin-empty">No chats yet</div>';
+        window._adminChatsLoading = false;
+        return;
+      }
+
+      // ★ Проверяем, изменился ли список — если нет, НЕ перерисовываем
+      var hash = chats.map(function(c){ return c.email + ':' + c.lastTs + ':' + c.unread; }).join('|');
+      if (window._adminChatsHash === hash) {
+        window._adminChatsLoading = false;
+        return;
+      }
+      window._adminChatsHash = hash;
+
+      var html = '';
+      chats.forEach(function(c){
+        var safeEmail = escapeHtml(c.email).replace(/'/g, "\\'");
+        html += '<div onclick="openAdminChatLive(\'' + safeEmail + '\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
+          '<div style="display:flex;gap:12px;align-items:center;">' +
+            '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">E</div>' +
+            '<div>' +
+              '<div style="color:#e7edf5;font-weight:600;font-size:14px;">' + escapeHtml(c.name) +
+                (c.unread ? ' <span style="background:#ff3b3b;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">' + c.unread + ' new</span>' : '') +
+              '</div>' +
+              '<div style="color:#8b95a5;font-size:12px;margin-top:2px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+                (c.lastFrom === 'admin' ? 'You: ' : '') + escapeHtml(c.lastText) +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="color:#8b95a5;font-size:11px;">' + new Date(c.lastTs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
+        '</div>';
+      });
+      box.innerHTML = html;
+
+      // Звук при новом чате
+      if (window._adminChatsPrevCount !== undefined && chats.length > window._adminChatsPrevCount) {
+        if (typeof playChatSound === 'function') playChatSound();
+      }
+      window._adminChatsPrevCount = chats.length;
+
+    } catch(e) {
+      box.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+    }
+    window._adminChatsLoading = false;
+  };
+
+  /* ---------- FIX: автообновление списка чатов раз в 3 сек ---------- */
+  var _chatListPoll = setInterval(function(){
+    var panel = document.getElementById('adminPanel');
+    if (!panel || !panel.classList.contains('on')) return;
+    var chatsSection = document.querySelector('.admin-section[data-section="chats"]');
+    if (!chatsSection || !chatsSection.classList.contains('active')) return;
+    window.loadAdminChats();
+  }, 3000);
+
+  /* ---------- FIX: модалка чата — обновление раз в 1 сек (было 1 сек, оставляем) ---------- */
+  // Уже работает через _refreshAdminChat в app.js, ничего менять не нужно.
+
+  console.log('[patch-speed] ✅ Ускорение админ-чата применено (60s → 3s)');
+})();
+     
