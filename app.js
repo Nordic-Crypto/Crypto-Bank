@@ -4237,3 +4237,104 @@ function updateUserUI(){
 
 document.addEventListener('DOMContentLoaded', updateUserUI);
 setInterval(updateUserUI, 5000);
+/* ========== ADMIN: WITHDRAWALS AUTO-REFRESH ========== */
+(function(){
+  var intervalId = null;
+  var lastCount = 0;
+
+  function startWithdrawalsPolling(){
+    if (intervalId) return;
+    intervalId = setInterval(async function(){
+      var panel = document.getElementById('adminPanel');
+      if (!panel || !panel.classList.contains('on')) return;
+
+      var section = document.querySelector('.admin-section[data-section="withdrawals"]');
+      if (!section || !section.classList.contains('active')) return;
+
+      if (window._wdLoading) return;
+      window._wdLoading = true;
+
+      try {
+        var token = getSessionToken();
+        if (!token) { window._wdLoading = false; return; }
+
+        var res = await fetch(WORKER_URL + '?action=listUsers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token })
+        });
+        var data = await res.json();
+        if (!data.ok || !data.users) { window._wdLoading = false; return; }
+
+        var promises = data.users.map(function(u) {
+          return fetch(WORKER_URL + '?action=getUserState', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, email: u.email })
+          })
+          .then(function(r){ return r.json(); })
+          .then(function(d2){
+            if (!d2 || !Array.isArray(d2.withdrawals)) return [];
+            return d2.withdrawals.map(function(w){
+              if (!w) return null;
+              w.userEmail = u.email;
+              w.userName = u.name || u.email;
+              return w;
+            }).filter(Boolean);
+          })
+          .catch(function(){ return []; });
+        });
+
+        var results = await Promise.all(promises);
+        var allWd = [];
+        results.forEach(function(arr){ allWd = allWd.concat(arr); });
+        allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+        var pending = allWd.filter(function(w) { return w.status === 'pending'; }).length;
+
+        if (allWd.length !== lastCount) {
+          lastCount = allWd.length;
+          renderWithdrawalsList(allWd, pending);
+          if (pending > 0 && typeof playTone === 'function') {
+            playTone(660, 0.1, 'sine', 0.25);
+            setTimeout(function(){ playTone(880, 0.15, 'sine', 0.2); }, 120);
+          }
+        }
+      } catch(e) {}
+      window._wdLoading = false;
+    }, 8000);
+  }
+
+  function renderWithdrawalsList(allWd, pending){
+    var listEl = document.getElementById('adminWithdrawalsList');
+    var countEl = document.getElementById('adminWithdrawalsCount');
+    if (countEl) countEl.textContent = pending + ' pending • ' + allWd.length + ' total';
+
+    if (!allWd.length) {
+      if (listEl) listEl.innerHTML = '<div class="admin-empty">No withdrawal requests</div>';
+      return;
+    }
+
+    var html = '';
+    for (var k = 0; k < allWd.length; k++) {
+      html += renderAdminWithdrawalCard(allWd[k]);
+    }
+    if (listEl) listEl.innerHTML = html;
+
+    var badge = document.getElementById('navWdsCount');
+    if (badge){
+      if (pending > 0){
+        badge.textContent = pending;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(startWithdrawalsPolling, 2000);
+  });
+
+  window.startWithdrawalsPolling = startWithdrawalsPolling;
+})();
