@@ -3509,7 +3509,7 @@ async function openAdminChat(email) {
       '</div>' +
       '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
       '<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">' +
-        '<input id="adminChatInput" placeholder="Reply..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;" onkeydown="if(event.key===\'Enter\')sendAdminChatMsg(\'' + email + '\')">' +
+        '<input id="adminChatInput" placeholder="Reply..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;" oninput="_notifyAdminTyping(\'' + email + '\')" onkeydown="if(event.key===\'Enter\')sendAdminChatMsg(\'' + email + '\')">' +
         '<button onclick="sendAdminChatMsg(\'' + email + '\')" style="width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;">→</button>' +
       '</div>' +
     '</div>';
@@ -4730,7 +4730,7 @@ setInterval(updateUserUI, 5000);
         }
       }
     } catch(e) {}
-  }, 2000);
+  }, 1000);
 })();
 
 // ========== CLIENT TYPING NOTIFY ==========
@@ -4778,7 +4778,7 @@ setInterval(updateUserUI, 5000);
     if (window._adminPollTimer) clearInterval(window._adminPollTimer);
     window._adminPollTimer = setInterval(function(){
       _refreshAdminChat(email);
-    }, 2000);
+    }, 1000);
   };
 
   window._closeAdminModal = function(){
@@ -4859,18 +4859,33 @@ setInterval(updateUserUI, 5000);
     var mb = document.getElementById('adminChatMsgs'); if (mb) mb.scrollTop = mb.scrollHeight;
   }
 
-  var _admTimer = null;
-  window._notifyAdminTyping = function(email){
-    var token = getSessionToken();
-    if (!token) return;
-    if (_admTimer) return;
-    _admTimer = setTimeout(function(){ _admTimer = null; }, 2000);
+ var _admTimer = null;
+var _admStopTimer = null;
+
+window._notifyAdminTyping = function(email){
+  var token = getSessionToken();
+  if (!token) return;
+
+  // Сброс "печатает" через 2.5 сек после последнего ввода
+  clearTimeout(_admStopTimer);
+  _admStopTimer = setTimeout(function(){
     fetch(WORKER_URL + '?action=setTyping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, who: 'admin', typing: true })
+      body: JSON.stringify({ token: token, email: email, who: 'admin', typing: false })
     }).catch(function(){});
-  };
+  }, 2500);
+
+  // Отправляем "печатает" не чаще раз в 2 сек
+  if (_admTimer) return;
+  _admTimer = setTimeout(function(){ _admTimer = null; }, 2000);
+
+  fetch(WORKER_URL + '?action=setTyping', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token, email: email, who: 'admin', typing: true })
+  }).catch(function(){});
+};
 })();
 
 /* ========== MERGE CONSECUTIVE MESSAGES ========== */
