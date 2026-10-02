@@ -4770,3 +4770,80 @@ setInterval(updateUserUI, 5000);
     box.scrollTop = box.scrollHeight;
   };
 })();
+/* ========== CLIENT CHAT — реакция на удаление ========== */
+(function(){
+  var lastLen = -1;
+
+  setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+
+    var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!targetEmail) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: targetEmail })
+      });
+      var fresh = await r.json();
+      if (!fresh) return;
+
+      var chat = fresh.chat || [];
+      var newLen = chat.length;
+
+      console.log('[client-poll] len:', newLen, 'last:', lastLen, 'ticket:', !!fresh.ticket);
+
+      // ★ Админ удалил чат — длина уменьшилась ИЛИ тикет исчез
+      if (lastLen >= 0 && (newLen < lastLen || (fresh.ticket === null && st.ticket && st.ticket.id))) {
+        console.log('[client] 🔥 Chat DELETED by admin — resetting UI');
+
+        st.chat = [];
+        st.ticket = null;
+        window._adminTyping = false;
+        window._lastAdminTyping = false;
+
+        // 1. Открываем ФОРМУ тикета
+        var form = document.getElementById('chatTicketForm');
+        var conv = document.getElementById('chatConversation');
+        if (form) form.style.display = 'flex';
+        if (conv) conv.style.display = 'none';
+
+        // 2. Заполняем email
+        var emailEl = document.getElementById('tkEmail');
+        if (emailEl) emailEl.value = targetEmail;
+
+        // 3. Очищаем поля
+        var topicEl = document.getElementById('tkTopic'); if (topicEl) topicEl.value = 'withdrawal';
+        var prioEl = document.getElementById('tkPriority'); if (prioEl) prioEl.value = 'normal';
+        var descEl = document.getElementById('tkDesc'); if (descEl) descEl.value = '';
+
+        // 4. Чистим сообщения
+        var box = document.getElementById('chatMessages');
+        if (box) box.innerHTML = '';
+
+        // 5. Сбрасываем бейдж
+        if (typeof updateChatBadge === 'function') updateChatBadge();
+
+        lastLen = 0;
+        return;
+      }
+
+      // Если форма открыта и нет тикета — оставляем как есть
+      // Если чат открыт и есть сообщения — рендерим
+      lastLen = newLen;
+      st.chat = chat;
+      window._adminTyping = !!(fresh.typing && fresh.typing.admin);
+
+      var panel = document.getElementById('chatPanel');
+      var isOpen = panel && panel.style.display === 'flex';
+      if (isOpen && newLen > 0 && typeof renderChatMessages === 'function') {
+        renderChatMessages();
+      }
+
+    } catch(e) {
+      console.error('[client-poll] err:', e);
+    }
+  }, 2000);
+})();
