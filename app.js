@@ -3317,6 +3317,8 @@ async function loadAdminChats() {
 }
 
 async function openAdminChat(email) {
+  if (typeof window.openAdminChatLive === 'function') { window.openAdminChatLive(email); return; }
+  // ← дальше старый код...
   var old = document.getElementById('adminChatModal'); if (old) old.remove();
   var token = getSessionToken();
   var r = await fetch(WORKER_URL + '?action=getUserState', {
@@ -4404,4 +4406,224 @@ setInterval(updateUserUI, 5000);
   });
 
   window.startWithdrawalsPolling = startWithdrawalsPolling;
+})();
+/* ============================================================
+   LIVE CHAT V2 — авто-обновление + typing indicator
+   ============================================================ */
+
+// ========== CLIENT POLLING (каждые 2 сек) ==========
+(function(){
+  var _lastAdminTyping = null;
+
+  setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+
+    var panel = document.getElementById('chatPanel');
+    var isOpen = panel && panel.style.display === 'flex';
+    if (!isOpen) return;
+
+    var targetEmail = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!targetEmail) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: targetEmail })
+      });
+      var fresh = await r.json();
+      if (!fresh || !fresh.chat) return;
+
+      var prevLen = (st.chat || []).length;
+      var newLen = fresh.chat.length;
+      st.chat = fresh.chat;
+
+      var adminTyping = !!(fresh.typing && fresh.typing.admin === true);
+
+      if (newLen !== prevLen || adminTyping !== _lastAdminTyping) {
+        _lastAdminTyping = adminTyping;
+        window._adminTyping = adminTyping;
+
+        // Перерисовываем
+        var box = document.getElementById('chatMessages');
+        if (box) {
+          var chat = fresh.chat.slice().sort(function(a,b){ return a.ts - b.ts; });
+          var html = '';
+          if (!chat.length) {
+            html = '<div class="chat-welcome"><div class="chat-welcome-name">Elena Bergström</div><div class="chat-welcome-text">Hi! How can I help you today?</div></div>';
+          } else {
+            chat.forEach(function(m){
+              var isClient = m.from === 'client';
+              html += '<div class="chat-msg ' + (isClient ? 'client' : 'admin') + '">' +
+                '<div>' +
+                  '<div class="chat-bubble">' + escapeHtml(m.text) + '</div>' +
+                  '<div class="chat-msg-meta">' +
+                    (isClient ? 'You' : 'Elena') + ' • ' +
+                    new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            });
+          }
+          // Индикатор "печатает"
+          if (adminTyping) {
+            html += '<div class="chat-msg admin chat-typing"><div><div class="chat-bubble">' +
+              '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>' +
+              '</div><div class="chat-msg-meta">Elena печатает...</div></div></div>';
+          }
+          box.innerHTML = html;
+          box.scrollTop = box.scrollHeight;
+        }
+
+        if (newLen > prevLen) {
+          var newMsgs = fresh.chat.slice(prevLen);
+          if (newMsgs.some(function(m){ return m.from === 'admin'; })) {
+            if (typeof playChatSound === 'function') playChatSound();
+          }
+        }
+      }
+    } catch(e) {}
+  }, 2000);
+})();
+
+// ========== CLIENT TYPING NOTIFY ==========
+(function(){
+  var timer = null;
+  function notifyTyping(){
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+    if (timer) return;
+    timer = setTimeout(function(){ timer = null; }, 2000);
+
+    fetch(WORKER_URL + '?action=setTyping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, who: 'client', typing: true })
+    }).catch(function(){});
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var input = document.getElementById('chatInput');
+    if (input) input.addEventListener('input', notifyTyping);
+  });
+})();
+
+// ========== ADMIN MODAL AUTO-REFRESH ==========
+(function(){
+  window._adminPollTimer = null;
+
+  window.openAdminChatLive = async function(email){
+    var old = document.getElementById('adminChatModal'); if (old) old.remove();
+    var token = getSessionToken();
+    window._currentAdminChatEmail = email;
+
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, email: email })
+    });
+    var state = await r.json();
+    var msgs = state.chat || [];
+    var typing = state.typing || {};
+
+    _buildAdminModal(email, msgs, typing);
+
+    if (window._adminPollTimer) clearInterval(window._adminPollTimer);
+    window._adminPollTimer = setInterval(function(){
+      _refreshAdminChat(email);
+    }, 2000);
+  };
+
+  window._closeAdminModal = function(){
+    var m = document.getElementById('adminChatModal');
+    if (m) m.remove();
+    if (window._adminPollTimer) { clearInterval(window._adminPollTimer); window._adminPollTimer = null; }
+  };
+
+  async function _refreshAdminChat(email){
+    var token = getSessionToken();
+    if (!token) return;
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var state = await r.json();
+      if (!state) return;
+
+      var msgs = state.chat || [];
+      var typing = state.typing || {};
+
+      var box = document.getElementById('adminChatMsgs');
+      if (!box) { _closeAdminModal(); return; }
+
+      var newHtml = _buildMsgs(msgs, typing);
+      if (box.dataset.hash !== newHtml.length + '_' + msgs.length) {
+        box.dataset.hash = newHtml.length + '_' + msgs.length;
+        var atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
+        box.innerHTML = newHtml;
+        if (atBottom) box.scrollTop = box.scrollHeight;
+      }
+    } catch(e) {}
+  }
+
+  function _buildMsgs(msgs, typing){
+    var html = '';
+    msgs.forEach(function(m){
+      var isAdmin = m.from === 'admin';
+      html += '<div style="display:flex;margin-bottom:10px;' + (isAdmin ? 'justify-content:flex-end;' : '') + '">' +
+        '<div style="max-width:70%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.45;' +
+          (isAdmin ? 'background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;' : 'background:rgba(255,255,255,0.06);color:#e7edf5;') + '">' +
+          escapeHtml(m.text) +
+          '<div style="font-size:10px;opacity:0.6;margin-top:4px;">' + new Date(m.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    if (typing && typing.client === true){
+      html += '<div style="display:flex;margin-bottom:10px;"><div style="padding:10px 14px;background:rgba(255,255,255,0.06);color:#e7edf5;border-radius:16px;font-size:13px;">' +
+        '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>' +
+      '</div></div>';
+    }
+    if (!html) html = '<div style="text-align:center;color:#8b95a5;padding:30px;">No messages</div>';
+    return html;
+  }
+
+  function _buildAdminModal(email, msgs, typing){
+    var messagesHtml = _buildMsgs(msgs, typing);
+    var modal = document.createElement('div');
+    modal.id = 'adminChatModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+    modal.innerHTML =
+      '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:520px;height:600px;display:flex;flex-direction:column;overflow:hidden;">' +
+        '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
+          '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button onclick="endAdminChat(\'' + email + '\')" style="background:rgba(255,80,80,0.15);border:none;color:#ff6b6b;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;">End chat</button>' +
+            '<button onclick="_closeAdminModal()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="adminChatMsgs" data-hash="" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
+        '<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">' +
+          '<input id="adminChatInput" placeholder="Reply..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;" onkeydown="if(event.key===\'Enter\')sendAdminChatMsg(\'' + email + '\')" oninput="_notifyAdminTyping(\'' + email + '\')">' +
+          '<button onclick="sendAdminChatMsg(\'' + email + '\')" style="width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;">→</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    var mb = document.getElementById('adminChatMsgs'); if (mb) mb.scrollTop = mb.scrollHeight;
+  }
+
+  // Admin typing notify
+  var _admTimer = null;
+  window._notifyAdminTyping = function(email){
+    var token = getSessionToken();
+    if (!token) return;
+    if (_admTimer) return;
+    _admTimer = setTimeout(function(){ _admTimer = null; }, 2000);
+    fetch(WORKER_URL + '?action=setTyping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, who: 'admin', typing: true })
+    }).catch(function(){});
+  };
 })();
