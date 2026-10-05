@@ -6836,7 +6836,7 @@ window.fixStuckTx = function() {
         }
       }
     } catch(e) {}
-  }, 2000);
+  }, 500);
 
   /* ---------- Админ: то же самое для модалки ---------- */
   // Патчим _refreshAdminChat — не перерисовывать если не изменилось
@@ -6908,7 +6908,7 @@ window.fixStuckTx = function() {
         box.innerHTML = html;
         if (wasAtBottom) box.scrollTop = box.scrollHeight;
       } catch(e) {}
-    }, 1500);
+    }, 500);
   };
 
   console.log('%c[chat-no-flicker] ✅ Чат без мигания','color:#00e08a;font-weight:bold');
