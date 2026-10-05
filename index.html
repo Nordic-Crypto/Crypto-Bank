@@ -35,7 +35,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 /* ============ SIDEBAR ============ */
 .side{width:238px;background:rgba(7,10,18,.88);border-right:1px solid var(--nc3-line);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
 .brand{font-size:1.3rem;font-weight:800;margin-bottom:42px;display:flex;align-items:center;gap:11px}
-.blogo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
+.blogo{width:34px;height:34px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,212,255,.25)}
+.blogo img{width:100%;height:100%;object-fit:cover;display:block}
 .blogo svg{width:18px;height:18px;stroke:#04121a;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .brand span{color:var(--pri)}
 .menu{list-style:none;flex:1;display:flex;flex-direction:column;gap:4px}
