@@ -6692,3 +6692,224 @@ window.fixStuckTx = function() {
 
   console.log('%c[chat-fix-v2] ✅ Typing + Badges + End chat','color:#00e08a;font-weight:bold');
 })();
+/* ============================================================
+   ЧАТ: БЕЗ МИГАНИЯ — обновляем только при изменениях
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- Клиент: кэш последнего рендера ---------- */
+  var _lastClientHash = '';
+
+  var _origRender = window.renderChatMessages;
+  window.renderChatMessages = function(force){
+    var box = document.getElementById('chatMessages');
+    if (!box) return;
+
+    var chat = (st.chat || []).slice().sort(function(a,b){ return a.ts - b.ts; });
+
+    // Уникальный хеш состояния чата
+    var hash = chat.length + '|' +
+               chat.map(function(m){
+                 return m.id + ':' + (m.read ? 1 : 0);
+               }).join(',') + '|' +
+               (window._adminTyping ? '1' : '0');
+
+    // Если ничего не изменилось — НЕ перерисовываем
+    if (!force && hash === _lastClientHash) return;
+    _lastClientHash = hash;
+
+    var html = '';
+    if (!chat.length){
+      html = '<div class="chat-welcome">' +
+        '<div class="chat-welcome-name">Elena Bergström</div>' +
+        '<div class="chat-welcome-text">Hi! How can I help you today?</div>' +
+      '</div>';
+    } else {
+      var prevFrom = null;
+      var prevTs = 0;
+      chat.forEach(function(m){
+        var isClient = m.from === 'client';
+        var sameAuthor = (prevFrom === m.from) && (m.ts - prevTs < 60000);
+
+        var metaHtml = sameAuthor ? '' :
+          '<div class="chat-msg-meta">' +
+            (isClient ? 'You' : 'Elena') + ' • ' +
+            new Date(m.ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) +
+          '</div>';
+
+        html += '<div class="chat-msg ' + (isClient ? 'client' : 'admin') + (sameAuthor ? ' same-author' : '') + '">' +
+          '<div>' +
+            '<div class="chat-bubble">' + (typeof escapeHtml === 'function' ? escapeHtml(m.text) : m.text) + '</div>' +
+            metaHtml +
+          '</div>' +
+        '</div>';
+
+        prevFrom = m.from;
+        prevTs = m.ts;
+      });
+    }
+
+    if (window._adminTyping){
+      html += '<div class="chat-msg admin chat-typing">' +
+        '<div>' +
+          '<div class="chat-bubble">' +
+            '<span class="typing-dot"></span>' +
+            '<span class="typing-dot"></span>' +
+            '<span class="typing-dot"></span>' +
+          '</div>' +
+          '<div class="chat-msg-meta">Elena is typing...</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // Запоминаем позицию скролла
+    var wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+    var oldScrollTop = box.scrollTop;
+
+    box.innerHTML = html;
+
+    // Восстанавливаем скролл
+    if (wasAtBottom) {
+      box.scrollTop = box.scrollHeight;
+    } else {
+      box.scrollTop = oldScrollTop;
+    }
+  };
+
+  /* ---------- Убираем агрессивные вызовы renderChatMessages ---------- */
+  // В client polling — рендерим только при реальных изменениях
+  // Перезапишем client polling (1 сек)
+  setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!email) return;
+
+    // Если это админ — пропускаем
+    if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+
+    // Проверяем, открыт ли чат
+    var panel = document.getElementById('chatPanel');
+    var isOpen = panel && panel.style.display === 'flex';
+    if (!isOpen) return; // Не делаем fetch если чат закрыт
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh) return;
+
+      var prevLen = (st.chat || []).length;
+      var newLen = (fresh.chat || []).length;
+      var prevTyping = window._adminTyping;
+      var newTyping = false;
+
+      if (fresh.typing && fresh.typing.admin === true){
+        var age = Date.now() - (fresh.typing.adminTs || 0);
+        newTyping = age < 3000;
+      }
+
+      st.chat = fresh.chat || [];
+      window._adminTyping = newTyping;
+
+      // ★ Перерисовываем ТОЛЬКО если изменилось
+      var changed = (newLen !== prevLen) || (newTyping !== prevTyping);
+      if (changed){
+        window.renderChatMessages();
+      }
+
+      // Badge
+      if (typeof updateChatBadge === 'function') updateChatBadge();
+
+      // Звук при новом сообщении
+      if (newLen > prevLen){
+        var newMsgs = st.chat.slice(prevLen);
+        var fromAdmin = newMsgs.some(function(m){ return m.from === 'admin'; });
+        if (fromAdmin){
+          if (typeof playChatSound === 'function') playChatSound();
+          if (typeof addNotification === 'function') addNotification('New message from Elena', '💬');
+        }
+      }
+    } catch(e) {}
+  }, 2000);
+
+  /* ---------- Админ: то же самое для модалки ---------- */
+  // Патчим _refreshAdminChat — не перерисовывать если не изменилось
+  window._lastAdminRenderHash = '';
+
+  var _origOpenAdminChatLive = window.openAdminChatLive;
+  window.openAdminChatLive = async function(email){
+    if (typeof _origOpenAdminChatLive === 'function'){
+      await _origOpenAdminChatLive(email);
+    }
+
+    // Свой polling — только при изменениях
+    if (window._adminPollCleaner) clearInterval(window._adminPollCleaner);
+    window._adminPollCleaner = setInterval(async function(){
+      var modal = document.getElementById('adminChatModal');
+      if (!modal) { clearInterval(window._adminPollCleaner); return; }
+
+      var token = getSessionToken();
+      if (!token) return;
+
+      try {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email })
+        });
+        var state = await r.json();
+        if (!state) return;
+
+        var msgs = state.chat || [];
+        var typing = state.typing || {};
+        var clientTyping = typing.client === true && (Date.now() - (typing.clientTs || 0) < 3000);
+
+        var hash = msgs.length + '|' +
+                   msgs.map(function(m){ return m.id; }).join(',') + '|' +
+                   (clientTyping ? '1' : '0');
+
+        // Обновляем placeholder если печатает
+        var inp = document.getElementById('adminChatInput');
+        if (inp){
+          var newPlaceholder = clientTyping ? 'Client is typing...' : 'Reply...';
+          if (inp.placeholder !== newPlaceholder) inp.placeholder = newPlaceholder;
+        }
+
+        // Обновляем сообщения только если изменилось
+        if (hash === window._lastAdminRenderHash) return;
+        window._lastAdminRenderHash = hash;
+
+        var box = document.getElementById('adminChatMsgs');
+        if (!box) return;
+
+        var wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+
+        var html = '';
+        msgs.forEach(function(m){
+          var isAdmin = m.from === 'admin';
+          html += '<div style="display:flex;margin-bottom:10px;' + (isAdmin ? 'justify-content:flex-end;' : '') + '">' +
+            '<div style="max-width:70%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.45;' +
+              (isAdmin ? 'background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;' : 'background:rgba(255,255,255,0.06);color:#e7edf5;') + '">' +
+              (typeof escapeHtml === 'function' ? escapeHtml(m.text) : m.text) +
+              '<div style="font-size:10px;opacity:0.6;margin-top:4px;">' +
+                new Date(m.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        });
+        if (!html) html = '<div style="text-align:center;color:#8b95a5;padding:30px;">No messages</div>';
+
+        box.innerHTML = html;
+        if (wasAtBottom) box.scrollTop = box.scrollHeight;
+      } catch(e) {}
+    }, 1500);
+  };
+
+  console.log('%c[chat-no-flicker] ✅ Чат без мигания','color:#00e08a;font-weight:bold');
+})();
