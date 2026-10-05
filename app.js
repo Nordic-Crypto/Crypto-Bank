@@ -6913,3 +6913,211 @@ window.fixStuckTx = function() {
 
   console.log('%c[chat-no-flicker] ✅ Чат без мигания','color:#00e08a;font-weight:bold');
 })();
+/* ============================================================
+   NOTIFICATIONS: кнопка удаления + clear all
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ============================================================
+     1. CSS для кнопки × на уведомлениях
+     ============================================================ */
+  var style = document.createElement('style');
+  style.id = 'notif-delete-style';
+  style.textContent = `
+    /* Позиционирование .notif-item относительно */
+    .notif-item {
+      position: relative;
+      padding-right: 44px !important;
+    }
+
+    /* Кнопка × — скрыта по умолчанию */
+    .notif-delete-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 80, 80, 0.12);
+      border: 1px solid rgba(255, 80, 80, 0.25);
+      color: #ff6b6b;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity .2s ease, background .2s ease, transform .2s ease;
+      font-family: inherit;
+      padding: 0;
+      z-index: 5;
+    }
+
+    /* Показываем кнопку при наведении */
+    .notif-item:hover .notif-delete-btn {
+      opacity: 1;
+    }
+
+    /* Hover эффект на кнопке */
+    .notif-delete-btn:hover {
+      background: rgba(255, 80, 80, 0.25);
+      transform: scale(1.1);
+    }
+
+    /* На мобильных — всегда показываем */
+    @media (max-width: 768px) {
+      .notif-delete-btn { opacity: 1; }
+    }
+
+    /* Кнопка Clear all в хедере */
+    .notif-clear-all {
+      padding: 7px 12px;
+      background: rgba(255, 80, 80, 0.1);
+      border: 1px solid rgba(255, 80, 80, 0.25);
+      border-radius: 8px;
+      color: #ff6b6b;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      font-family: inherit;
+      margin-left: 8px;
+    }
+    .notif-clear-all:hover {
+      background: rgba(255, 80, 80, 0.2);
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* ============================================================
+     2. Функция: удалить одно уведомление
+     ============================================================ */
+  window.deleteNotification = function(id){
+    if (!st.notifications) return;
+
+    var before = st.notifications.length;
+    st.notifications = st.notifications.filter(function(n){
+      return String(n.id) !== String(id);
+    });
+
+    if (st.notifications.length < before){
+      if (typeof saveToServer === 'function') saveToServer();
+      if (typeof renderNotifications === 'function') renderNotifications();
+      console.log('[notif] deleted', id);
+    }
+  };
+
+  /* ============================================================
+     3. Функция: удалить все уведомления
+     ============================================================ */
+  window.clearAllNotifications = function(){
+    if (!st.notifications || !st.notifications.length) {
+      if (typeof toast === 'function') toast('No notifications to clear', true);
+      return;
+    }
+    if (!confirm('Clear all notifications?')) return;
+
+    st.notifications = [];
+    if (typeof saveToServer === 'function') saveToServer();
+    if (typeof renderNotifications === 'function') renderNotifications();
+    if (typeof toast === 'function') toast('All notifications cleared');
+  };
+
+  /* ============================================================
+     4. Перезаписываем renderNotifications с кнопками ×
+     ============================================================ */
+  window.renderNotifications = function(){
+    var listEl = document.getElementById('notifList');
+    var badge  = document.getElementById('notifBadge');
+    var sub    = document.getElementById('notifSub');
+    if (!listEl) return;
+
+    var notifs = st.notifications || [];
+    var unread = 0;
+    for (var i = 0; i < notifs.length; i++) {
+      if (!notifs[i].read) unread++;
+    }
+
+    // Badge
+    if (badge){
+      if (unread > 0){
+        badge.style.display = 'flex';
+        badge.textContent = unread > 9 ? '9+' : unread;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Subtitle
+    if (sub) sub.textContent = unread > 0 ? (unread + ' unread') : 'All read';
+
+    // Пусто
+    if (notifs.length === 0){
+      listEl.innerHTML = '<div class="notif-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:8px">🔔</div><div>No notifications yet</div></div>';
+      return;
+    }
+
+    // Render
+    var html = '';
+    for (var j = 0; j < notifs.length; j++){
+      var n = notifs[j];
+      var safeId = String(n.id).replace(/'/g, "\\'");
+      var safeText = (n.text || '').replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+      html += '<div class="notif-item' + (n.read ? '' : ' unread') + '" data-id="' + n.id + '">' +
+        '<div class="notif-icon">' + (n.icon || '🔔') + '</div>' +
+        '<div class="notif-body">' +
+          '<div class="notif-text">' + safeText + '</div>' +
+          '<div class="notif-time">' + (typeof timeAgo === 'function' ? timeAgo(n.ts) : '') + '</div>' +
+        '</div>' +
+        '<button class="notif-delete-btn" onclick="event.stopPropagation(); deleteNotification(\'' + safeId + '\')" title="Delete notification">×</button>' +
+      '</div>';
+    }
+    listEl.innerHTML = html;
+
+    // Клик по уведомлению — только mark as read (НЕ удаляет)
+    var items = listEl.querySelectorAll('.notif-item');
+    for (var k = 0; k < items.length; k++){
+      items[k].addEventListener('click', function(e){
+        if (e.target.classList.contains('notif-delete-btn')) return;
+        var id = this.getAttribute('data-id');
+        if (typeof markRead === 'function') markRead(Number(id));
+      });
+    }
+  };
+
+  /* ============================================================
+     5. Добавляем кнопку "Clear all" в header панели
+     ============================================================ */
+  document.addEventListener('DOMContentLoaded', function(){
+    var header = document.querySelector('.notif-header');
+    if (!header) return;
+    if (header.querySelector('.notif-clear-all')) return;
+
+    var btn = document.createElement('button');
+    btn.className = 'notif-clear-all';
+    btn.textContent = 'Clear all';
+    btn.onclick = function(){ window.clearAllNotifications(); };
+
+    // Вставляем перед close кнопкой
+    var closeBtn = header.querySelector('.notif-close');
+    if (closeBtn){
+      closeBtn.parentNode.insertBefore(btn, closeBtn);
+      btn.style.marginRight = '8px';
+    } else {
+      header.appendChild(btn);
+    }
+  });
+
+  /* ============================================================
+     6. Перерисовываем уведомления при старте
+     ============================================================ */
+  setTimeout(function(){
+    if (typeof renderNotifications === 'function') renderNotifications();
+  }, 500);
+
+  console.log('%c[notif-delete] ✅ Кнопка × на уведомлениях + Clear all','color:#00e08a;font-weight:bold');
+})();
