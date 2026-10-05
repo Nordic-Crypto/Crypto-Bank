@@ -7055,12 +7055,32 @@ async function scanAllDeposits() {
     } catch(e) {}
   }
 
-  async function checkDeposits() {
+   async function checkDeposits() {
     var role = localStorage.getItem('user_role');
     if (role === 'admin') return;
 
     var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
     if (!email) return;
+
+    // ★ Always sync fresh state from server (get new wallet from admin)
+    try {
+      var token = getSessionToken();
+      if (token) {
+        var freshR = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email })
+        });
+        var fresh = await freshR.json();
+        if (fresh && !fresh.error) {
+          if (fresh.cryptoAddress) st.cryptoAddress = fresh.cryptoAddress;
+          if (fresh.txs) st.txs = fresh.txs;
+          if (fresh.depositVerifications) st.depositVerifications = fresh.depositVerifications;
+        }
+      }
+    } catch(e) {
+      console.warn('[final-fix] sync error:', e);
+    }
 
     var hasWallet = false;
     try {
