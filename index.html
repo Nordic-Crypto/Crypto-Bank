@@ -837,6 +837,38 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
   #chatPanel .chat-header{padding-right:70px;position:relative}
   #chatToggle{bottom:16px;right:16px;z-index:100000}
 }
+  /* ============================================================
+   WORDMARK SHIMMER — текст с переливом как логотип
+   ============================================================ */
+.brand .nm,
+.login-logo-text,
+.admin-brand > div:last-child {
+  background: linear-gradient(90deg,
+    #F8FAFC 0%,
+    #00D4FF 25%,
+    #A855F7 50%,
+    #00D4FF 75%,
+    #F8FAFC 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: wordmarkShimmer 5s linear infinite;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+@keyframes wordmarkShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: -200% center; }
+}
+
+/* "Nordic" — сделать чуть ярче белого */
+.brand .nm,
+.login-logo-text,
+.admin-brand > div:last-child {
+  color: #F8FAFC;
+}
 </style>
 
 <script>
