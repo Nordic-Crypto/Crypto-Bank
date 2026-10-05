@@ -6374,3 +6374,321 @@ window.fixStuckTx = function() {
 
   console.log('%c[chat-fix] ✅ Чат исправлен — 2s обновление, badge, звук','color:#a855f7;font-weight:bold');
 })();
+/* ============================================================
+   ЧАТ FIX v2 — typing indicator, badges, end chat
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ============================================================
+     1. КЛИЕНТ: уведомлять что печатает
+     ============================================================ */
+  function notifyClientTyping(){
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+
+    // Отправляем "печатает: true"
+    fetch(WORKER_URL + '?action=setTyping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, who: 'client', typing: true })
+    }).catch(function(){});
+
+    // Через 2.5 сек — "печатает: false"
+    clearTimeout(window._clientTypingTimer);
+    window._clientTypingTimer = setTimeout(function(){
+      fetch(WORKER_URL + '?action=setTyping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email, who: 'client', typing: false })
+      }).catch(function(){});
+    }, 2500);
+  }
+
+  // Привязываем к input чата
+  document.addEventListener('DOMContentLoaded', function(){
+    var input = document.getElementById('chatInput');
+    if (input && !input._typingBound) {
+      input._typingBound = true;
+      input.addEventListener('input', notifyClientTyping);
+    }
+  });
+  setTimeout(function(){
+    var input = document.getElementById('chatInput');
+    if (input && !input._typingBound) {
+      input._typingBound = true;
+      input.addEventListener('input', notifyClientTyping);
+    }
+  }, 2000);
+
+  /* ============================================================
+     2. АДМИН: уведомлять что печатает (уже есть, но фиксим имя)
+     ============================================================ */
+  window._notifyAdminTyping = function(email){
+    var token = getSessionToken();
+    if (!token) return;
+
+    fetch(WORKER_URL + '?action=setTyping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, who: 'admin', typing: true })
+    }).catch(function(){});
+
+    clearTimeout(window._admTypingTimer);
+    window._admTypingTimer = setTimeout(function(){
+      fetch(WORKER_URL + '?action=setTyping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email, who: 'admin', typing: false })
+      }).catch(function(){});
+    }, 2500);
+  };
+
+  /* ============================================================
+     3. BADGE У КЛИЕНТА (chatBadge)
+     ============================================================ */
+  window.updateChatBadge = function(){
+    var badge = document.getElementById('chatBadge');
+    if (!badge) return;
+
+    var unread = 0;
+    (st.chat || []).forEach(function(m){
+      if (m.from === 'admin' && !m.read) unread++;
+    });
+
+    if (unread > 0){
+      badge.textContent = unread > 9 ? '9+' : unread;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  };
+
+  /* ============================================================
+     4. BADGE У АДМИНА (navChatsCount в сайдбаре)
+     ============================================================ */
+  async function updateAdminChatsBadge(){
+    var panel = document.getElementById('adminPanel');
+    if (!panel || !panel.classList.contains('on')) return;
+
+    var badge = document.getElementById('navChatsCount');
+    if (!badge) return;
+
+    try {
+      var token = getSessionToken();
+      if (!token) return;
+
+      var r = await fetch(WORKER_URL + '?action=listUsers', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token })
+      });
+      var d = await r.json();
+      if (!d.ok || !d.users) return;
+
+      var results = await Promise.all(d.users.map(function(u){
+        return fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: u.email })
+        })
+        .then(function(r2){ return r2.json(); })
+        .catch(function(){ return {}; });
+      }));
+
+      var totalUnread = 0;
+      results.forEach(function(s){
+        totalUnread += (s.chat || []).filter(function(m){
+          return m.from === 'client' && !m.read;
+        }).length;
+      });
+
+      if (totalUnread > 0){
+        badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    } catch(e) {}
+  }
+
+  // Обновляем badge админа каждые 3 сек
+  setInterval(updateAdminChatsBadge, 3000);
+
+  /* ============================================================
+     5. АДМИН: показывать "печатает" в модалке
+     ============================================================ */
+  // Патчим openAdminChatLive — добавляем показ typing
+  var _origOpenAdminChatLive = window.openAdminChatLive;
+  window.openAdminChatLive = async function(email){
+    if (typeof _origOpenAdminChatLive === 'function'){
+      await _origOpenAdminChatLive(email);
+    }
+    // Запускаем отдельный polling для typing клиента
+    if (window._adminTypingPoll) clearInterval(window._adminTypingPoll);
+    window._adminTypingPoll = setInterval(async function(){
+      var modal = document.getElementById('adminChatModal');
+      if (!modal) {
+        clearInterval(window._adminTypingPoll);
+        return;
+      }
+      var token = getSessionToken();
+      if (!token) return;
+      try {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: email })
+        });
+        var state = await r.json();
+        var typing = state.typing || {};
+        var clientTyping = typing.client === true;
+        // Обновляем placeholder в input
+        var inp = document.getElementById('adminChatInput');
+        if (inp){
+          inp.placeholder = clientTyping ? 'Клиент печатает...' : 'Reply...';
+        }
+      } catch(e) {}
+    }, 1500);
+  };
+
+  /* ============================================================
+     6. END CHAT — жёсткая очистка с повтором
+     ============================================================ */
+  window.endAdminChat = async function(email){
+    if (!email) return;
+    if (!confirm('End chat with ' + email + '?\nAll messages will be deleted.')) return;
+
+    var token = getSessionToken();
+    if (!token) { alert('No session'); return; }
+
+    async function wipeOnce(silent){
+      try {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: email })
+        });
+        var state = await r.json();
+        if (!state || state.error) return false;
+
+        state.chat = [];
+        state.ticket = null;
+        state.typing = {};
+
+        var r2 = await fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            token: token,
+            email: email,
+            state: state,
+            force: true,
+            wipeChat: true
+          })
+        });
+        var res = await r2.json();
+        if (!silent) console.log('[endAdminChat] wipe result:', res);
+        return res && res.ok;
+      } catch(e){
+        console.error('[endAdminChat]', e);
+        return false;
+      }
+    }
+
+    // Тройной удар — сразу, через 1.5 сек, через 4 сек
+    await wipeOnce(false);
+    setTimeout(function(){ wipeOnce(true); }, 1500);
+    setTimeout(function(){ wipeOnce(true); }, 4000);
+
+    alert('✅ Chat closed for ' + email);
+
+    var modal = document.getElementById('adminChatModal');
+    if (modal) modal.remove();
+    if (window._adminTypingPoll) clearInterval(window._adminTypingPoll);
+
+    if (typeof loadAdminChats === 'function') loadAdminChats();
+  };
+
+  /* ============================================================
+     7. КЛИЕНТ: если чат очищен — сброс UI (проверяем каждые 3 сек)
+     ============================================================ */
+  setInterval(async function(){
+    var token = getSessionToken();
+    if (!token) return;
+
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!email) return;
+
+    if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh) return;
+
+      var serverHasChat = (fresh.chat || []).length > 0 || (fresh.ticket && fresh.ticket.id);
+      var localHasChat = (st.chat || []).length > 0 || (st.ticket && st.ticket.id);
+
+      // ★ АДМИН УДАЛИЛ ЧАТ — но у клиента он ещё есть
+      if (!serverHasChat && localHasChat){
+        console.log('[chat-sync] админ удалил чат — очищаю локально');
+        st.chat = [];
+        st.ticket = null;
+        st.typing = {};
+
+        if (typeof updateChatBadge === 'function') updateChatBadge();
+        if (typeof renderChatMessages === 'function') renderChatMessages();
+
+        // Показываем форму подачи тикета
+        var formEl = document.getElementById('chatTicketForm');
+        var convEl = document.getElementById('chatConversation');
+        if (formEl) formEl.style.display = 'flex';
+        if (convEl) convEl.style.display = 'none';
+
+        if (typeof toast === 'function') toast('Chat closed by support', true);
+      }
+    } catch(e) {}
+  }, 3000);
+
+  /* ============================================================
+     8. КЛИЕНТ: markChatRead при открытии чата
+     ============================================================ */
+  window.markChatRead = async function(){
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await r.json();
+      if (!fresh || !fresh.chat) return;
+
+      var changed = false;
+      fresh.chat.forEach(function(m){
+        if (m.from === 'admin' && !m.read){ m.read = true; changed = true; }
+      });
+      st.chat = fresh.chat;
+
+      if (changed){
+        await fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: token, email: email, state: st, force: true })
+        });
+      }
+      if (typeof updateChatBadge === 'function') updateChatBadge();
+    } catch(e) {}
+  };
+
+  console.log('%c[chat-fix-v2] ✅ Typing + Badges + End chat','color:#00e08a;font-weight:bold');
+})();
