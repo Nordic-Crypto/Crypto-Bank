@@ -869,6 +869,49 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .admin-brand > div:last-child {
   color: #F8FAFC;
 }
+  /* ============================================================
+   LOGO HOVER — увеличение + свечение при наведении
+   ============================================================ */
+.brand,
+.login-logo,
+.onb-logo,
+.admin-brand {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.3s ease;
+  cursor: pointer;
+}
+
+.brand:hover,
+.login-logo:hover,
+.onb-logo:hover,
+.admin-brand:hover {
+  transform: scale(1.03);
+}
+
+/* Свечение усиливается при hover */
+.brand:hover .blogo,
+.login-logo:hover .blogo,
+.onb-logo:hover .blogo,
+.admin-brand:hover .blogo {
+  box-shadow:
+    0 4px 12px rgba(0, 212, 255, 0.25),
+    0 0 24px rgba(0, 212, 255, 0.4),
+    0 0 48px rgba(139, 92, 246, 0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Текст "NordicCrypto" тоже чуть светится */
+.brand:hover .nm,
+.login-logo:hover .login-logo-text,
+.onb-logo:hover,
+.admin-brand:hover > div:last-child {
+  filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.3));
+}
+
+/* Стандартное состояние blogo — с transition для плавности */
+.blogo {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
 </style>
 
 <script>
