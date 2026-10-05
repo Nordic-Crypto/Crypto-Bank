@@ -6994,7 +6994,7 @@ window.fixStuckTx = function() {
   /* ============================================================
      2. Функция: удалить одно уведомление
      ============================================================ */
-  window.deleteNotification = function(id){
+   window.deleteNotification = function(id){
     if (!st.notifications) return;
 
     var before = st.notifications.length;
@@ -7003,7 +7003,22 @@ window.fixStuckTx = function() {
     });
 
     if (st.notifications.length < before){
-      if (typeof saveToServer === 'function') saveToServer();
+      // ★ ОТПРАВЛЯЕМ НА СЕРВЕР С ФЛАГОМ wipeNotifs
+      var token = getSessionToken();
+      if (token && typeof stateLoaded !== 'undefined' && stateLoaded){
+        fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: token,
+            state: st,
+            email: window.adminViewingEmail || undefined,
+            force: true,
+            wipeNotifs: true
+          })
+        }).catch(function(){});
+      }
+
       if (typeof renderNotifications === 'function') renderNotifications();
       console.log('[notif] deleted', id);
     }
@@ -7012,7 +7027,7 @@ window.fixStuckTx = function() {
   /* ============================================================
      3. Функция: удалить все уведомления
      ============================================================ */
-  window.clearAllNotifications = function(){
+   window.clearAllNotifications = function(){
     if (!st.notifications || !st.notifications.length) {
       if (typeof toast === 'function') toast('No notifications to clear', true);
       return;
@@ -7020,7 +7035,23 @@ window.fixStuckTx = function() {
     if (!confirm('Clear all notifications?')) return;
 
     st.notifications = [];
-    if (typeof saveToServer === 'function') saveToServer();
+
+    // ★ ОТПРАВЛЯЕМ НА СЕРВЕР С ФЛАГОМ wipeNotifs
+    var token = getSessionToken();
+    if (token && typeof stateLoaded !== 'undefined' && stateLoaded){
+      fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: token,
+          state: st,
+          email: window.adminViewingEmail || undefined,
+          force: true,
+          wipeNotifs: true
+        })
+      }).catch(function(){});
+    }
+
     if (typeof renderNotifications === 'function') renderNotifications();
     if (typeof toast === 'function') toast('All notifications cleared');
   };
