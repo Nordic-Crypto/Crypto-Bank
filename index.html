@@ -1027,21 +1027,42 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
     white-space: nowrap;
   }
 
-  /* Balance */
-  .nc3-balance-card { padding: 18px !important; min-height: auto !important; }
-  .nc3-balance { font-size: 1.9rem !important; letter-spacing: -0.03em !important; }
-  .nc3-eur { font-size: 0.78rem !important; }
-  .nc3-performance { font-size: 0.72rem !important; flex-wrap: wrap; }
+ /* Balance */
+.nc3-balance-card {
+  padding: 18px !important;
+  min-height: auto !important;
+  padding-bottom: 130px !important;
+  overflow: hidden !important;
+}
+.nc3-balance-top {
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+.nc3-balance-menu { display: none !important; }
+.nc3-balance { font-size: 1.9rem !important; letter-spacing: -0.03em !important; word-break: break-word !important; }
+.nc3-eur { font-size: 0.78rem !important; }
+.nc3-performance { font-size: 0.7rem !important; flex-wrap: wrap !important; gap: 4px !important; }
+.nc3-performance-note { font-size: 0.65rem !important; }
 
-  /* Mini-stats под балансом */
-  .nc3-mini-stats {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    padding: 10px 0 4px !important;
-  }
-  .nc3-mini-stat { padding: 8px 10px !important; }
-  .nc3-mini-label { font-size: 9px !important; }
-  .nc3-mini-value { font-size: 14px !important; }
+/* Чарт внизу — не накладывается */
+.nc3-balance-chart {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: auto !important;
+  padding: 8px 18px 14px !important;
+}
+
+/* Mini-stats — компактные, 3 колонки */
+.nc3-mini-stats {
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 6px !important;
+  padding: 0 !important;
+}
+.nc3-mini-stat { padding: 6px 8px !important; border-radius: 8px !important; gap: 2px !important; }
+.nc3-mini-label { font-size: 8px !important; letter-spacing: 0 !important; line-height: 1 !important; }
+.nc3-mini-value { font-size: 12px !important; line-height: 1.1 !important; font-weight: 700 !important; }
 
   /* Карта */
   .nc3-card-wrap { padding: 16px !important; }
