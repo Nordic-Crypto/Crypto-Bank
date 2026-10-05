@@ -7152,3 +7152,214 @@ window.fixStuckTx = function() {
 
   console.log('%c[notif-delete] ✅ Кнопка × на уведомлениях + Clear all','color:#00e08a;font-weight:bold');
 })();
+/* ============================================================
+   FINAL FIX — auto-deposit + notifications + English chat text
+   Silent auto-credit every 15s. No modals. English UI.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  if (typeof WORKER_URL === 'undefined') {
+    console.error('[final-fix] WORKER_URL not found');
+    return;
+  }
+
+  /* ============================================================
+     1. FIX ENGLISH TYPING TEXT
+     ============================================================ */
+
+  // Fix admin input placeholder (client typing)
+  setInterval(function(){
+    var inp = document.getElementById('adminChatInput');
+    if (!inp) return;
+    // Replace Russian if present
+    if (inp.placeholder && inp.placeholder.indexOf('печ') !== -1) {
+      inp.placeholder = 'Client is typing...';
+    }
+  }, 500);
+
+  // Override renderChatMessages to use English
+  var _origRenderChatMessages = window.renderChatMessages;
+  window.renderChatMessages = function(){
+    if (typeof _origRenderChatMessages === 'function') {
+      _origRenderChatMessages.apply(this, arguments);
+    }
+    // Fix any Russian text in rendered chat
+    var box = document.getElementById('chatMessages');
+    if (!box) return;
+    var html = box.innerHTML;
+    if (html.indexOf('печ') !== -1) {
+      html = html.replace(/Elena печатает\.\.\./g, 'Elena is typing...');
+      html = html.replace(/печатает\.\.\./g, 'is typing...');
+      box.innerHTML = html;
+    }
+  };
+
+  /* ============================================================
+     2. AUTO-DEPOSIT — silent credit every 15s
+     ============================================================ */
+
+  var CHECK_INTERVAL = 15000;
+  var processedHashes = {};
+
+  try {
+    var saved = localStorage.getItem('_autoDepositProcessed');
+    if (saved) processedHashes = JSON.parse(saved);
+  } catch(e) {}
+
+  function saveProcessed() {
+    try {
+      var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      Object.keys(processedHashes).forEach(function(h) {
+        if (processedHashes[h] < weekAgo) delete processedHashes[h];
+      });
+      localStorage.setItem('_autoDepositProcessed', JSON.stringify(processedHashes));
+    } catch(e) {}
+  }
+
+  async function checkDeposits() {
+    // Only for clients (not admin)
+    var role = localStorage.getItem('user_role');
+    if (role === 'admin') return;
+
+    var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
+    if (!email) return;
+
+    // Check if user has wallet
+    var hasWallet = false;
+    try {
+      hasWallet = !!(
+        (window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]) ||
+        (st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth))
+      );
+    } catch(e) {}
+    if (!hasWallet) return;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(email) + '&_t=' + Date.now());
+      var data = await r.json();
+      if (!data || !data.ok || !data.result) return;
+
+      var btcList = data.result.btc || [];
+      var ethList = data.result.eth || [];
+      var allTxs = [];
+
+      btcList.forEach(function(tx) { tx._type = 'BTC'; allTxs.push(tx); });
+      ethList.forEach(function(tx) { tx._type = 'ETH'; allTxs.push(tx); });
+
+      // Skip already credited
+      var knownHashes = {};
+      (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
+      (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
+
+      var newTxs = allTxs.filter(function(tx) {
+        if (knownHashes[tx.hash]) return false;
+        if (processedHashes[tx.hash]) return false;
+        return true;
+      });
+
+      if (newTxs.length === 0) return;
+
+      console.log('[final-fix] Found ' + newTxs.length + ' new deposit(s)');
+
+      var totalUsd = 0;
+      var totalBtc = 0;
+      var totalEth = 0;
+
+      newTxs.forEach(function(tx) {
+        var price = tx._type === 'BTC' ? (st.btcP || 90000) : (st.ethP || 3000);
+        var credit = tx.amount * price;
+        if (credit <= 0) return;
+
+        // ★ Credit balance
+        st.usd = (st.usd || 0) + credit;
+        if (tx._type === 'BTC') {
+          st.btc = (st.btc || 0) + tx.amount;
+          totalBtc += tx.amount;
+        } else {
+          st.eth = (st.eth || 0) + tx.amount;
+          totalEth += tx.amount;
+        }
+        totalUsd += credit;
+
+        // Transaction
+        if (!Array.isArray(st.txs)) st.txs = [];
+        st.txs.unshift({
+          date: new Date().toISOString().slice(0, 10),
+          ts: Date.now(),
+          desc: 'Crypto deposit — ' + tx.amount.toFixed(8) + ' ' + tx._type +
+                ' (' + tx.hash.slice(0, 10) + '…)',
+          amt: credit,
+          status: 'Completed',
+          hash: tx.hash,
+          crypto: tx.amount,
+          symbol: tx._type
+        });
+
+        // Duplicate protection
+        if (!st.depositVerifications) st.depositVerifications = [];
+        st.depositVerifications.push({
+          txHash: tx.hash,
+          cryptoAmt: tx.amount,
+          symbol: tx._type,
+          usdValue: credit,
+          source: 'auto',
+          origin: 'auto',
+          completedAt: Date.now()
+        });
+
+        processedHashes[tx.hash] = Date.now();
+      });
+
+      saveProcessed();
+
+      // Save to server
+      var token = getSessionToken();
+      if (token) {
+        await fetch(WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, state: st, force: true })
+        }).catch(function(e){ console.error('[final-fix] save error:', e); });
+      }
+
+      // Update UI
+      if (typeof render === 'function') render();
+
+      // ★ Client notification
+      var msg = '💰 Deposit received: +' + totalBtc.toFixed(8) + ' BTC' +
+                (totalEth > 0 ? ' +' + totalEth.toFixed(8) + ' ETH' : '') +
+                ' ≈ $' + totalUsd.toFixed(2);
+
+      if (typeof addNotification === 'function') addNotification(msg, '💰');
+      if (typeof toast === 'function') toast('💰 +' + totalBtc.toFixed(8) + ' BTC received!');
+      if (typeof playChime === 'function') playChime();
+      if (typeof spawnConfetti === 'function') spawnConfetti();
+
+      // ★ Admin notification (if worker supports)
+      try {
+        await fetch(WORKER_URL + '?action=notifyAdmin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: token,
+            text: '💰 NEW DEPOSIT from ' + email + ': ' +
+                  totalBtc.toFixed(8) + ' BTC' +
+                  (totalEth > 0 ? ' +' + totalEth.toFixed(8) + ' ETH' : '') +
+                  ' ≈ $' + totalUsd.toFixed(2),
+            icon: '💰'
+          })
+        });
+      } catch(e) {}
+
+    } catch(e) {
+      console.error('[final-fix] error:', e);
+    }
+  }
+
+  setTimeout(checkDeposits, 5000);
+  setInterval(checkDeposits, CHECK_INTERVAL);
+
+  console.log('%c[final-fix] ✅ Auto-deposit + English chat + notifications',
+    'color:#00e08a;font-weight:bold');
+})();
