@@ -4925,7 +4925,7 @@ window._notifyAdminTyping = function(email){
             '<span class="typing-dot"></span>' +
             '<span class="typing-dot"></span>' +
           '</div>' +
-          '<div class="chat-msg-meta">Elena печатает...</div>' +
+          '<div class="chat-msg-meta">Elena is typing...</div>' +
         '</div>' +
       '</div>';
     }
@@ -6547,7 +6547,7 @@ window.fixStuckTx = function() {
         // Обновляем placeholder в input
         var inp = document.getElementById('adminChatInput');
         if (inp){
-          inp.placeholder = clientTyping ? 'Клиент печатает...' : 'Reply...';
+          inp.placeholder = clientTyping ? 'Client is typing...' : 'Reply...';
         }
       } catch(e) {}
     }, 1500);
