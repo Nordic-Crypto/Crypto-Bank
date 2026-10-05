@@ -1,0 +1,25 @@
+{
+  "name": "NordicCrypto — Crypto Banking",
+  "short_name": "NordicCrypto",
+  "description": "Premium crypto banking app",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1220",
+  "theme_color": "#0B1220",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
