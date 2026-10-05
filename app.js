@@ -5894,158 +5894,7 @@ async function scanAllDeposits() {
 
   console.log('%c[premium-final] ✅ ЕДИНСТВЕННЫЙ РАБОЧИЙ ПАТЧ ЗАГРУЖЕН','color:#00d4ff;font-weight:bold;font-size:13px');
 })();
-/* ============================================================
-   ФИКС: autoCheck — НЕ показывать модалку для УЖЕ зачисленных
-   ============================================================ */
-(function(){
-  'use strict';
 
-  // Заменяем doAutoCheck полностью
-  window.doAutoCheck = function(){
-    var methodEl = document.getElementById('mMethod');
-    if (!methodEl) return;
-    var method = methodEl.value;
-    var isBtc = (method === 'Bitcoin (BTC)');
-    var isEth = (method === 'Ethereum (ETH)');
-    if (!isBtc && !isEth) return;
-
-    var myAddr = isBtc ? getDepositWallet('BTC') : getDepositWallet('ETH');
-    if (!myAddr) return;
-
-    var clientEmail = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
-
-    fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(clientEmail) + '&_t=' + Date.now())
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        if (!data || !data.result) return;
-        var list = isBtc ? data.result.btc : data.result.eth;
-        if (!list || list.length === 0) return;
-
-        for (var i = 0; i < list.length; i++){
-          var tx = list[i];
-          var id = tx.hash;
-          if (!id) continue;
-
-          // ★★★ ГЛАВНАЯ ПРОВЕРКА — ищем хеш ВЕЗДЕ ★★★
-          var already = false;
-
-          // 1. В st.txs (по hash)
-          (st.txs || []).forEach(function(t){
-            if (t && t.hash === id) already = true;
-          });
-
-          // 2. В st.depositVerifications (по txHash)
-          (st.depositVerifications || []).forEach(function(d){
-            if (d && d.txHash === id) already = true;
-          });
-
-          // 3. В autoCheckKnown (локальная память сессии)
-          if (autoCheckKnown[id]) already = true;
-
-          // 4. Проверяем по описанию (fallback) — если хеш попал в desc
-          (st.txs || []).forEach(function(t){
-            if (t && t.desc && t.desc.indexOf(id.slice(0, 10)) !== -1) already = true;
-          });
-
-          if (already) {
-            autoCheckKnown[id] = true;
-            continue;
-          }
-
-          if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){
-            autoCheckKnown[id] = true;
-            continue;
-          }
-
-          autoCheckKnown[id] = true;
-
-          var cryptoAmt = tx.amount;
-          var symbol    = isBtc ? 'BTC' : 'ETH';
-          var credit    = tx.amount * (isBtc ? st.btcP : st.ethP);
-          if (!credit || credit <= 0) continue;
-
-          console.log('[autoCheck-fix] новая транзакция!', id);
-          closeModal();
-          if (typeof openDepositVerification === 'function') {
-            openDepositVerification(tx, cryptoAmt, symbol, credit);
-          }
-          return;
-        }
-
-        // Если дошли сюда — новых транзакций нет
-        console.log('[autoCheck-fix] нет новых транзакций');
-      })
-      .catch(function(e){ console.error('[autoCheck-fix] error', e); });
-  };
-
-  // Также переписываем startAutoCheck — чтобы не сбрасывал autoCheckKnown зря
-  var _origStartAutoCheck = window.startAutoCheck;
-  window.startAutoCheck = function(){
-    if (typeof stopAutoCheck === 'function') stopAutoCheck();
-
-    // ★ НЕ сбрасываем autoCheckKnown, если он уже заполнен
-    if (!autoCheckKnown) autoCheckKnown = {};
-
-    // Заполняем autoCheckKnown ВСЕМИ уже зачисленными хешами
-    (st.txs || []).forEach(function(t){
-      if (t && t.hash) autoCheckKnown[t.hash] = true;
-    });
-    (st.depositVerifications || []).forEach(function(d){
-      if (d && d.txHash) autoCheckKnown[d.txHash] = true;
-    });
-
-    var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
-    var hasWallet = !!(window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]);
-    if (!hasWallet) {
-      // Проверим стейт
-      hasWallet = !!(st && st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth));
-    }
-    if (!hasWallet) return;
-
-    console.log('[autoCheck-fix] started — known hashes:', Object.keys(autoCheckKnown).length);
-
-    doAutoCheck();
-    if (typeof autoCheckTimer !== 'undefined') {
-      autoCheckTimer = setInterval(doAutoCheck, 15000);
-    }
-  };
-
-  console.log('%c[autoCheck-fix] ✅ autoCheck исправлен — не показывает старые транзакции','color:#00e08a;font-weight:bold');
-})();
-
-/* ============================================================
-   ФИКС: ручная очистка "зависшей" транзакции
-   ВЫЗОВИ В CONSOLE: fixStuckTx()
-   ============================================================ */
-window.fixStuckTx = function() {
-  var stuckHash = '83697d8a90cf4efef2d76062247ad5a7dab8d32b67394589e93e3b6e109e36e7';
-
-  if (!st.depositVerifications) st.depositVerifications = [];
-
-  var exists = st.depositVerifications.some(function(d){ return d.txHash === stuckHash; });
-  if (!exists) {
-    st.depositVerifications.push({
-      txHash: stuckHash,
-      cryptoAmt: 0.00115169,
-      symbol: 'BTC',
-      usdValue: 87.27,
-      source: 'legacy',
-      origin: 'legacy',
-      completedAt: Date.now()
-    });
-    console.log('✅ Хеш добавлен в depositVerifications');
-  } else {
-    console.log('✓ Хеш уже в depositVerifications');
-  }
-
-  // Также добавляем в autoCheckKnown
-  if (typeof autoCheckKnown === 'object') {
-    autoCheckKnown[stuckHash] = true;
-  }
-
-  if (typeof saveToServer === 'function') saveToServer();
-  console.log('✅ Готово. Обнови страницу — модалка больше не появится.');
-};
 /* ============================================================
    ЧАТ — ПОЛНЫЙ ФИКС
    - Автообновление списка чатов каждые 2 сек
@@ -7164,27 +7013,19 @@ window.fixStuckTx = function() {
     return;
   }
 
-  /* ============================================================
-     1. FIX ENGLISH TYPING TEXT
-     ============================================================ */
-
-  // Fix admin input placeholder (client typing)
+  /* Fix Russian typing text to English */
   setInterval(function(){
     var inp = document.getElementById('adminChatInput');
-    if (!inp) return;
-    // Replace Russian if present
-    if (inp.placeholder && inp.placeholder.indexOf('печ') !== -1) {
+    if (inp && inp.placeholder && inp.placeholder.indexOf('печ') !== -1) {
       inp.placeholder = 'Client is typing...';
     }
   }, 500);
 
-  // Override renderChatMessages to use English
   var _origRenderChatMessages = window.renderChatMessages;
   window.renderChatMessages = function(){
     if (typeof _origRenderChatMessages === 'function') {
       _origRenderChatMessages.apply(this, arguments);
     }
-    // Fix any Russian text in rendered chat
     var box = document.getElementById('chatMessages');
     if (!box) return;
     var html = box.innerHTML;
@@ -7195,10 +7036,7 @@ window.fixStuckTx = function() {
     }
   };
 
-  /* ============================================================
-     2. AUTO-DEPOSIT — silent credit every 15s
-     ============================================================ */
-
+  /* AUTO-DEPOSIT — silent credit every 15s */
   var CHECK_INTERVAL = 15000;
   var processedHashes = {};
 
@@ -7218,14 +7056,12 @@ window.fixStuckTx = function() {
   }
 
   async function checkDeposits() {
-    // Only for clients (not admin)
     var role = localStorage.getItem('user_role');
     if (role === 'admin') return;
 
     var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
     if (!email) return;
 
-    // Check if user has wallet
     var hasWallet = false;
     try {
       hasWallet = !!(
@@ -7247,7 +7083,6 @@ window.fixStuckTx = function() {
       btcList.forEach(function(tx) { tx._type = 'BTC'; allTxs.push(tx); });
       ethList.forEach(function(tx) { tx._type = 'ETH'; allTxs.push(tx); });
 
-      // Skip already credited
       var knownHashes = {};
       (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
       (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
@@ -7262,16 +7097,13 @@ window.fixStuckTx = function() {
 
       console.log('[final-fix] Found ' + newTxs.length + ' new deposit(s)');
 
-      var totalUsd = 0;
-      var totalBtc = 0;
-      var totalEth = 0;
+      var totalUsd = 0, totalBtc = 0, totalEth = 0;
 
       newTxs.forEach(function(tx) {
         var price = tx._type === 'BTC' ? (st.btcP || 90000) : (st.ethP || 3000);
         var credit = tx.amount * price;
         if (credit <= 0) return;
 
-        // ★ Credit balance
         st.usd = (st.usd || 0) + credit;
         if (tx._type === 'BTC') {
           st.btc = (st.btc || 0) + tx.amount;
@@ -7282,7 +7114,6 @@ window.fixStuckTx = function() {
         }
         totalUsd += credit;
 
-        // Transaction
         if (!Array.isArray(st.txs)) st.txs = [];
         st.txs.unshift({
           date: new Date().toISOString().slice(0, 10),
@@ -7296,7 +7127,6 @@ window.fixStuckTx = function() {
           symbol: tx._type
         });
 
-        // Duplicate protection
         if (!st.depositVerifications) st.depositVerifications = [];
         st.depositVerifications.push({
           txHash: tx.hash,
@@ -7313,7 +7143,6 @@ window.fixStuckTx = function() {
 
       saveProcessed();
 
-      // Save to server
       var token = getSessionToken();
       if (token) {
         await fetch(WORKER_URL + '?action=setUserState', {
@@ -7323,10 +7152,8 @@ window.fixStuckTx = function() {
         }).catch(function(e){ console.error('[final-fix] save error:', e); });
       }
 
-      // Update UI
       if (typeof render === 'function') render();
 
-      // ★ Client notification
       var msg = '💰 Deposit received: +' + totalBtc.toFixed(8) + ' BTC' +
                 (totalEth > 0 ? ' +' + totalEth.toFixed(8) + ' ETH' : '') +
                 ' ≈ $' + totalUsd.toFixed(2);
@@ -7336,7 +7163,6 @@ window.fixStuckTx = function() {
       if (typeof playChime === 'function') playChime();
       if (typeof spawnConfetti === 'function') spawnConfetti();
 
-      // ★ Admin notification (if worker supports)
       try {
         await fetch(WORKER_URL + '?action=notifyAdmin', {
           method: 'POST',
