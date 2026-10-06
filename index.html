@@ -51,7 +51,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .settings-btn svg{width:18px;height:18px;stroke:var(--txt);fill:none;stroke-width:1.9}
 .st{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mut);background:rgba(0,224,138,.07);border:1px solid rgba(0,224,138,.18);padding:7px 14px;border-radius:999px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
-.body{flex:1;padding:26px 30px 48px;overflow-y:auto;overflow-x:hidden;min-height:0}
+.body{flex:1;padding:26px 30px 48px;overflow-y:auto;overflow-x:hidden;min-height:0;max-height:100%;-webkit-overflow-scrolling:touch}
 .pg{display:none}
 .pg.on{display:block;animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -189,7 +189,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .pv.m{font-family:ui-monospace,Menlo,monospace}
 .card-network{display:flex;align-items:center;color:inherit;opacity:.9}
 .card-network svg{width:56px;height:24px;display:block}
-.pay.pay-large{height:240px;padding:22px;margin-bottom:0;max-width:360px;width:100%;background:radial-gradient(500px 250px at 100% 0%,rgba(236,72,153,.5),transparent 60%),radial-gradient(400px 250px at 0% 100%,rgba(139,92,246,.55),transparent 60%),linear-gradient(135deg,#4c1d95 0%,#6b21a8 50%,#831843 100%);border:1px solid rgba(255,255,255,.15);box-shadow:0 30px 60px -20px rgba(139,92,246,.5),inset 0 1px 0 rgba(255,255,255,.2)}
+.pay.pay-large{height:240px;padding:22px;margin-bottom:0;max-width:360px;width:100%;background:radial-gradient(500px 250px at 100% 0%,rgba(139,92,246,.35),transparent 60%),radial-gradient(400px 250px at 0% 100%,rgba(95,76,255,.35),transparent 60%),linear-gradient(135deg,#1a1030 0%,#2a1750 50%,#3d1a45 100%);border:1px solid rgba(255,255,255,.12);box-shadow:0 30px 60px -20px rgba(95,76,255,.4),inset 0 1px 0 rgba(255,255,255,.15);overflow:hidden}
 .pay.pay-large .pn{font-size:1.3rem;letter-spacing:.12em;white-space:nowrap}
 
 .pay.design-cosmic{background:linear-gradient(135deg,#1a1a2e,#0f3460)}
@@ -299,7 +299,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .recent-tx-badge.fail{background:rgba(255,80,80,.15);color:#ff6b6b}
 .recent-tx-empty{text-align:center;padding:40px 20px;color:var(--mut);font-size:.88rem}
 
-.nc3-bottom-row{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
+.nc3-bottom-row{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px;margin-bottom:60px}
 .nc3-iban{padding:22px;border-radius:16px;background:radial-gradient(400px 200px at 100% 0%,rgba(71,220,255,.08),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.9),rgba(9,14,23,.9));border:1px solid rgba(71,220,255,.18)}
 .nc3-iban-copy{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .nc3-icon-circle{width:48px;height:48px;min-width:48px;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:22px}
@@ -837,12 +837,12 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
       <div class="nc3-asset-grid">
         <div class="nc3-asset">
-          <div class="nc3-asset-icon btc">₿</div>
+          <div class="nc3-asset-icon btc"><svg viewBox="0 0 32 32" width="26" height="26"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg></div>
           <div><div class="nc3-asset-name">Bitcoin <span>BTC</span></div><div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div></div>
           <div class="nc3-asset-value"><strong id="btcPrice">$—</strong><span id="btcChange">—</span></div>
         </div>
         <div class="nc3-asset">
-          <div class="nc3-asset-icon eth">Ξ</div>
+          <div class="nc3-asset-icon eth"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg></div>
           <div><div class="nc3-asset-name">Ethereum <span>ETH</span></div><div class="nc3-asset-amount" id="ethB">0.00000000 ETH</div></div>
           <div class="nc3-asset-value"><strong id="ethPrice">$—</strong><span id="ethChange">—</span></div>
         </div>
@@ -953,11 +953,11 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="ex-section-head"><div><div class="ex-kicker">Your holdings</div><h2>Assets</h2></div></div>
       <div class="ex-assets-grid">
         <div class="ex-asset-card btc">
-          <div class="ex-asset-icon-big">₿</div>
+          <div class="ex-asset-icon-big"><svg viewBox="0 0 32 32" width="32" height="32" fill="#fff"><path d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg></div>
           <div class="ex-asset-info"><div class="ex-asset-label">Bitcoin</div><div class="ex-asset-amount" id="exBtcAmt">0.00000000 BTC</div><div class="ex-asset-value" id="exBtcVal">$0.00</div></div>
         </div>
         <div class="ex-asset-card eth">
-          <div class="ex-asset-icon-big">Ξ</div>
+          <div class="ex-asset-icon-big"><svg viewBox="0 0 24 24" width="32" height="32" fill="#fff"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg></div>
           <div class="ex-asset-info"><div class="ex-asset-label">Ethereum</div><div class="ex-asset-amount" id="exEthAmt">0.00000000 ETH</div><div class="ex-asset-value" id="exEthVal">$0.00</div></div>
         </div>
       </div>
