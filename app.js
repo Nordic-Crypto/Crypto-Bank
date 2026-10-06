@@ -4448,3 +4448,41 @@ window.renderIban = renderIbanByAdmin;
 })();
 
 console.log('%c[NordicCrypto] ✅ App v3.0 loaded','color:#00d4ff;font-weight:bold;font-size:14px');
+/* BUG FIX: стабилизация рендера — не чаще 1 раза в 150мс */
+(function(){
+  var _lastRender = 0;
+  var _origRender = window.render;
+  window.render = function(){
+    var now = Date.now();
+    if (now - _lastRender < 150) return;
+    _lastRender = now;
+    if (typeof _origRender === 'function') _origRender.apply(this, arguments);
+  };
+})();
+/* BUG FIX: жёсткая привязка кнопки Submit верификации */
+(function(){
+  function bindSubmit(){
+    var btn = document.getElementById('verifyNext3');
+    if (!btn || btn._hardBound) return;
+    btn._hardBound = true;
+    var clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof window.submitRealVerification === 'function') {
+        window.submitRealVerification();
+      } else {
+        alert('Ошибка: обновите страницу Ctrl+Shift+R');
+      }
+    };
+  }
+  var _orig = window.showVerifyScreen;
+  window.showVerifyScreen = function(){
+    if (typeof _orig === 'function') _orig.apply(this, arguments);
+    setTimeout(bindSubmit, 100);
+  };
+  document.addEventListener('DOMContentLoaded', bindSubmit);
+  setTimeout(bindSubmit, 1000);
+  setTimeout(bindSubmit, 3000);
+})();
