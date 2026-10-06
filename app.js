@@ -4133,19 +4133,29 @@ async function loadExchangePrices() {
 function renderExchangeCoins() {
   var box = document.getElementById('exCoinsList');
   if (!box || !_exPricesCache) return;
+
+  var ICONS = {
+    'BTC': '<svg viewBox="0 0 32 32" width="24" height="24"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg>',
+    'ETH': '<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#627eea"/><path fill="#fff" d="M12 3L6 12.2L12 15.5L18 12.2L12 3Z" opacity="0.9"/><path fill="#fff" d="M6 13.5L12 22L18 13.5L12 17L6 13.5Z" opacity="0.65"/></svg>',
+    'USDT': '<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#26a17b"/><path fill="#fff" d="M13.4 10.5v-1.8h3.4V6H7.2v2.7h3.4v1.8c-2.8.1-4.9.7-4.9 1.4 0 .7 2.1 1.3 4.9 1.4v4.6h2.8v-4.6c2.8-.1 4.9-.7 4.9-1.4 0-.7-2.1-1.3-4.9-1.4zm0 2.3v0c-.1 0-.3 0-.5 0-.3 0-.6 0-.9 0-.1 0-.3 0-.4 0v0c-2.4-.1-4.1-.5-4.1-1 0-.5 1.8-.9 4.1-1v1.6c.2 0 .3 0 .4 0 .3 0 .6 0 .9 0 .2 0 .4 0 .5 0v-1.6c2.3.1 4.1.5 4.1 1 0 .5-1.7.9-4.1 1z"/></svg>',
+    'SOL': '<svg viewBox="0 0 24 24" width="24" height="24"><defs><linearGradient id="solg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#9945FF"/><stop offset="100%" stop-color="#14F195"/></linearGradient></defs><rect width="24" height="24" rx="12" fill="url(#solg)"/><path fill="#fff" d="M7.5 16.5h9.2c.2 0 .3.1.2.3l-1.6 1.6c-.1.1-.3.2-.4.2H5.7c-.2 0-.3-.1-.2-.3l1.6-1.6c.1-.1.3-.2.4-.2zm9.2-3.9H7.5c-.2 0-.3-.1-.2-.3l1.6-1.6c.1-.1.3-.2.4-.2h9.2c.2 0 .3.1.2.3l-1.6 1.6c-.1.1-.3.2-.4.2zm-9.2-3.9h9.2c.2 0 .3.1.2.3l-1.6 1.6c-.1.1-.3.2-.4.2H5.7c-.2 0-.3-.1-.2-.3l1.6-1.6c.1-.1.3-.2.4-.2z"/></svg>',
+    'BNB': '<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#f3ba2f"/><path fill="#fff" d="M9.5 9.5L12 7l2.5 2.5L12 12 9.5 9.5zm-4 4L8 11l2.5 2.5L8 16l-2.5-2.5zm8 0L16 11l2.5 2.5L16 16l-2.5-2.5zM9.5 17.5L12 15l2.5 2.5L12 20l-2.5-2.5zM12 10.5l1.5 1.5L12 13.5 10.5 12 12 10.5z"/></svg>'
+  };
+
   var html = '';
   _exPricesCache.forEach(function(c){
     var up = c.change24h >= 0;
     var arrow = up ? '▲' : '▼';
+    var change = c.change24h ? Math.abs(c.change24h).toFixed(2) + '%' : '0.00%';
+    var iconSvg = ICONS[c.symbol] || '<div style="width:24px;height:24px;background:' + c.icon + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:11px;">' + c.symbol.charAt(0) + '</div>';
     html += '<div class="ex-coin-row">' +
-      '<div class="ex-coin-icon" style="background:linear-gradient(135deg,' + c.icon + ',rgba(255,255,255,.2))">' + c.symbol.charAt(0) + '</div>' +
+      '<div class="ex-coin-icon">' + iconSvg + '</div>' +
       '<div><div class="ex-coin-name">' + c.name + '</div><div class="ex-coin-symbol">' + c.symbol + ' / USD</div></div>' +
       '<div class="ex-coin-price"><strong>$' + Number(c.usd).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</strong>' +
-      '<span class="ex-coin-change ' + (up ? 'up' : 'down') + '">' + arrow + ' ' + Math.abs(c.change24h).toFixed(2) + '%</span></div></div>';
+      '<span class="ex-coin-change ' + (up ? 'up' : 'down') + '">' + arrow + ' ' + change + '</span></div></div>';
   });
   box.innerHTML = html;
 }
-
 function renderExchangeDash() {
   var greet = document.getElementById('exGreeting');
   if (greet) {
