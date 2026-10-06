@@ -12,7 +12,6 @@
 <link rel="apple-touch-icon" href="logo.png">
 <title>NordicCrypto</title>
 <style>
-/* ============ ROOT ============ */
 :root{
   --pri:#00E5FF;--pri2:#8B5CF6;--acc:#10B981;
   --bg:#0B1220;--pan:#111827;--pan2:#1A1F2E;
@@ -24,41 +23,34 @@
   --shadow-sm:0 4px 12px rgba(0,0,0,.25);
   --shadow-md:0 12px 30px rgba(0,0,0,.35);
   --shadow-lg:0 24px 60px rgba(0,0,0,.45);
-  --glow-cyan:0 0 24px rgba(71,220,255,.35);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);display:flex;overflow:hidden;color-scheme:dark;-webkit-font-smoothing:antialiased}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:
-  radial-gradient(900px 500px at 15% -10%,rgba(0,212,255,.10),transparent 60%),
-  radial-gradient(800px 500px at 100% 110%,rgba(124,58,237,.12),transparent 60%)}
-
-/* Custom scrollbar */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(900px 500px at 15% -10%,rgba(0,212,255,.10),transparent 60%),radial-gradient(800px 500px at 100% 110%,rgba(124,58,237,.12),transparent 60%)}
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:rgba(255,255,255,.02)}
 ::-webkit-scrollbar-thumb{background:rgba(71,220,255,.25);border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(71,220,255,.5)}
 
-/* ============ SIDEBAR ============ */
+/* SIDEBAR */
 .side{width:238px;background:rgba(7,10,18,.88);border-right:1px solid var(--nc3-line);display:flex;flex-direction:column;padding:18px 14px;position:relative;z-index:2}
 .brand{font-size:1.3rem;font-weight:800;margin-bottom:42px;display:flex;align-items:center;gap:11px}
 .blogo{width:34px;height:34px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,212,255,.25)}
 .blogo img{width:100%;height:100%;object-fit:cover;display:block}
-.blogo svg{width:18px;height:18px;stroke:#04121a;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .brand span{color:var(--pri)}
 .menu{list-style:none;flex:1;display:flex;flex-direction:column;gap:4px}
 .mi{padding:12px 14px;border-radius:12px;cursor:pointer;color:var(--mut);font-weight:500;font-size:.92rem;transition:background .2s,color .2s;display:flex;align-items:center;gap:13px;position:relative;user-select:none}
 .mi svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .mi:hover{background:rgba(255,255,255,.045);color:var(--txt)}
 .mi.on{background:linear-gradient(100deg,rgba(71,220,255,.13),rgba(71,220,255,.025));color:var(--pri);box-shadow:inset 0 0 0 1px rgba(71,220,255,.11),0 0 20px -5px rgba(71,220,255,.3)}
-.mi.on svg{filter:drop-shadow(0 0 6px rgba(71,220,255,.7))}
 .mi.on::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;background:var(--pri);border-radius:0 3px 3px 0}
 .umi{border-top:1px solid var(--bd);padding-top:18px;display:flex;align-items:center;gap:12px}
 .av{width:42px;height:42px;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:.9rem;color:#05070a;flex-shrink:0}
 .umi h4{font-size:.86rem;font-weight:600}
 .umi p{font-size:.72rem;color:var(--ok);margin-top:2px}
 
-/* ============ MAIN ============ */
+/* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
 .top{height:70px;background:rgba(7,10,18,.88);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 30px;flex-shrink:0;gap:20px;position:relative;z-index:100}
 .top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px}
@@ -78,7 +70,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .pg.on{display:block;animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-/* ============ BUTTONS / PANEL ============ */
+/* BUTTONS */
 .panel{background:var(--pan);border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:var(--shadow-md)}
 .btn{padding:12px 20px;border-radius:10px;border:none;font-weight:600;font-size:.9rem;cursor:pointer;transition:transform .15s,box-shadow .2s,filter .15s,background .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
 .btn:active{transform:scale(.97)}
@@ -92,7 +84,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sh h2{font-size:1.4rem;font-weight:700}
 .sh p{color:var(--mut);font-size:.88rem;margin-top:5px}
 
-/* ============ FORM ============ */
+/* FORM */
 .fg{margin-bottom:18px}
 .fg label{display:block;margin-bottom:8px;color:var(--mut);font-size:.82rem;font-weight:500}
 .fc{width:100%;padding:13px 15px;background:rgba(7,10,15,.7);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);font-size:.95rem;font-family:inherit;transition:border-color .2s,box-shadow .2s}
@@ -102,13 +94,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 select.fc{background:#0f1420;color:#e8f4ff;color-scheme:dark}
 select.fc option{background:#0f1420;color:#e8f4ff}
 
-/* ============ TOAST ============ */
+/* TOAST */
 .toast{position:fixed;top:22px;right:22px;background:var(--pan2);border:1px solid var(--bd2);border-left:4px solid var(--ok);padding:15px 22px;border-radius:10px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:11px;transform:translateX(130%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:2000;font-size:.9rem;max-width:380px}
 .toast.on{transform:translateX(0)}
 .toast svg{width:18px;height:18px;stroke:var(--ok);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .hidden{display:none}
 
-/* ============ MASK / BOX ============ */
+/* MASK */
 .mask{position:fixed;inset:0;background:rgba(3,6,11,.75);display:none;justify-content:center;align-items:center;z-index:7000;animation:maskIn .2s ease}
 .mask.on{display:flex}
 @keyframes maskIn{from{opacity:0}to{opacity:1}}
@@ -119,7 +111,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .box .d{color:var(--mut);font-size:.86rem;margin-bottom:22px}
 .mact{display:flex;gap:10px;margin-top:24px}
 
-/* ============ TABLE ============ */
+/* TABLE */
 .tbl{background:var(--pan);border:1px solid var(--bd);border-radius:16px;overflow:hidden}
 .tbl table{width:100%;border-collapse:collapse}
 .tbl th{text-align:left;color:var(--mut);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;padding:16px 22px;border-bottom:1px solid var(--bd);font-weight:600}
@@ -132,7 +124,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .badge.proc{background:rgba(0,212,255,.14);color:var(--pri)}
 .badge.fail{background:rgba(255,84,112,.14);color:var(--bad)}
 
-/* ============ LOGIN ============ */
+/* LOGIN */
 .login-screen{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:5000;padding:40px 20px;transition:opacity .4s ease}
 .login-screen.hidden{opacity:0;pointer-events:none}
 .login-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:42px 38px;width:100%;max-width:420px;box-shadow:var(--shadow-lg)}
@@ -156,7 +148,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .pass-wrap{position:relative}
 .pass-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:1rem;padding:4px}
 
-/* ============ NOTIFICATIONS ============ */
+/* NOTIFICATIONS */
 .notif-bell{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:all .25s}
 .notif-bell:hover{background:rgba(71,220,255,.08);border-color:rgba(71,220,255,.5);transform:translateY(-2px)}
 .notif-bell svg{width:18px;height:18px;stroke:#7dd3fc;fill:none;stroke-width:2}
@@ -179,36 +171,19 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .notif-empty{text-align:center;padding:60px 20px;color:var(--mut);font-size:.9rem}
 @media (max-width:600px){.notif-panel{width:100vw}}
 
-/* ============ SOUND BTN ============ */
-.sound-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,176,32,.15);border:1px solid rgba(255,176,32,.5);border-radius:999px;color:var(--warn);cursor:pointer;font-family:inherit;font-size:.78rem;font-weight:600}
-.sound-btn.hidden{display:none}
-.sound-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
-
-/* ============ CURRENCY ============ */
-.curr-switch{position:relative}
-.curr-btn-top{display:flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:999px;color:var(--txt);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600}
-.curr-menu{position:absolute;top:calc(100% + 8px);right:0;background:linear-gradient(180deg,var(--pan2),#0f151e);border:1px solid var(--bd2);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;min-width:220px;display:none;z-index:9999}
-.curr-menu.on{display:block}
-.curr-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:.88rem}
-.curr-opt.on{background:rgba(0,212,255,.12);color:var(--pri)}
-.curr-opt span:first-child{font-weight:600;flex:1}
-.curr-rate{color:var(--mut);font-size:.78rem;font-family:ui-monospace,monospace}
-
-/* ============ SETTINGS ============ */
+/* SETTINGS */
 .settings-section{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--bd)}
 .settings-section:last-of-type{border-bottom:none;padding-bottom:0}
 .settings-label{font-size:.72rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:12px}
 .settings-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px}
 .settings-name{font-size:.92rem;font-weight:700;margin-bottom:3px}
 .settings-email{font-size:.78rem;color:var(--mut);font-family:ui-monospace,monospace}
-.settings-role{font-size:.72rem;padding:4px 10px;border-radius:6px;background:rgba(0,212,255,.12);color:var(--pri);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:inline-block;margin-top:6px}
+.settings-role{font-size:.72rem;padding:4px 10px;border-radius:6px;background:rgba(0,212,255,.12);color:var(--pri);font-weight:700;text-transform:uppercase;display:inline-block;margin-top:6px}
 .settings-btn-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.9rem;font-weight:600;transition:.2s;margin-bottom:8px}
 .settings-btn-row:hover{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.3)}
 .settings-btn-row.danger{color:#ff5470}
-.back-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--txt);cursor:pointer;margin-bottom:8px}
-.back-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
-/* ============ INACTIVITY ============ */
+/* INACTIVITY */
 .inactivity-overlay{position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:6000;padding:20px}
 .inactivity-overlay.on{display:flex}
 .inactivity-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(255,176,32,.3);border-radius:20px;padding:38px;width:100%;max-width:420px;text-align:center;box-shadow:var(--shadow-lg)}
@@ -218,7 +193,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .inactivity-timer{font-family:ui-monospace,Menlo,monospace;font-size:3rem;font-weight:800;color:var(--warn);margin-bottom:24px}
 .inactivity-actions{display:flex;gap:10px}
 .inactivity-actions .btn{flex:1;justify-content:center;padding:14px}
-  /* ============ PREMIUM CARD ============ */
+
+/* PREMIUM CARD */
 .pay{background:radial-gradient(500px 200px at 100% 0%,rgba(0,212,255,.18),transparent 60%),linear-gradient(135deg,#1b2533 0%,#0a0e15 100%);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:26px;height:200px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 30px 60px -30px rgba(0,0,0,.9);position:relative;overflow:hidden;margin-bottom:24px;transition:transform .3s ease,box-shadow .3s ease,background .5s ease}
 .pay-shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(120deg,transparent 0%,transparent 30%,rgba(255,255,255,.15) 50%,transparent 70%,transparent 100%);transition:left .8s ease;pointer-events:none;z-index:3}
 .pay:hover .pay-shine{left:100%}
@@ -228,11 +204,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ptop{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
 .pb{font-weight:800;letter-spacing:.14em;font-size:.82rem;color:#fff}
 .pt{font-size:.7rem;color:var(--mut);letter-spacing:.12em}
-.chip{width:46px;height:34px;background:linear-gradient(135deg,#ffd97a,#c98a12);border-radius:6px;position:relative;z-index:1}
-.chip-row{display:flex;align-items:center;gap:14px;position:relative;z-index:1;margin:4px 0}
 .chip-real{width:52px;height:40px;background:linear-gradient(135deg,#f5d67a 0%,#d4a017 40%,#a37c0c 100%);border-radius:7px;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),inset 0 -2px 4px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.4);overflow:hidden}
-.chip-real::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 8px,rgba(0,0,0,.25) 8px,rgba(0,0,0,.25) 9px,transparent 9px,transparent 18px,rgba(0,0,0,.25) 18px,rgba(0,0,0,.25) 19px,transparent 19px,transparent 28px,rgba(0,0,0,.25) 28px,rgba(0,0,0,.25) 29px,transparent 29px,transparent 38px,rgba(0,0,0,.25) 38px,rgba(0,0,0,.25) 39px,transparent 39px);border-radius:7px}
-.chip-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:20px;background:linear-gradient(135deg,#fff5c2,#e8c552);border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.chip-row{display:flex;align-items:center;gap:14px;position:relative;z-index:1;margin:4px 0}
 .nfc-icon{width:26px;height:26px;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;fill:none;opacity:.65;transform:rotate(90deg)}
 .pn{font-family:ui-monospace,Menlo,monospace;font-size:1.42rem;letter-spacing:.16em;position:relative;z-index:1;color:#fff}
 .pf{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:1;gap:12px}
@@ -243,20 +216,14 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .card-network svg{width:56px;height:24px;display:block}
 .pay.pay-large{height:240px;padding:22px;margin-bottom:0;max-width:360px;width:100%;background:radial-gradient(500px 250px at 100% 0%,rgba(236,72,153,.5),transparent 60%),radial-gradient(400px 250px at 0% 100%,rgba(139,92,246,.55),transparent 60%),radial-gradient(300px 150px at 50% 50%,rgba(91,141,239,.3),transparent 70%),linear-gradient(135deg,#4c1d95 0%,#6b21a8 50%,#831843 100%);border:1px solid rgba(255,255,255,.15);box-shadow:0 30px 60px -20px rgba(139,92,246,.5),0 0 60px rgba(236,72,153,.3),inset 0 1px 0 rgba(255,255,255,.2);overflow:hidden}
 .pay.pay-large .pn{font-size:1.3rem;letter-spacing:.12em;white-space:nowrap}
-.pay.pay-large .pb{font-size:.88rem}
-.pay.pay-large .chip-real{width:52px;height:38px}
-.pay.pay-large .pv{font-size:1rem}
-.pay.pay-large .pl{font-size:.68rem}
 
-/* ============ CARD DESIGNS ============ */
+/* CARD DESIGNS */
 .pay.design-cosmic{background:linear-gradient(135deg,#1a1a2e,#0f3460)}
 .pay.design-purple{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .pay.design-silver{background:linear-gradient(135deg,#c0c0c0,#808080)}
 .pay.design-silver .pb,.pay.design-silver .pn,.pay.design-silver .pv,.pay.design-silver .pl{color:#18181b}
-.pay.design-silver .pt{color:#52525b}
 .pay.design-black{background:linear-gradient(135deg,#1a1a1a,#000)}
 .pay.design-gold{background:linear-gradient(135deg,#d4af37,#b8860b)}
-.pay.design-gold .chip-real{background:linear-gradient(135deg,#fff8d4 0%,#f5d67a 40%,#c9a227 100%)}
 .pay.design-ocean{background:linear-gradient(135deg,#0891b2,#06b6d4)}
 .pay.design-mountain{background:linear-gradient(135deg,#475569,#1e293b)}
 .pay.design-aurora{background:linear-gradient(135deg,#10b981,#7c3aed)}
@@ -265,7 +232,6 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 /* DESIGN PICKER */
 .design-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
 .design-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:.7rem;font-weight:600;transition:.2s}
-.design-opt:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
 .design-opt.on{border-color:var(--pri);background:rgba(0,212,255,.08);box-shadow:0 0 0 3px rgba(0,212,255,.15)}
 .design-preview{width:100%;height:34px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .design-preview.cosmic{background:radial-gradient(100px 40px at 100% 0%,rgba(0,212,255,.5),transparent 60%),linear-gradient(135deg,#1b2533 0%,#0a0e15 100%)}
@@ -279,7 +245,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .design-preview.city{background:linear-gradient(135deg,#0f0f1a 0%,#16213e 100%)}
 @media (max-width:540px){.design-picker{grid-template-columns:repeat(3,1fr)}}
 
-/* ============ NC3 DASHBOARD ============ */
+/* NC3 DASHBOARD */
 .nc3-dashboard{max-width:1480px;margin:0 auto}
 .nc3-hero{display:flex;justify-content:space-between;align-items:flex-end;padding:4px 2px 26px}
 .nc3-eyebrow,.nc3-kicker{color:#77869e;text-transform:uppercase;font-size:.67rem;font-weight:800;letter-spacing:.13em}
@@ -292,107 +258,72 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-ghost,.nc3-primary{border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:11px 16px;font-weight:750;cursor:pointer;transition:.2s;display:flex;gap:7px;align-items:center;font-family:inherit;font-size:.9rem}
 .nc3-ghost{background:rgba(255,255,255,.035);color:#b6c1d1}
 .nc3-primary{background:linear-gradient(135deg,#46dfff,#238cff);color:#03111b;border:0;box-shadow:0 13px 28px rgba(36,154,255,.2)}
-.nc3-ghost:hover{background:rgba(255,255,255,.065);transform:translateY(-2px)}
-.nc3-primary:hover{transform:translateY(-2px);box-shadow:0 18px 34px rgba(36,154,255,.3)}
 .nc3-overview{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,480px);gap:18px}
 @media (max-width:1100px){.nc3-overview{grid-template-columns:1fr}}
 .nc3-balance-card,.nc3-card-wrap,.nc3-chart-panel,.nc3-transactions,.nc3-iban{background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid var(--nc3-line);border-radius:22px;box-shadow:var(--shadow-md)}
 .nc3-balance-card{min-height:385px;padding:25px;position:relative;overflow:hidden}
-.nc3-balance-card:before{content:"";position:absolute;width:520px;height:300px;right:-210px;top:-160px;background:radial-gradient(circle,rgba(71,220,255,.12),transparent 67%);pointer-events:none}
 .nc3-balance-top{display:flex;justify-content:space-between}
 .nc3-kicker{font-size:.68rem;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#47dcff;opacity:.85}
-.nc3-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:5px;background:linear-gradient(110deg,#fff,#cceeff 55%,#7bdfff);-webkit-background-clip:text;background-clip:text;color:transparent;word-break:keep-all;line-height:1.1;text-shadow:0 0 40px rgba(71,220,255,.25)}
-@media (max-width:1100px){.nc3-balance{font-size:2.2rem}}
+.nc3-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:5px;background:linear-gradient(110deg,#fff,#cceeff 55%,#7bdfff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .nc3-eur{color:#718098;font-size:.88rem;margin-top:3px}
-.nc3-balance-menu{color:#718098;letter-spacing:3px;padding:6px 2px}
-.nc3-performance{margin-top:16px;display:flex;gap:7px;align-items:center;color:#5ce6b5;font-size:.78rem;font-weight:700}
-.nc3-performance span:last-child{color:#68768c}
-.pnl-line.positive{color:#00ffa3 !important;text-shadow:0 0 12px rgba(0,255,163,.35)}
-.pnl-line.negative{color:#ff5470 !important;text-shadow:0 0 12px rgba(255,84,112,.3)}
-.nc3-performance-note{font-size:.72rem;color:#657389;margin-top:8px;font-weight:600}
-.nc3-balance-chart{position:absolute;left:0;right:0;bottom:0;height:190px;padding:18px 25px 10px;background:linear-gradient(180deg,transparent,rgba(71,220,255,.018))}
-.nc3-chart-labels{display:flex;justify-content:space-between;color:#59677b;font-size:.64rem;margin-bottom:5px}
 .nc3-mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 0 4px}
 .nc3-mini-stat{display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:rgba(71,220,255,.05);border:1px solid rgba(71,220,255,.15);border-radius:10px}
 .nc3-mini-label{font-size:10px;color:#7c9cbb;text-transform:uppercase;letter-spacing:.5px}
 .nc3-mini-value{font-size:16px;font-weight:600;color:#47dcff}
 
-/* ============ NC3 CARD WRAP ============ */
+/* NC3 CARD */
 .nc3-card-wrap{padding:20px;background:linear-gradient(145deg,rgba(18,23,37,.92),rgba(9,13,23,.96));display:flex;flex-direction:column;gap:14px}
 .nc3-section-label{color:#77869d;text-transform:uppercase;font-size:.62rem;letter-spacing:.12em;font-weight:800;margin:1px 3px 11px}
-.nc3-bank-card{width:100%;aspect-ratio:1.6/1;height:auto;min-height:220px;max-height:280px;border-radius:22px;padding:26px;background:radial-gradient(500px 250px at 90% -10%,rgba(255,83,190,.5),transparent 58%),radial-gradient(400px 240px at 0% 110%,rgba(95,76,255,.55),transparent 64%),linear-gradient(135deg,#2a1750 0%,#4a1a7a 50%,#751a55 100%);box-shadow:0 35px 70px rgba(0,0,0,.4),0 0 80px rgba(255,83,190,.22),0 0 100px rgba(95,76,255,.18),inset 0 1px 0 rgba(255,255,255,.22);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
-.nc3-bank-card .pn{font-size:1.13rem;letter-spacing:.16em}
-.nc3-bank-card .chip-real{transform:scale(.9);transform-origin:left center}
-
+.nc3-bank-card{width:100%;aspect-ratio:1.6/1;height:auto;min-height:220px;max-height:280px;border-radius:22px;padding:26px;background:radial-gradient(500px 250px at 90% -10%,rgba(255,83,190,.5),transparent 58%),radial-gradient(400px 240px at 0% 110%,rgba(95,76,255,.55),transparent 64%),linear-gradient(135deg,#2a1750 0%,#4a1a7a 50%,#751a55 100%);box-shadow:0 35px 70px rgba(0,0,0,.4),0 0 80px rgba(255,83,190,.22);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
 .nc3-card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
 .nc3-card-action{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px;background:rgba(13,19,30,.72);border:1px solid var(--nc3-line);border-radius:14px;cursor:pointer;transition:.2s;font-family:inherit;color:#e7edf6}
-.nc3-card-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px)}
-.nc3-card-action-icon{width:32px;height:32px;min-width:32px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:.2s}
+.nc3-card-action-icon{width:32px;height:32px;min-width:32px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff}
 .nc3-card-action-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
 .nc3-card-action-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 .nc3-card-action-icon.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .nc3-card-action-label{font-size:13px;font-weight:600}
-@media (max-width:500px){.nc3-card-actions{grid-template-columns:1fr}.nc3-card-action{justify-content:flex-start}}
 
-/* ============ ASSETS ============ */
+/* ASSETS */
 .nc3-assets,.nc3-actions-section{margin-top:27px}
-.nc3-section-head,.nc3-panel-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
-.nc3-section-head h2,.nc3-panel-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px}
-.nc3-link,.nc3-panel-head a{color:#65ddff;text-decoration:none;font-size:.72rem;font-weight:750}
+.nc3-section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
+.nc3-section-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px}
 .nc3-asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .nc3-asset{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:94px;padding:16px;border:1px solid var(--nc3-line);border-radius:16px;background:rgba(13,19,30,.72);position:relative;overflow:hidden;transition:.2s}
-.nc3-asset:hover{transform:translateY(-2px);border-color:rgba(71,220,255,.18);background:rgba(17,25,39,.9)}
 .nc3-asset-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem}
 .nc3-asset-icon.btc{background:rgba(245,158,11,.11);color:#ffbd4c}
 .nc3-asset-icon.eth{background:rgba(139,108,255,.12);color:#aa98ff}
 .nc3-asset-name{font-weight:750;font-size:.83rem}
-.nc3-asset-name span{font-size:.63rem;color:#657389;margin-left:4px}
 .nc3-asset-amount{color:#6e7c92;font-size:.69rem;margin-top:4px;font-family:ui-monospace,monospace}
 .nc3-asset-value{text-align:right}
 .nc3-asset-value strong{display:block;font-size:.84rem}
 .nc3-asset-value span{font-size:.66rem;color:#57dfad}
-.nc3-asset .crypto-chart{position:absolute;right:100px;bottom:10px;width:130px;height:50px;pointer-events:none}
-.nc3-asset .crypto-chart svg{width:100%;height:100%;display:block}
 
-/* ============ ACTIONS ============ */
+/* ACTIONS */
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-#btnWithdrawV2{grid-column: span 2}  /* ← Withdraw занимает 2 колонки */
-.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:.2s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit;font-size:inherit}
-.nc3-action:hover{background:rgba(71,220,255,.06);border-color:rgba(71,220,255,.3);transform:translateY(-1px);box-shadow:0 15px 40px -10px rgba(71,220,255,.4)}
-.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
-.nc3-action-icon svg{width:20px;height:20px;stroke:#fff}
-.nc3-action-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
+#btnWithdrawV2{grid-column:span 2}
+.nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:.2s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit}
+.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff}
+.nc3-action-icon.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .nc3-action-icon.pink{background:linear-gradient(135deg,#ec4899,#f472b6)}
 .nc3-action-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
 .nc3-action-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
-.nc3-action-icon.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .nc3-action b{display:block;font-size:.77rem}
 .nc3-action small{display:block;color:#68768b;margin-top:4px;font-size:.63rem}
-.nc3-action i{font-style:normal;color:#536177}
 
-/* ============ LOWER / TX ============ */
+/* LOWER */
 .nc3-lower{display:grid;grid-template-columns:1.25fr .9fr;gap:14px;margin-top:27px}
 .nc3-chart-panel,.nc3-transactions{padding:20px;min-height:355px}
-.nc3-panel-head{align-items:center}
-.nc3-panel-head strong{font-family:ui-monospace,monospace;color:#62ddff;font-size:.84rem}
-.nc3-large-chart{height:270px;margin:3px -5px -5px}
-.nc3-transactions .recent-tx-list{max-height:285px;overflow:auto;margin-top:4px}
-.nc3-transactions .recent-tx-item{padding:11px 5px;border-bottom:1px solid rgba(255,255,255,.045)}
 .recent-tx-list{display:flex;flex-direction:column;gap:8px}
-.recent-tx-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:10px;transition:.2s}
-.recent-tx-item:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.25)}
+.recent-tx-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:10px}
 .recent-tx-icon{width:38px;height:38px;border-radius:10px;background:rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
 .recent-tx-icon.deposit{background:rgba(0,224,138,.12)}
-.recent-tx-icon.transfer{background:rgba(255,176,32,.12)}
-.recent-tx-icon.card{background:rgba(124,58,237,.15)}
 .recent-tx-icon.withdrawal{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff}
 .recent-tx-info{flex:1;min-width:0}
-.recent-tx-desc{font-size:.88rem;font-weight:600;color:var(--txt);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-tx-desc{font-size:.88rem;font-weight:600;color:var(--txt);margin-bottom:3px}
 .recent-tx-time{font-size:.72rem;color:var(--mut)}
-.recent-tx-amount{font-size:.92rem;font-weight:700;font-family:ui-monospace,monospace;text-align:right;white-space:nowrap}
+.recent-tx-amount{font-size:.92rem;font-weight:700;font-family:ui-monospace,monospace;text-align:right}
 .recent-tx-amount.plus{color:#00e08a}
 .recent-tx-amount.minus{color:#ff5470}
-.recent-tx-amount.neutral{color:var(--mut);font-size:.78rem}
 .recent-tx-badge{font-size:.68rem;padding:2px 8px;border-radius:6px;font-weight:600;display:inline-block;margin-top:4px}
 .recent-tx-badge.ok{background:rgba(0,224,138,.14);color:var(--ok)}
 .recent-tx-badge.pend{background:rgba(255,176,32,.14);color:var(--warn)}
@@ -400,69 +331,43 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .recent-tx-badge.fail{background:rgba(255,80,80,.15);color:#ff6b6b}
 .recent-tx-empty{text-align:center;padding:40px 20px;color:var(--mut);font-size:.88rem}
 
-/* ============ BOTTOM ROW / IBAN ============ */
+/* IBAN */
 .nc3-bottom-row{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
-.nc3-iban{padding:22px;border-radius:16px;background:radial-gradient(400px 200px at 100% 0%,rgba(71,220,255,.08),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.9),rgba(9,14,23,.9));border:1px solid rgba(71,220,255,.18);position:relative;overflow:hidden}
-.nc3-iban::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(71,220,255,.12),transparent 70%);pointer-events:none}
+.nc3-iban{padding:22px;border-radius:16px;background:radial-gradient(400px 200px at 100% 0%,rgba(71,220,255,.08),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.9),rgba(9,14,23,.9));border:1px solid rgba(71,220,255,.18)}
 .nc3-iban-copy{display:flex;align-items:center;gap:14px;margin-bottom:16px}
-.nc3-iban-copy > div:last-child{display:flex;flex-direction:column;gap:4px}
-.nc3-icon-circle{width:48px;height:48px;min-width:48px;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:.2s;flex-shrink:0}
-.nc3-icon-circle svg{width:22px;height:22px;stroke:#fff;fill:none}
-.nc3-iban-copy h3{margin:0;font-size:16px;font-weight:700;color:#e8f4ff}
-.nc3-iban-copy p{margin:0;font-size:12px;color:#7c9cbb}
+.nc3-icon-circle{width:48px;height:48px;min-width:48px;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#22d3ee);display:inline-flex;align-items:center;justify-content:center;color:#fff}
 .nc3-iban-details{display:flex;flex-direction:column;gap:10px;margin-top:16px}
 .nc3-iban-details > div{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(71,220,255,.04);border:1px solid rgba(71,220,255,.1);border-radius:10px}
-.nc3-iban-details span{color:#7c9cbb;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.nc3-iban-details b{color:#e8f4ff;font-size:13px;font-family:ui-monospace,monospace;font-weight:600}
-#myIban{color:#47dcff}
-#mySwift{color:#a855f7}
-#myBank{color:#e8f4ff}
-#myCountry{color:#f59e0b}
-.nc3-copy-iban{margin-top:14px;width:100%;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(71,220,255,.08);border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#47dcff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-.nc3-copy-iban svg{width:13px;height:13px;flex-shrink:0}
+.nc3-iban-details span{color:#7c9cbb;font-size:11px;text-transform:uppercase;font-weight:600}
+.nc3-iban-details b{color:#e8f4ff;font-size:13px;font-family:ui-monospace,monospace}
 .iban-pending{text-align:center;padding:20px 12px}
 .iban-spinner{width:28px;height:28px;border:3px solid rgba(0,212,255,.15);border-top-color:var(--pri);border-radius:50%;margin:0 auto 12px;animation:ibanSpin 1s linear infinite}
 @keyframes ibanSpin{to{transform:rotate(360deg)}}
 .iban-pending-text{font-size:.88rem;font-weight:600;color:var(--txt);margin-bottom:4px}
 .iban-pending-sub{font-size:.75rem;color:var(--mut)}
+.nc3-copy-iban{margin-top:14px;width:100%;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(71,220,255,.08);border:1px solid rgba(71,220,255,.25);border-radius:10px;color:#47dcff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 
-/* ============ STAT STRIP ============ */
+/* STATS */
 .nc3-stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--nc3-line);border-radius:16px;overflow:hidden;background:var(--nc3-line)}
-.nc3-stat{padding:17px;background:rgba(13,19,30,.8);min-height:110px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px}
-.nc3-stat-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:.2s}
-.nc3-stat-icon svg{width:20px;height:20px;stroke:#fff}
+.nc3-stat{padding:17px;background:rgba(13,19,30,.8);min-height:110px;display:flex;flex-direction:column;gap:6px}
+.nc3-stat-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff}
 .nc3-stat-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
 .nc3-stat-icon.red{background:linear-gradient(135deg,#ef4444,#f87171)}
 .nc3-stat-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
 .nc3-stat-icon.violet{background:linear-gradient(135deg,#7c3aed,#a855f7)}
-.nc3-stat-body{flex:1}
 .nc3-stat span{display:block;color:#64738a;font-size:.62rem}
 .nc3-stat strong{display:block;font-size:1rem;margin-top:3px}
 .nc3-stat small{display:block;color:#4edca9;font-size:.6rem;margin-top:3px}
-.nc3-stat-spark{position:absolute;right:12px;bottom:12px;width:60px;height:24px;opacity:.5;pointer-events:none}
-.nc3-stat-spark::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 24' preserveAspectRatio='none'><polyline points='0,18 10,15 20,17 30,10 40,12 50,6 60,3' fill='none' stroke='%234edca9' stroke-width='2'/></svg>") no-repeat center;background-size:100% 100%}
 
-/* ============ BALANCE CHART ============ */
-.balance-chart-panel{display:flex;flex-direction:column;height:400px;min-height:400px;overflow:hidden}
-.balance-current{font-size:1.25rem;font-weight:800;color:var(--pri);font-family:ui-monospace,monospace}
-.balance-chart-wrap{flex:1;position:relative;margin-top:16px;min-height:180px}
-.balance-chart-wrap svg{width:100%;height:100%;display:block;overflow:visible}
-.balance-chart-wrap .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:.88rem;text-align:center;flex-direction:column;gap:8px}
-.balance-chart-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:.7rem;color:var(--mut);font-family:ui-monospace,monospace}
-.bottom-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-top:14px;align-items:stretch}
-.bottom-grid .recent-tx-panel{height:400px;min-height:400px;display:flex;flex-direction:column;margin-top:0;overflow:hidden}
-.bottom-grid .recent-tx-list{flex:1;overflow-y:auto;padding-right:6px;margin-top:4px}
-
-/* ============ RESPONSIVE ============ */
+/* RESPONSIVE */
 @media(max-width:1100px){.nc3-overview,.nc3-lower,.nc3-bottom-row{grid-template-columns:1fr}.nc3-action-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:900px){.bottom-grid{grid-template-columns:1fr}.balance-chart-panel,.bottom-grid .recent-tx-panel{height:auto;min-height:320px}.nc3-asset-grid{grid-template-columns:1fr}}
-@media(max-width:760px){.side{width:78px}.body{padding:20px 15px 90px}.top{padding:0 15px}.nc3-hero{align-items:flex-start;gap:15px;flex-direction:column}.nc3-overview,.nc3-asset-grid,.nc3-action-grid{grid-template-columns:1fr}.nc3-balance{font-size:2.55rem}.nc3-bank-card{height:215px}.brand .nm,.mi .tx,.umi .inf{display:none}.mi{justify-content:center}.umi{justify-content:center}}
-@media(max-width:500px){.nc3-hero h1{font-size:1.55rem}.nc3-balance-card{padding:19px;min-height:350px}.nc3-card-actions button b{display:none}.nc3-action-grid{grid-template-columns:1fr 1fr}.nc3-action{grid-template-columns:36px 1fr}.nc3-action i{display:none}.nc3-asset{grid-template-columns:38px 1fr auto}}
-@media (max-width:480px){.top-search{display:none}.body{padding:16px 14px}.bottom-grid{grid-template-columns:1fr}}
-/* ============ EXCHANGE DASHBOARD ============ */
-.ex-dashboard{max-width:1480px;margin:0 auto}
+@media(max-width:900px){.nc3-asset-grid{grid-template-columns:1fr}}
+@media(max-width:760px){.side{width:78px}.body{padding:20px 15px 90px}.top{padding:0 15px}.nc3-hero{align-items:flex-start;gap:15px;flex-direction:column}.nc3-overview,.nc3-asset-grid,.nc3-action-grid{grid-template-columns:1fr}.nc3-balance{font-size:2.55rem}.brand .nm,.mi .tx,.umi .inf{display:none}.mi{justify-content:center}.umi{justify-content:center}}
+@media(max-width:500px){.nc3-hero h1{font-size:1.55rem}.nc3-action-grid{grid-template-columns:1fr 1fr}.nc3-action{grid-template-columns:36px 1fr}}
+@media (max-width:480px){.top-search{display:none}.body{padding:16px 14px}}
 
-/* HERO */
+/* EXCHANGE DASHBOARD */
+.ex-dashboard{max-width:1480px;margin:0 auto}
 .ex-hero{display:flex;justify-content:space-between;align-items:flex-end;padding:4px 2px 26px;flex-wrap:wrap;gap:16px}
 .ex-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:9px;color:#8e9bb0;text-transform:uppercase;font-size:.67rem;font-weight:800;letter-spacing:.13em}
 .ex-live-dot{width:7px;height:7px;border-radius:50%;background:#36e2a3;box-shadow:0 0 12px rgba(54,226,163,.7);animation:exPulse 2s infinite}
@@ -476,22 +381,14 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ex-btn-withdraw{background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 10px 24px -8px rgba(245,158,11,.6)}
 .ex-btn-trade{background:linear-gradient(135deg,#8b5cf6,#ec4899);box-shadow:0 10px 24px -8px rgba(139,92,246,.7)}
 .ex-btn:hover{transform:translateY(-2px);filter:brightness(1.1)}
-
-/* MAIN GRID */
 .ex-main-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,440px);gap:18px;margin-bottom:24px}
 @media(max-width:1100px){.ex-main-grid{grid-template-columns:1fr}}
-
-/* BALANCE CARD */
 .ex-balance-card{background:radial-gradient(600px 300px at 100% 0%,rgba(139,92,246,.15),transparent 60%),radial-gradient(400px 300px at 0% 100%,rgba(16,185,129,.1),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:22px;padding:26px;box-shadow:0 24px 60px -30px rgba(0,0,0,.7);position:relative;overflow:hidden}
-.ex-balance-card::before{content:'';position:absolute;width:500px;height:250px;right:-180px;top:-150px;background:radial-gradient(circle,rgba(139,92,246,.18),transparent 67%);pointer-events:none}
 .ex-bal-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
 .ex-kicker{font-size:.68rem;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#a78bfa;opacity:.9}
-.ex-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:6px;background:linear-gradient(110deg,#fff,#e8d5ff 55%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1;text-shadow:0 0 40px rgba(167,139,250,.3)}
-@media(max-width:1100px){.ex-balance{font-size:2.2rem}}
+.ex-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:6px;background:linear-gradient(110deg,#fff,#e8d5ff 55%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
 .ex-balance-sub{color:#718098;font-size:.88rem;margin-top:4px}
 .ex-bal-badge{padding:6px 12px;border-radius:999px;font-size:.7rem;font-weight:800;letter-spacing:.1em;background:rgba(139,92,246,.15);color:#c4b5fd;border:1px solid rgba(139,92,246,.3)}
-
-/* CHART */
 .ex-chart-wrap{margin-top:22px;position:relative;z-index:1}
 .ex-chart-tabs{display:flex;gap:6px;margin-bottom:12px}
 .ex-tab{padding:6px 14px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#7a8a9e;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.2s}
@@ -499,21 +396,16 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ex-portfolio-chart{height:180px;position:relative}
 .ex-portfolio-chart svg{width:100%;height:100%;display:block;overflow:visible}
 .ex-chart-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:.7rem;color:#5e6b80;font-family:ui-monospace,monospace}
-
-/* BAL STATS */
 .ex-bal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px;position:relative;z-index:1}
 .ex-stat-mini{background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);border-radius:12px;padding:10px 12px}
 .ex-stat-mini span{display:block;font-size:10px;color:#8b8fb0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .ex-stat-mini strong{display:block;font-size:15px;color:#c4b5fd;font-weight:700}
-
-/* COINS CARD */
 .ex-coins-card{background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:22px;padding:22px;box-shadow:0 24px 60px -30px rgba(0,0,0,.7)}
 .ex-coins-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
 .ex-coins-head h3{font-size:1.15rem;margin:4px 0 0;color:#fff}
 .ex-live-badge{font-size:.68rem;font-weight:800;letter-spacing:.1em;color:#4edca9;background:rgba(78,220,169,.1);border:1px solid rgba(78,220,169,.25);padding:5px 10px;border-radius:999px}
 .ex-coins-list{display:flex;flex-direction:column;gap:8px}
-.ex-coin-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:14px;transition:.2s;cursor:pointer}
-.ex-coin-row:hover{background:rgba(139,92,246,.06);border-color:rgba(139,92,246,.25);transform:translateX(3px)}
+.ex-coin-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:14px;transition:.2s}
 .ex-coin-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:900;color:#fff}
 .ex-coin-name{font-weight:700;font-size:.92rem;color:#fff}
 .ex-coin-symbol{font-size:.72rem;color:#718098;margin-top:2px}
@@ -522,30 +414,22 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ex-coin-change{font-size:.72rem;font-weight:700;margin-top:3px;display:block}
 .ex-coin-change.up{color:#10b981}
 .ex-coin-change.down{color:#ef4444}
-
-/* ASSETS SECTION */
 .ex-assets-section{margin-bottom:24px}
 .ex-section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
 .ex-section-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px;color:#fff}
 .ex-assets-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:760px){.ex-assets-grid{grid-template-columns:1fr}}
-.ex-asset-card{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;padding:20px;background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:18px;transition:.25s;position:relative;overflow:hidden}
-.ex-asset-card::before{content:'';position:absolute;width:200px;height:200px;right:-80px;top:-80px;opacity:.15;border-radius:50%;filter:blur(40px)}
-.ex-asset-card.btc::before{background:#f7931a}
-.ex-asset-card.eth::before{background:#627eea}
+.ex-asset-card{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;padding:20px;background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:18px;transition:.25s}
 .ex-asset-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -15px rgba(0,0,0,.6)}
-.ex-asset-icon-big{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;position:relative;z-index:1}
+.ex-asset-icon-big{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff}
 .ex-asset-card.btc .ex-asset-icon-big{background:linear-gradient(135deg,#f7931a,#ffbd4c)}
 .ex-asset-card.eth .ex-asset-icon-big{background:linear-gradient(135deg,#627eea,#8c6cff)}
-.ex-asset-info{position:relative;z-index:1}
 .ex-asset-label{font-size:.75rem;color:#8b8fb0;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:4px}
 .ex-asset-amount{font-size:1.05rem;font-weight:800;color:#fff;font-family:ui-monospace,monospace}
 .ex-asset-value{font-size:.85rem;color:#a78bfa;margin-top:4px;font-weight:700}
-
-/* IBAN CARD */
-.ex-iban-card{background:radial-gradient(400px 200px at 100% 0%,rgba(139,92,246,.12),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(139,92,246,.25);border-radius:22px;padding:26px;margin-bottom:24px;position:relative;overflow:hidden}
+.ex-iban-card{background:radial-gradient(400px 200px at 100% 0%,rgba(139,92,246,.12),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(139,92,246,.25);border-radius:22px;padding:26px;margin-bottom:24px}
 .ex-iban-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
-.ex-iban-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 8px 24px -8px rgba(139,92,246,.8)}
+.ex-iban-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:1.5rem}
 .ex-iban-head h3{font-size:1.1rem;margin:3px 0 0;color:#fff}
 .ex-iban-pending{text-align:center;padding:28px 16px}
 .ex-iban-spinner{width:32px;height:32px;border:3px solid rgba(139,92,246,.2);border-top-color:#a78bfa;border-radius:50%;margin:0 auto 14px;animation:exIbanSpin 1s linear infinite}
@@ -553,80 +437,56 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ex-iban-pending div:nth-child(2){color:#e7edf5;font-weight:700;font-size:.95rem}
 .ex-iban-details{display:flex;flex-direction:column;gap:10px}
 .ex-iban-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);border-radius:12px}
-.ex-iban-row span{font-size:11px;color:#8b8fb0;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.ex-iban-row span{font-size:11px;color:#8b8fb0;text-transform:uppercase;font-weight:700}
 .ex-iban-row b{font-family:ui-monospace,monospace;font-size:13px;color:#c4b5fd;font-weight:700}
-.ex-copy-btn{margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#ec4899);border:0;color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit;transition:.2s}
-.ex-copy-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px -10px rgba(139,92,246,.9)}
-
-/* TX LIST */
+.ex-copy-btn{margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#ec4899);border:0;color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit}
 .ex-tx-section{margin-bottom:24px}
 .ex-tx-list{display:flex;flex-direction:column;gap:8px}
-.ex-tx-list .recent-tx-item{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px 16px}
-.ex-tx-list .recent-tx-item:hover{background:rgba(139,92,246,.05);border-color:rgba(139,92,246,.2)}
 .ex-empty{text-align:center;padding:50px 20px;color:#7a8a9e;font-size:.9rem;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.08);border-radius:16px}
-/* ============ ONBOARDING ============ */
+
+/* ONBOARDING */
 .onboard{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:3000;overflow-y:auto;padding:40px 20px}
 .onboard.on{display:flex}
 .onb-box{background:linear-gradient(180deg,rgba(22,30,42,.95),rgba(13,18,25,.95));border:1px solid var(--bd2);border-radius:20px;padding:38px;width:100%;max-width:520px;box-shadow:var(--shadow-lg)}
 .onb-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;font-size:1.4rem;font-weight:800}
-.onb-logo .blogo{width:38px;height:38px}
-.onb-box h1{font-size:1.55rem;font-weight:800;margin-bottom:8px;letter-spacing:-.02em}
-.onb-box > p{color:var(--mut);font-size:.92rem;margin-bottom:26px}
-.onb-preview{margin-bottom:24px}
 .onb-step{display:none;width:100%;max-width:520px;animation:stepFadeIn .5s ease}
 .onb-step.on{display:block}
 @keyframes stepFadeIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.onb-welcome{text-align:center;padding:44px 38px}
-.welcome-icon{font-size:3.5rem;margin:20px 0 24px;filter:drop-shadow(0 0 30px rgba(0,212,255,.6))}
-.onb-welcome h1{font-size:1.8rem;line-height:1.25;margin-bottom:14px}
-.welcome-sub{color:var(--mut);font-size:.95rem;margin-bottom:28px;line-height:1.5}
-.welcome-features{display:flex;flex-direction:column;gap:12px;margin-bottom:8px;text-align:left}
-.welcome-features .feat{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:10px;font-size:.88rem;color:var(--txt)}
-.welcome-features .feat span{font-size:1.15rem;flex-shrink:0}
-.onb-nav{display:flex;gap:10px;margin-top:20px}
-#onbStep3Title{background:linear-gradient(135deg,#fff,#8fb8ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.welcome-icon{font-size:3.5rem;margin:20px 0 24px}
 .type-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.type-btn{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:.2s;font-family:inherit;color:var(--txt);font-size:.9rem}
-.type-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
+.type-btn{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;font-family:inherit;color:var(--txt);font-size:.9rem}
+.type-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri)}
 .cur-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.cur-btn{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;transition:.2s;font-family:inherit;color:var(--txt);font-size:.88rem}
-.cur-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
-.onboard.exiting{opacity:0;transform:scale(1.05);transition:opacity .4s ease,transform .5s ease;pointer-events:none}
+.cur-btn{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:2px solid var(--bd);cursor:pointer;text-align:center;font-weight:600;font-family:inherit;color:var(--txt);font-size:.88rem}
+.cur-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);color:var(--pri)}
+.onb-nav{display:flex;gap:10px;margin-top:20px}
 
-/* ============ CARD ANIMATION ============ */
+/* CARD ANIMATION */
 .onb-anim-stage{position:fixed;inset:0;z-index:2500;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#0a1428,#05070e)}
 .onb-anim-stage.on{display:flex}
 .anim-card{width:380px;max-width:calc(100vw - 40px);height:220px;border-radius:20px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#1b2533 0%,#0a0e15 100%);border:1px solid rgba(71,220,255,.25);box-shadow:0 30px 80px -20px rgba(0,0,0,.9);opacity:0;transform:scale(.3) rotateY(45deg);transition:transform .9s cubic-bezier(.34,1.5,.5,1),opacity .6s ease;position:relative}
 .anim-card.visible{opacity:1;transform:scale(1) rotateY(0deg)}
-.anim-card.glow{box-shadow:0 30px 80px -20px rgba(0,0,0,.9),0 0 60px rgba(71,220,255,.6),0 0 120px rgba(168,85,247,.4);border-color:rgba(71,220,255,.6)}
+.anim-card.glow{box-shadow:0 30px 80px -20px rgba(0,0,0,.9),0 0 60px rgba(71,220,255,.6),0 0 120px rgba(168,85,247,.4)}
 .anim-card.flash::after{content:'';position:absolute;inset:-20px;border-radius:30px;background:radial-gradient(circle,rgba(255,255,255,.8),transparent 70%);animation:flashBurst .6s ease-out forwards;pointer-events:none}
 @keyframes flashBurst{0%{opacity:0;transform:scale(.8)}40%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1.4)}}
-.anim-card.exit{transform:translateY(-80px) scale(.9);opacity:0;transition:all .8s ease-in}
-.card-top{display:flex;justify-content:space-between;align-items:flex-start}
-.card-num-line{font-family:ui-monospace,Menlo,monospace;font-size:18px;letter-spacing:2px;color:#fff;margin:20px 0;min-height:26px;white-space:nowrap;overflow:hidden}
-.card-num-line.typing::after{content:'|';color:#47dcff;animation:caretBlink .7s step-end infinite}
-@keyframes caretBlink{50%{opacity:0}}
+.anim-card.exit{transform:translateY(-80px) scale(.9);opacity:0}
+.card-top{display:flex;justify-content:space-between}
+.card-num-line{font-family:ui-monospace,Menlo,monospace;font-size:18px;letter-spacing:2px;color:#fff;margin:20px 0;min-height:26px}
 .card-footer{display:flex;justify-content:space-between;align-items:flex-end}
 .lbl{font-size:9px;color:#7c9cbb;letter-spacing:1px;margin-bottom:2px}
 .val{font-size:13px;color:#fff;font-weight:600;text-transform:uppercase;opacity:0;transition:opacity .4s ease}
 .val.show{opacity:1}
-.ready-text{position:absolute;top:12%;left:50%;transform:translateX(-50%) scale(.8);font-size:22px;font-weight:700;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;transition:opacity .4s,transform .5s;pointer-events:none}
+.ready-text{position:absolute;top:12%;left:50%;transform:translateX(-50%) scale(.8);font-size:22px;font-weight:700;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;opacity:0;transition:opacity .4s,transform .5s;pointer-events:none}
 .ready-text.show{opacity:1;transform:translateX(-50%) scale(1)}
-.pay.fresh-card{animation:freshCardGlow 2.5s ease-out}
-@keyframes freshCardGlow{0%{box-shadow:0 30px 60px -30px rgba(0,0,0,.9),0 0 60px rgba(0,212,255,.7);transform:scale(1.03)}100%{box-shadow:0 30px 60px -30px rgba(0,0,0,.9);transform:scale(1)}}
-.balance-pulse{animation:balancePulse 1.5s ease-out}
-@keyframes balancePulse{0%,100%{transform:scale(1)}30%{transform:scale(1.08)}60%{transform:scale(.98)}}
 
-/* ============ CONFETTI ============ */
+/* CONFETTI */
 .confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:2600;overflow:hidden}
 .confetti-piece{position:absolute;top:50%;left:50%;width:14px;height:14px;opacity:0;will-change:transform,opacity}
-.coin{border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff5c2,#d4a017 60%,#8a6508);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#6b4a04;font-family:ui-monospace,monospace}
+.coin{border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff5c2,#d4a017 60%,#8a6508);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#6b4a04}
 .spark{border-radius:50%;background:radial-gradient(circle,#00d4ff,#0090c9)}
-.crystal{background:linear-gradient(135deg,#a78bfa,#7c3aed);transform:rotate(45deg);border-radius:3px}
-.star{background:radial-gradient(circle,#00e08a,#00b46e);clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
 @keyframes confettiFly{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0deg)}10%{opacity:1}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(1) rotate(var(--rot))}}
 
-/* ============ VERIFICATION ============ */
+/* VERIFICATION */
 .verify-screen{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:2900;overflow-y:auto;padding:40px 20px}
 .verify-screen.on{display:flex}
 .verify-step{display:none;width:100%;max-width:520px;animation:verifyFadeIn .45s ease}
@@ -638,17 +498,17 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .verify-sub{color:var(--mut);font-size:.88rem;margin-bottom:24px}
 .verify-types{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
 .vtype-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:12px;cursor:pointer;font-family:inherit;color:var(--txt);transition:.2s}
-.vtype-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1);box-shadow:0 0 0 4px rgba(0,212,255,.08)}
+.vtype-btn.on{border-color:var(--pri);background:rgba(0,212,255,.1)}
 .vtype-emoji{font-size:1.6rem}
-.vtype-name{font-size:.78rem;font-weight:600;text-align:center;line-height:1.2}
+.vtype-name{font-size:.78rem;font-weight:600;text-align:center}
 .upload-zone{display:block;padding:28px 20px;background:rgba(7,10,15,.5);border:2px dashed var(--bd2);border-radius:14px;cursor:pointer;transition:.2s;margin-bottom:16px}
 .upload-zone:hover{border-color:var(--pri);background:rgba(0,212,255,.04)}
 .upload-inner{text-align:center}
 .upload-icon{font-size:2rem;margin-bottom:8px;opacity:.7}
-.upload-text{font-size:.9rem;font-weight:600;margin-bottom:4px}
+.upload-text{font-size:.9rem;font-weight:600}
 .upload-hint{font-size:.74rem;color:var(--mut)}
 .uploaded-file{display:flex;align-items:center;gap:10px;padding:14px 16px;background:rgba(0,224,138,.08);border:1px solid rgba(0,224,138,.25);border-radius:12px;margin-bottom:16px;text-align:left}
-.file-check{width:26px;height:26px;border-radius:50%;background:var(--ok);color:#04121a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;flex-shrink:0}
+.file-check{width:26px;height:26px;border-radius:50%;background:var(--ok);color:#04121a;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
 .file-name{flex:1;font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-size{font-size:.74rem;color:var(--mut);font-family:ui-monospace,monospace}
 .verify-next,.verify-nav button{width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-top:8px}
@@ -657,131 +517,87 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .selfie-hint{background:rgba(255,176,32,.06);border:1px solid rgba(255,176,32,.2);border-radius:12px;padding:14px 16px;margin-bottom:18px;text-align:left}
 .hint-line{font-size:.85rem;color:var(--txt);padding:4px 0}
 .verify-spinner{font-size:3rem;margin-bottom:16px}
-.verify-timer{font-family:ui-monospace,monospace;font-size:2.4rem;font-weight:800;color:var(--pri);margin:18px 0 20px}
 .verify-progress{background:rgba(255,255,255,.06);height:6px;border-radius:3px;overflow:hidden;margin-bottom:24px}
 .verify-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;transition:width .5s ease}
-.verify-steps-list{text-align:left}
-.vstep{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:.88rem;color:var(--mut)}
-.vstep.done{color:var(--txt)}
-.vstep.done .vstep-check,.vstep.done .vstep-dot{color:var(--ok);font-weight:800}
-.vstep.active{color:var(--pri);font-weight:600}
-.vstep-check,.vstep-dot{width:20px;text-align:center;flex-shrink:0}
-.success-circle{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:800;margin:0 auto 24px;box-shadow:0 0 0 12px rgba(0,224,138,.12);animation:successPop .6s cubic-bezier(.34,1.56,.64,1)}
-@keyframes successPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.success-circle{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:800;margin:0 auto 24px}
 .verify-success-note{background:rgba(0,224,138,.06);border:1px solid rgba(0,224,138,.2);border-radius:12px;padding:16px;margin:20px 0 24px;font-size:.88rem;color:var(--txt);line-height:1.5;text-align:left}
 @media (max-width:540px){.verify-box{padding:26px 22px}.verify-types{grid-template-columns:1fr}.vtype-btn{flex-direction:row;gap:12px;justify-content:flex-start}}
 
-/* ============ TRACKING ============ */
+/* TRACKING */
 .track-wrap{max-width:720px}
-.track-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px;flex-wrap:wrap}
 .track-id-box{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);padding:12px 18px;border-radius:12px}
-.track-id-box .l{font-size:.7rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-.track-id-box .v{font-family:ui-monospace,monospace;font-weight:700;color:var(--pri);font-size:1.05rem}
 .progress-steps{display:flex;justify-content:space-between;margin-bottom:24px;position:relative}
-.progress-steps::before{content:'';position:absolute;top:14px;left:22px;right:22px;height:2px;background:var(--bd);z-index:0}
-.step{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;position:relative;z-index:1}
-.step-dot{width:30px;height:30px;border-radius:50%;background:var(--pan2);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--mut);transition:.3s}
+.step{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1}
+.step-dot{width:30px;height:30px;border-radius:50%;background:var(--pan2);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--mut)}
 .step.done .step-dot{background:var(--ok);border-color:var(--ok);color:#04121a}
-.step.active .step-dot{background:var(--pri);border-color:var(--pri);color:#04121a;box-shadow:0 0 0 6px rgba(0,212,255,.15)}
-.step-label{font-size:.7rem;color:var(--mut);text-align:center;font-weight:500;max-width:90px}
-.step.done .step-label,.step.active .step-label{color:var(--txt)}
+.step.active .step-dot{background:var(--pri);border-color:var(--pri);color:#04121a}
 .progress-bar-bg{background:rgba(255,255,255,.06);height:9px;border-radius:5px;overflow:hidden;margin:16px 0}
-.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;border-radius:5px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));width:0%;border-radius:5px}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
 .info-box{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:16px}
-.info-box .l{font-size:.68rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
-.info-box .v{font-weight:600;font-size:.9rem;word-break:break-word}
 .log{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-top:16px;max-height:220px;overflow-y:auto}
-.log-item{display:flex;gap:12px;padding:8px 0;font-size:.85rem;border-bottom:1px solid rgba(255,255,255,.04)}
-.log-item:last-child{border-bottom:none}
-.log-time{color:var(--pri);font-family:ui-monospace,monospace;font-size:.75rem;flex-shrink:0;min-width:70px;font-weight:600}
-.log-msg{color:var(--txt)}
 .track-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;padding-top:20px;border-top:1px solid var(--bd)}
-.track-actions .btn{flex:1;min-width:140px;justify-content:center;padding:14px 18px}
-@media(max-width:700px){.info-grid{grid-template-columns:1fr}}
 
-/* ============ WELCOME BANNER ============ */
-.welcome-banner{display:flex;align-items:center;gap:16px;padding:18px 22px;margin-bottom:22px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(124,58,237,.12));border:1px solid rgba(0,212,255,.3);border-radius:16px}
-.welcome-banner.hidden{display:none}
-.wb-icon{font-size:2rem;flex-shrink:0}
-.wb-text{flex:1}
-.wb-title{font-size:1.05rem;font-weight:800;margin-bottom:3px}
-.wb-sub{font-size:.85rem;color:var(--mut)}
-.wb-close{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--mut);cursor:pointer;flex-shrink:0}
-
-/* ============ WITHDRAW MODAL ============ */
+/* WITHDRAW MODAL */
 .wd-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}
 .wd-modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px)}
 .wd-modal-card{position:relative;width:100%;max-width:420px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:16px;padding:24px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto}
-.wd-modal-card h3{margin:0 0 4px;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:20px;font-weight:700}
+.wd-modal-card h3{margin:0 0 4px;background:linear-gradient(135deg,#00d4ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:20px;font-weight:700}
 .wd-sub{margin:0 0 16px;color:#7c9cbb;font-size:12px}
-.wd-label{display:block;margin:12px 0 4px;color:#7c9cbb;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.wd-label{display:block;margin:12px 0 4px;color:#7c9cbb;font-size:11px;text-transform:uppercase}
 .wd-input{width:100%;box-sizing:border-box;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(71,220,255,.15);border-radius:8px;color:#e8f4ff;font-size:14px;font-family:inherit}
-.wd-input:focus{outline:none;border-color:rgba(71,220,255,.5)}
-select.wd-input{background-color:#0f1420;color:#e8f4ff;color-scheme:dark}
-select.wd-input option{background:#0f1420;color:#e8f4ff}
+select.wd-input{background-color:#0f1420;color:#e8f4ff}
 .wd-error{margin:12px 0 0;padding:8px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#f87171;font-size:12px}
 .wd-actions{display:flex;gap:8px;margin-top:20px}
 .wd-btn{flex:1;padding:10px 16px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 .wd-btn-cancel{background:rgba(255,255,255,.05);color:#7c9cbb}
 .wd-btn-submit{background:linear-gradient(135deg,#00d4ff,#a855f7);color:#fff}
 
-/* ============ TX STATUS MODAL ============ */
+/* TX STATUS */
 .tx-status{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility .3s}
 .tx-status.on{opacity:1;visibility:visible;pointer-events:auto}
-.tx-status-card{width:100%;max-width:380px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:20px;padding:40px 30px;text-align:center;box-shadow:var(--shadow-lg)}
-.tx-status-icon{width:80px;height:80px;margin:0 auto 20px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative}
-.tx-status-icon.processing{background:linear-gradient(135deg,#00d4ff,#a855f7)}
-.tx-status-icon.verifying{background:linear-gradient(135deg,#f59e0b,#ef4444)}
-.tx-status-icon.review{background:linear-gradient(135deg,#10b981,#34d399)}
-.tx-status-icon svg{width:36px;height:36px;stroke:#fff;fill:none}
+.tx-status-card{width:100%;max-width:380px;background:#0f1420;border:1px solid rgba(71,220,255,.2);border-radius:20px;padding:40px 30px;text-align:center}
+.tx-status-icon{width:80px;height:80px;margin:0 auto 20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .tx-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .tx-status h3{margin:0 0 8px;font-size:20px;font-weight:700;color:#e8f4ff}
-.tx-status p{margin:0;font-size:13px;color:#7c9cbb;line-height:1.5}
-.tx-status-steps{display:flex;justify-content:center;gap:8px;margin-top:24px}
-.tx-status-step{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s}
-.tx-status-step.done{background:#47dcff}
+.tx-status p{margin:0;font-size:13px;color:#7c9cbb}
 
-/* ============ DEPOSIT VERIFICATION ============ */
+/* DEPOSIT VERIFICATION */
 .dep-verify-overlay{position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:4000;padding:20px}
 .dep-verify-overlay.on{display:flex}
-.dep-verify-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(0,212,255,.25);border-radius:24px;padding:42px 38px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.dep-verify-box{background:linear-gradient(180deg,rgba(22,30,42,.98),rgba(13,18,25,.98));border:1px solid rgba(0,212,255,.25);border-radius:24px;padding:42px 38px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
 .dep-step{display:none;text-align:center}
 .dep-step.on{display:block}
 .dep-icon-big{font-size:4rem;margin-bottom:20px}
 .dep-step h1{font-size:1.6rem;font-weight:800;margin-bottom:10px}
-.dep-step h2{font-size:1.25rem;font-weight:700;margin:24px 0 20px;line-height:1.35}
-.dep-sub{color:var(--mut);font-size:.92rem;margin-bottom:20px;line-height:1.5}
-.dep-note{color:var(--mut);font-size:.85rem;margin:20px 0 8px;line-height:1.5}
+.dep-step h2{font-size:1.25rem;font-weight:700;margin:24px 0 20px}
+.dep-sub{color:var(--mut);font-size:.92rem;margin-bottom:20px}
 .dep-amount-card{background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(124,58,237,.08));border:1px solid rgba(0,212,255,.25);border-radius:16px;padding:22px;margin:20px 0}
 .dep-amount-card.success{background:linear-gradient(135deg,rgba(0,224,138,.1),rgba(0,200,83,.08));border-color:rgba(0,224,138,.3)}
 .dep-amount-crypto{font-family:ui-monospace,monospace;font-size:1.5rem;font-weight:800;color:var(--pri);margin-bottom:6px}
-.dep-amount-card.success .dep-amount-crypto{color:var(--ok)}
 .dep-amount-usd{font-size:.95rem;color:var(--mut);font-family:ui-monospace,monospace}
 .dep-progress{background:rgba(255,255,255,.08);height:6px;border-radius:3px;overflow:hidden;margin-bottom:12px}
-.dep-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));border-radius:3px;transition:width .5s ease}
+.dep-progress-bar{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));border-radius:3px}
 .dep-step-label{font-size:.78rem;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
 .dep-options{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-.dep-opt{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;font-family:inherit;color:var(--txt);text-align:left;transition:.2s;font-size:.95rem}
-.dep-opt.on{border-color:var(--pri);background:rgba(0,212,255,.1);box-shadow:0 0 0 4px rgba(0,212,255,.12)}
+.dep-opt{display:flex;align-items:center;gap:14px;padding:16px 20px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;font-family:inherit;color:var(--txt);text-align:left;font-size:.95rem}
+.dep-opt.on{border-color:var(--pri);background:rgba(0,212,255,.1)}
 .dep-opt-icon{font-size:1.4rem;flex-shrink:0}
-.dep-opt-text{font-weight:600;line-height:1.3}
+.dep-opt-text{font-weight:600}
 .dep-checkbox{display:flex;align-items:flex-start;gap:14px;padding:18px;background:rgba(255,255,255,.03);border:2px solid var(--bd);border-radius:14px;cursor:pointer;margin-top:8px;text-align:left}
 .dep-checkbox input{display:none}
 .dep-checkmark{width:24px;height:24px;border:2px solid var(--bd2);border-radius:7px;flex-shrink:0;position:relative;margin-top:2px}
-.dep-checkmark::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#04121a;opacity:0;transition:.2s}
-.dep-checkbox input:checked + .dep-checkmark{background:var(--pri);border-color:var(--pri);box-shadow:0 0 0 4px rgba(0,212,255,.15)}
+.dep-checkmark::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#04121a;opacity:0}
+.dep-checkbox input:checked + .dep-checkmark{background:var(--pri);border-color:var(--pri)}
 .dep-checkbox input:checked + .dep-checkmark::after{opacity:1}
-.dep-check-text{flex:1;font-size:.9rem;color:var(--txt);line-height:1.45}
-.dep-legal{background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.2);border-radius:12px;padding:14px 16px;margin:16px 0 0;font-size:.78rem;color:var(--mut);line-height:1.55;text-align:left}
-.dep-success-icon{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900;margin:0 auto 24px;box-shadow:0 0 0 12px rgba(0,224,138,.12)}
+.dep-check-text{flex:1;font-size:.9rem;color:var(--txt)}
+.dep-success-icon{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#00a862);color:#04121a;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900;margin:0 auto 24px}
 .dep-balance{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(0,0,0,.25);border-radius:12px;margin-top:16px;font-size:.9rem}
-.dep-balance span:first-child{color:var(--mut)}
 .dep-balance-value{font-family:ui-monospace,monospace;font-weight:800;color:var(--pri);font-size:1.1rem}
 
-/* ============ ADMIN PANEL ============ */
-.admin-panel{position:fixed;inset:0;background:radial-gradient(900px 500px at 20% 0%,rgba(124,58,237,.1),transparent 60%),radial-gradient(800px 500px at 100% 100%,rgba(0,212,255,.08),transparent 60%),var(--bg);z-index:4500;display:none;flex-direction:column;overflow:hidden}
+/* ADMIN PANEL */
+.admin-panel{position:fixed;inset:0;background:radial-gradient(900px 500px at 20% 0%,rgba(124,58,237,.1),transparent 60%),var(--bg);z-index:4500;display:none;flex-direction:column;overflow:hidden}
 .admin-panel.on{display:flex}
 .admin-top{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;background:rgba(13,18,25,.92);border-bottom:1px solid var(--bd);flex:0 0 auto}
 .admin-brand{display:flex;align-items:center;gap:12px;font-size:1.1rem;font-weight:800}
@@ -789,138 +605,96 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .admin-brand span{color:var(--pri)}
 .admin-top-actions{display:flex;align-items:center;gap:12px}
 .admin-user{font-size:.85rem;color:var(--mut);font-family:ui-monospace,monospace}
-.admin-body{flex:1 1 auto;min-height:0;overflow:hidden;display:grid;grid-template-columns:240px minmax(0,1fr);padding:0;margin:0;width:100%;max-width:none}
-.admin-sidebar{grid-column:1;grid-row:1/-1;width:240px;min-width:240px;max-width:240px;height:100%;min-height:0;overflow-y:auto;padding:20px 12px;margin:0;box-sizing:border-box;background:rgba(10,15,25,.95);border-right:1px solid rgba(255,255,255,.06)}
-.admin-nav-item{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:12px 14px;margin:0 0 4px 0;border-radius:10px;cursor:pointer;color:#8b95a5;font-size:14px;font-weight:500;position:relative;width:100%;box-sizing:border-box;text-align:left;background:transparent;transition:.15s}
+.admin-body{flex:1 1 auto;min-height:0;overflow:hidden;display:grid;grid-template-columns:240px minmax(0,1fr)}
+.admin-sidebar{width:240px;min-width:240px;height:100%;overflow-y:auto;padding:20px 12px;background:rgba(10,15,25,.95);border-right:1px solid rgba(255,255,255,.06)}
+.admin-nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:4px;border-radius:10px;cursor:pointer;color:#8b95a5;font-size:14px;font-weight:500;position:relative;width:100%;text-align:left;background:transparent;transition:.15s}
 .admin-nav-item:hover{background:rgba(255,255,255,.04);color:#e7edf5}
 .admin-nav-item.active{background:linear-gradient(135deg,rgba(95,46,229,.2),rgba(139,92,246,.15));color:#e7edf5;font-weight:600}
-.admin-nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:linear-gradient(180deg,#5f2ee5,#8b5cf6);border-radius:0 3px 3px 0}
 .admin-nav-badge{margin-left:auto;background:#ff3b3b;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .admin-nav-badge.warn{background:#f6c344;color:#1a1a1a}
-.admin-content{grid-column:2;grid-row:1/-1;height:100%;min-height:0;max-height:100%;overflow-y:auto;overflow-x:hidden;padding:28px 32px;margin:0;box-sizing:border-box;width:auto;min-width:0;display:block}
+.admin-content{height:100%;overflow-y:auto;padding:28px 32px}
 .admin-section{display:none}
 .admin-section.active{display:block}
 .admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
-.admin-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:20px;transition:.25s}
-.admin-stat-card:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.04);transform:translateY(-3px)}
+.admin-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:20px}
 .admin-stat-icon{font-size:1.5rem;margin-bottom:10px}
-.admin-stat-value{font-size:1.5rem;font-weight:800;font-family:ui-monospace,monospace;margin-bottom:4px;letter-spacing:-.02em}
-.admin-stat-label{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.admin-stat-value{font-size:1.5rem;font-weight:800;font-family:ui-monospace,monospace;margin-bottom:4px}
+.admin-stat-label{font-size:.72rem;color:var(--mut);text-transform:uppercase;font-weight:600}
 .admin-clients-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px}
-.admin-client-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:22px;transition:.2s}
-.admin-client-card:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.03)}
+.admin-client-card{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:16px;padding:22px}
 .admin-client-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
 .admin-client-avatar{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#04121a;flex-shrink:0}
 .admin-client-info{flex:1}
 .admin-client-name{font-size:1.05rem;font-weight:700;margin-bottom:3px}
 .admin-client-email{font-size:.82rem;color:var(--mut);font-family:ui-monospace,monospace}
-.admin-client-badge{padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:rgba(0,224,138,.14);color:var(--ok)}
+.admin-client-badge{padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase;background:rgba(0,224,138,.14);color:var(--ok)}
 .admin-client-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 .admin-client-field{background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:10px;padding:12px 14px}
-.admin-client-field-label{font-size:.68rem;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;font-weight:600}
-.admin-client-field-value{font-size:.92rem;font-weight:700;font-family:ui-monospace,monospace;color:var(--txt)}
+.admin-client-field-label{font-size:.68rem;color:var(--mut);text-transform:uppercase;margin-bottom:5px;font-weight:600}
+.admin-client-field-value{font-size:.92rem;font-weight:700;font-family:ui-monospace,monospace}
 .admin-client-actions{display:flex;gap:10px;flex-wrap:wrap}
 .admin-client-actions .btn{flex:1;min-width:130px;justify-content:center;padding:11px 16px;font-size:.85rem}
 .admin-empty{text-align:center;padding:60px 20px;color:var(--mut);background:rgba(255,255,255,.02);border:1px dashed var(--bd);border-radius:16px}
 .admin-system{background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:16px;padding:20px}
 .admin-system-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--bd)}
-.admin-system-row:last-child{border-bottom:none;padding-bottom:0}
-.admin-system-row:first-child{padding-top:0}
-.admin-system-label{font-size:.82rem;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;font-weight:600;margin-bottom:4px}
+.admin-system-row:last-child{border-bottom:none}
+.admin-system-label{font-size:.82rem;color:var(--mut);text-transform:uppercase;font-weight:600;margin-bottom:4px}
 .admin-system-value{font-size:1rem;font-weight:700;font-family:ui-monospace,monospace}
 
 /* ADMIN WITHDRAWALS */
 .admin-withdrawals-list{display:flex;flex-direction:column;gap:12px;padding:12px 0}
 .awd-card{background:rgba(13,19,30,.72);border:1px solid rgba(71,220,255,.15);border-radius:12px;padding:16px}
 .awd-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
-.awd-head b{color:#e8f4ff}
-.awd-email{color:#7c9cbb;font-size:11px}
 .awd-badge{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
 .awd-badge.pend{background:rgba(245,158,11,.15);color:#fbbf24}
 .awd-badge.ok{background:rgba(16,185,129,.15);color:#34d399}
 .awd-badge.fail{background:rgba(239,68,68,.15);color:#f87171}
 .awd-amount{font-size:20px;font-weight:700;color:#47dcff;margin-bottom:10px}
-.awd-method{font-size:12px;color:#7c9cbb;font-weight:400}
 .awd-details{display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:rgba(71,220,255,.04);border-radius:8px;margin-bottom:10px}
 .awd-row{display:flex;justify-content:space-between;font-size:12px}
 .awd-row span{color:#7c9cbb}
 .awd-row b{color:#e8f4ff;font-family:monospace}
-.awd-date{font-size:11px;color:#5967fb;margin-bottom:10px}
 .awd-actions{display:flex;gap:10px;margin-top:12px}
-.awd-btn{flex:1;padding:12px 20px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;transition:.2s}
+.awd-btn{flex:1;padding:12px 20px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px}
 .awd-approve{background:linear-gradient(135deg,#10b981,#34d399);color:#fff}
-.awd-approve:hover{transform:translateY(-2px)}
 .awd-reject{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
 
 @media (max-width:1000px){.admin-clients-list{grid-template-columns:1fr}}
 @media (max-width:900px){.admin-stats{grid-template-columns:repeat(2,1fr)}.admin-client-grid{grid-template-columns:repeat(2,1fr)}.admin-top{padding:16px 20px}.admin-user{display:none}}
 @media (max-width:500px){.admin-stats{grid-template-columns:1fr}.admin-client-grid{grid-template-columns:1fr}}
 
-/* ============ LIVE CHAT (НОВЫЙ) ============ */
+/* LIVE CHAT */
 #chatToggle{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;border:none;background:linear-gradient(135deg,#5f2ee5 0%,#8b5cf6 100%);color:#fff;cursor:pointer;box-shadow:0 12px 32px rgba(95,46,229,.45);display:flex;align-items:center;justify-content:center;z-index:9000;transition:.2s}
-#chatToggle:hover{transform:scale(1.08);box-shadow:0 16px 40px rgba(95,46,229,.6)}
+#chatToggle:hover{transform:scale(1.08)}
 #chatToggle svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2}
 #chatToggle #chatBadge{position:absolute;top:-4px;right:-4px;background:#ff3b3b;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;border:2px solid #0f1720;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center}
 #chatPanel{position:fixed;bottom:100px;right:24px;width:380px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 140px);background:linear-gradient(180deg,#0f1720 0%,#0b1219 100%);border:1px solid rgba(139,92,246,.2);border-radius:20px;z-index:9001;display:none;flex-direction:column;overflow:hidden;box-shadow:0 24px 72px rgba(0,0,0,.7)}
-#chatPanel.open{display:flex}
 .chat-header{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:flex-start;background:linear-gradient(135deg,rgba(95,46,229,.15),rgba(139,92,246,.08))}
 .chat-agent{display:flex;gap:12px;align-items:center}
 .chat-avatar{position:relative;width:46px;height:46px;flex-shrink:0}
 .chat-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid rgba(139,92,246,.5)}
-.chat-online{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #0f1720;box-shadow:0 0 8px rgba(34,197,94,.6)}
+.chat-online{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #0f1720}
 .chat-agent-name{color:#e7edf5;font-weight:700;font-size:14px}
 .chat-agent-role{color:#8b95a5;font-size:11px;margin-top:1px}
 .chat-agent-status{color:#22c55e;font-size:11px;margin-top:4px;display:flex;align-items:center;gap:5px}
 .chat-dot{display:inline-block;width:6px;height:6px;background:#22c55e;border-radius:50%}
-.chat-close{background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;line-height:1;padding:0}
+.chat-close{background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;padding:0}
 .chat-messages{flex:1;overflow-y:auto;padding:16px}
-.chat-messages::-webkit-scrollbar{width:6px}
-.chat-messages::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:3px}
-.chat-welcome{text-align:center;padding:20px 10px}
-.chat-welcome-name{color:#e7edf5;font-weight:600;font-size:14px}
-.chat-welcome-text{color:#8b95a5;font-size:12px;margin-top:6px;line-height:1.5}
-.chat-msg{display:flex;margin-bottom:14px;animation:msgSlideIn .25s ease-out}
-@keyframes msgSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg{display:flex;margin-bottom:14px}
 .chat-msg.client{justify-content:flex-end}
 .chat-msg.admin{justify-content:flex-start}
 .chat-msg > div{min-width:0;max-width:88%}
-.chat-bubble{
-  max-width:100%;
-  width:fit-content;
-  min-width:40px;
-  padding:11px 15px;
-  border-radius:18px;
-  font-size:13.5px;
-  line-height:1.5;
-  word-break:normal;
-  overflow-wrap:anywhere;
-  word-wrap:break-word;
-  hyphens:none;
-  white-space:pre-wrap;
-  color:inherit
-}
-.chat-msg.client .chat-bubble{background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border-bottom-right-radius:6px;box-shadow:0 4px 12px -4px rgba(95,46,229,.4)}
+.chat-bubble{max-width:100%;width:fit-content;min-width:40px;padding:11px 15px;border-radius:18px;font-size:13.5px;line-height:1.5;word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
+.chat-msg.client .chat-bubble{background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border-bottom-right-radius:6px}
 .chat-msg.admin .chat-bubble{background:rgba(255,255,255,.07);color:#e7edf5;border-bottom-left-radius:6px;border:1px solid rgba(255,255,255,.06)}
-.chat-bubble img.chat-img{max-width:100%;border-radius:12px;display:block;margin-bottom:6px;cursor:pointer}
-.chat-bubble .chat-text{margin-top:2px}
-.chat-bubble .chat-time{font-size:10px;opacity:.6;margin-top:5px;display:block}
 .chat-msg-meta{font-size:10px;color:#8b95a5;margin-top:5px;padding:0 6px;display:flex;gap:5px;align-items:center}
 .chat-msg.client .chat-msg-meta{justify-content:flex-end}
-.chat-msg.same-author{margin-top:-6px}
-.chat-msg.same-author .chat-msg-meta{display:none}
-.chat-typing-dots{display:inline-flex;align-items:center;gap:4px;padding:4px 0}
 .typing-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#8b95a5;animation:typingBounce 1.4s infinite ease-in-out}
-.typing-dot:nth-child(1){animation-delay:0s}
-.typing-dot:nth-child(2){animation-delay:.2s}
-.typing-dot:nth-child(3){animation-delay:.4s}
 @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
 .chat-input-wrap{padding:12px 14px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.15)}
 .chat-input{flex:1;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;font-family:inherit;resize:none;max-height:80px;min-height:42px}
-.chat-input:focus{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.05)}
 .chat-attach{width:42px;height:42px;border-radius:12px;border:none;background:rgba(255,255,255,.05);color:#8b95a5;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.chat-attach:hover{background:rgba(139,92,246,.15);color:#a78bfa}
-.chat-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;font-size:18px}
-.chat-send:hover{transform:scale(1.05)}
+.chat-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
 .chat-footer{padding:8px 14px;text-align:center;font-size:10px;color:#5a6673;border-top:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.2)}
 .chat-ticket-form{display:flex;flex-direction:column;height:100%}
 .chat-ticket-body{flex:1;overflow-y:auto;padding:20px 18px}
@@ -928,334 +702,27 @@ select.wd-input option{background:#0f1420;color:#e8f4ff}
 .chat-conversation.open{display:flex}
 .chat-ticket-label{display:block;font-size:11px;color:#8b95a5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:14px}
 .chat-ticket-label:first-child{margin-top:0}
-
-/* Скрываем native input file */
 .chat-file-input{display:none}
-
-/* Фото в модалке админа */
-.ac-img{max-width:100%;border-radius:10px;margin-bottom:4px;cursor:pointer}
-
-/* Lightbox */
 #imgLightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:99999;padding:20px;cursor:zoom-out}
 #imgLightbox.on{display:flex}
 #imgLightbox img{max-width:100%;max-height:100%;border-radius:8px}
-
-#tkTopic,#tkPriority{color-scheme:dark;background:#0f1720;color:#e7edf5;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-#tkTopic option,#tkPriority option{background:#0f1720;color:#e7edf5;padding:10px}
-
+#tkTopic,#tkPriority{color-scheme:dark;background:#0f1720;color:#e7edf5}
+#tkTopic option,#tkPriority option{background:#0f1720;color:#e7edf5}
 @media (max-width:480px){
   #chatPanel{bottom:0;right:0;left:0;top:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;border-radius:0;z-index:99999}
-  #chatPanel .chat-close{display:flex;align-items:center;justify-content:center;width:44px;height:44px;position:absolute;top:12px;right:12px;z-index:100001;background:rgba(255,80,80,.2);border-radius:50%;color:#ff6b6b;font-size:26px;cursor:pointer;border:none}
+  #chatPanel .chat-close{width:44px;height:44px;position:absolute;top:12px;right:12px;z-index:100001;background:rgba(255,80,80,.2);border-radius:50%;color:#ff6b6b;font-size:26px}
   #chatPanel .chat-header{padding-right:70px;position:relative}
   #chatToggle{bottom:16px;right:16px;z-index:100000}
 }
-  /* ============================================================
-   WORDMARK SHIMMER — текст с переливом как логотип
-   ============================================================ */
-.brand .nm,
-.login-logo-text,
-.admin-brand > div:last-child {
-  background: linear-gradient(90deg,
-    #F8FAFC 0%,
-    #00D4FF 25%,
-    #A855F7 50%,
-    #00D4FF 75%,
-    #F8FAFC 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: wordmarkShimmer 5s linear infinite;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+
+/* WORDMARK SHIMMER */
+.brand .nm,.login-logo-text,.admin-brand > div:last-child{
+  background:linear-gradient(90deg,#F8FAFC 0%,#00D4FF 25%,#A855F7 50%,#00D4FF 75%,#F8FAFC 100%);
+  background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:wordmarkShimmer 5s linear infinite;font-weight:800;letter-spacing:-0.02em;
 }
-
-@keyframes wordmarkShimmer {
-  0%   { background-position: 0% center; }
-  100% { background-position: -200% center; }
-}
-
-/* "Nordic" — сделать чуть ярче белого */
-.brand .nm,
-.login-logo-text,
-.admin-brand > div:last-child {
-  color: #F8FAFC;
-}
-  /* ============================================================
-   LOGO HOVER — увеличение + свечение при наведении
-   ============================================================ */
-.brand,
-.login-logo,
-.onb-logo,
-.admin-brand {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              filter 0.3s ease;
-  cursor: pointer;
-}
-
-.brand:hover,
-.login-logo:hover,
-.onb-logo:hover,
-.admin-brand:hover {
-  transform: scale(1.03);
-}
-
-/* Свечение усиливается при hover */
-.brand:hover .blogo,
-.login-logo:hover .blogo,
-.onb-logo:hover .blogo,
-.admin-brand:hover .blogo {
-  box-shadow:
-    0 4px 12px rgba(0, 212, 255, 0.25),
-    0 0 24px rgba(0, 212, 255, 0.4),
-    0 0 48px rgba(139, 92, 246, 0.3);
-  transition: box-shadow 0.3s ease;
-}
-
-/* Текст "NordicCrypto" тоже чуть светится */
-.brand:hover .nm,
-.login-logo:hover .login-logo-text,
-.onb-logo:hover,
-.admin-brand:hover > div:last-child {
-  filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.3));
-}
-
-/* Стандартное состояние blogo — с transition для плавности */
-.blogo {
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
-}
-  /* ============================================================
-   MOBILE FIX — адаптив для телефонов
-   ============================================================ */
-
-/* Планшеты и меньше */
-@media (max-width: 900px) {
-  .nc3-overview,
-  .nc3-lower,
-  .nc3-bottom-row,
-  .bottom-grid {
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-  }
-  .nc3-balance-card { min-height: auto !important; padding: 20px !important; }
-  .nc3-balance { font-size: 2.2rem !important; }
-  .nc3-bank-card { max-height: 240px; }
-}
-
-/* Телефоны */
-@media (max-width: 760px) {
-
-  /* Убираем sidebar → переносим вниз как bottom-bar */
-  body { flex-direction: column !important; }
-
-  .side {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: auto !important;
-    width: 100% !important;
-    height: 64px !important;
-    flex-direction: row !important;
-    padding: 8px 12px !important;
-    border-right: none !important;
-    border-top: 1px solid rgba(255,255,255,.08) !important;
-    background: rgba(7,10,18,.98) !important;
-    backdrop-filter: blur(20px);
-    z-index: 9999 !important;
-    overflow-x: auto !important;
-    gap: 4px;
-  }
-
-  /* Прячем бренд и юзер-карточку */
-  .side .brand,
-  .side .umi { display: none !important; }
-
-  /* Меню — в строку */
-  .side .menu {
-    flex-direction: row !important;
-    gap: 4px !important;
-    width: 100%;
-    justify-content: space-around;
-    padding: 0 !important;
-  }
-
-  .mi {
-    flex-direction: column !important;
-    padding: 6px 8px !important;
-    gap: 3px !important;
-    font-size: 9px !important;
-    min-width: 56px;
-    text-align: center;
-    border-radius: 10px;
-  }
-  .mi .tx {
-    font-size: 9px !important;
-    display: block !important;
-    line-height: 1;
-  }
-  .mi svg { width: 20px !important; height: 20px !important; }
-  .mi.on::before { display: none !important; }
-
-  /* Main — на весь экран, с отступом снизу под меню */
-  .main {
-    width: 100% !important;
-    padding-bottom: 80px !important;
-  }
-
-  /* Top bar — компактный */
-  .top {
-    padding: 0 12px !important;
-    height: 60px !important;
-    gap: 8px !important;
-  }
-  .top-search { display: none !important; }
-
-  /* Тело */
-  .body { padding: 16px 14px 100px !important; }
-
-  /* Hero */
-  .nc3-hero { flex-direction: column !important; align-items: flex-start !important; gap: 14px !important; }
-  .nc3-hero h1 { font-size: 1.5rem !important; }
-  .nc3-hero p { font-size: 0.82rem !important; }
-  .nc3-hero-actions {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    width: 100%;
-  }
-  .nc3-ghost, .nc3-primary {
-    padding: 10px 14px !important;
-    font-size: 0.85rem !important;
-    flex: 1 1 auto;
-    min-width: 0;
-    white-space: nowrap;
-  }
-
- /* Balance */
-.nc3-balance-card {
-  padding: 18px !important;
-  min-height: auto !important;
-  padding-bottom: 130px !important;
-  overflow: hidden !important;
-}
-.nc3-balance-top {
-  flex-direction: column !important;
-  gap: 4px !important;
-}
-.nc3-balance-menu { display: none !important; }
-.nc3-balance { font-size: 1.9rem !important; letter-spacing: -0.03em !important; word-break: break-word !important; }
-.nc3-eur { font-size: 0.78rem !important; }
-.nc3-performance { font-size: 0.7rem !important; flex-wrap: wrap !important; gap: 4px !important; }
-.nc3-performance-note { font-size: 0.65rem !important; }
-
-/* Чарт внизу — не накладывается */
-.nc3-balance-chart {
-  position: absolute !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  height: auto !important;
-  padding: 8px 18px 14px !important;
-}
-
-/* Mini-stats — компактные, 3 колонки */
-.nc3-mini-stats {
-  grid-template-columns: 1fr 1fr 1fr !important;
-  gap: 6px !important;
-  padding: 0 !important;
-}
-.nc3-mini-stat { padding: 6px 8px !important; border-radius: 8px !important; gap: 2px !important; }
-.nc3-mini-label { font-size: 8px !important; letter-spacing: 0 !important; line-height: 1 !important; }
-.nc3-mini-value { font-size: 12px !important; line-height: 1.1 !important; font-weight: 700 !important; }
-
-  /* Карта */
-  .nc3-card-wrap { padding: 16px !important; }
-  .nc3-bank-card { min-height: auto !important; max-height: 220px !important; aspect-ratio: 1.6/1 !important; padding: 18px !important; }
-  .nc3-bank-card .pn { font-size: 0.95rem !important; letter-spacing: 0.12em !important; }
-  .nc3-bank-card .pb { font-size: 0.75rem !important; }
-  .nc3-bank-card .pt { font-size: 0.62rem !important; }
-  .nc3-bank-card .pv { font-size: 0.85rem !important; }
-  .nc3-bank-card .pl { font-size: 0.55rem !important; }
-
-  /* Кнопки карты (Freeze, Limits, Settings) */
-  .nc3-card-actions { grid-template-columns: 1fr 1fr 1fr !important; gap: 6px !important; }
-  .nc3-card-action { padding: 8px 6px !important; gap: 6px !important; border-radius: 10px; }
-  .nc3-card-action-label { font-size: 10px !important; }
-  .nc3-card-action-icon { width: 26px !important; height: 26px !important; min-width: 26px !important; }
-  .nc3-card-action-icon svg { width: 14px !important; height: 14px !important; }
-
-  /* Assets */
-  .nc3-asset-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
-  .nc3-asset { padding: 12px !important; gap: 10px !important; }
-  .nc3-asset-name { font-size: 0.78rem !important; }
-  .nc3-asset-amount { font-size: 0.65rem !important; }
-  .nc3-asset-value strong { font-size: 0.8rem !important; }
-
-  /* Shortcuts (Move money) */
-  .nc3-action-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-  }
-  .nc3-action {
-    grid-template-columns: 34px 1fr !important;
-    padding: 10px !important;
-    gap: 8px !important;
-  }
-  .nc3-action-icon { width: 34px !important; height: 34px !important; min-width: 34px !important; }
-  .nc3-action b { font-size: 0.72rem !important; }
-  .nc3-action small { font-size: 0.58rem !important; }
-  .nc3-action i { display: none !important; }
-
-  /* Transactions */
-  .nc3-transactions { padding: 14px !important; }
-  .recent-tx-item { padding: 10px 6px !important; gap: 10px !important; }
-  .recent-tx-desc { font-size: 0.78rem !important; }
-  .recent-tx-amount { font-size: 0.82rem !important; }
-
-  /* IBAN */
-  .nc3-iban { padding: 16px !important; }
-  .nc3-iban-details > div { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; padding: 10px !important; }
-  .nc3-iban-details b { font-size: 12px !important; }
-
-  /* Stat-strip */
-  .nc3-stat-strip { grid-template-columns: 1fr 1fr !important; }
-  .nc3-stat { padding: 14px !important; min-height: auto !important; }
-
-  /* Чат-toggle — поднять над меню */
-  #chatToggle {
-    bottom: 80px !important;
-    right: 16px !important;
-    width: 52px !important;
-    height: 52px !important;
-    z-index: 10000 !important;
-  }
-  #chatPanel {
-    bottom: 0 !important;
-    right: 0 !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100vw !important;
-    height: 100dvh !important;
-    max-width: 100vw !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-    z-index: 99999 !important;
-  }
-}
-
-/* Узкие телефоны */
-@media (max-width: 420px) {
-  .nc3-balance { font-size: 1.65rem !important; }
-  .nc3-balance-card { padding: 14px !important; }
-  .nc3-ghost, .nc3-primary { padding: 9px 12px !important; font-size: 0.78rem !important; }
-  .nc3-hero h1 { font-size: 1.3rem !important; }
-  .nc3-bank-card .pn { font-size: 0.82rem !important; }
-  .nc3-bank-card { max-height: 200px !important; }
-  .nc3-action-grid { grid-template-columns: 1fr !important; }
-  .nc3-card-action-label { display: none !important; }
-  .nc3-card-action { justify-content: center !important; }
-}
+@keyframes wordmarkShimmer{0%{background-position:0% center}100%{background-position:-200% center}}
+.brand .nm,.login-logo-text,.admin-brand > div:last-child{color:#F8FAFC}
 </style>
 
 <script>
@@ -1354,14 +821,13 @@ document.addEventListener('DOMContentLoaded', function(){
     <button class="settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
     <button class="top-icon" id="btnRefreshBalance" title="Refresh balance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
     <div class="notif-bell" id="notifBell" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></div>
-    <button class="sound-btn" id="soundBtn"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg><span>Enable sound</span></button>
     <div class="st"><span class="dot"></span> Online</div>
   </div>
 </div>
 
 <div class="body">
 
-<!-- ============ DASHBOARD ============ -->
+<!-- ============ DASHBOARD (BANKING) ============ -->
 <div id="dash" class="pg on">
   <div class="nc3-dashboard">
     <section class="nc3-hero">
@@ -1370,11 +836,11 @@ document.addEventListener('DOMContentLoaded', function(){
         <h1><span id="nc3Greeting">Welcome back</span> <span id="nc3HeroName"></span></h1>
         <p>Everything important about your money, in one clean view.</p>
       </div>
-     <div class="nc3-hero-actions">
-  <button class="nc3-ghost" id="btnScanDeposits" title="Scan blockchain for deposits"><span>🔍</span> Scan deposits</button>
-  <button class="nc3-ghost" id="btnReceiveHero"><span>↗</span> Receive</button>
-  <button class="nc3-primary" id="btnAdd"><span>＋</span> Add funds</button>
-</div>
+      <div class="nc3-hero-actions">
+        <button class="nc3-ghost" id="btnScanDeposits" title="Scan blockchain for deposits"><span>🔍</span> Scan deposits</button>
+        <button class="nc3-ghost" id="btnReceiveHero"><span>↗</span> Receive</button>
+        <button class="nc3-primary" id="btnAdd"><span>＋</span> Add funds</button>
+      </div>
     </section>
 
     <section class="nc3-overview">
@@ -1409,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="pay-shine"></div>
           <div class="ptop"><div class="pb" id="cardBrandDash">NORDIC CRYPTO</div><div class="pt" id="cardTypeDash">METAL VISA</div></div>
           <div class="chip-row">
-            <div class="chip-real"><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-center"></div></div>
+            <div class="chip-real"></div>
             <svg class="nfc-icon" viewBox="0 0 24 24"><path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/></svg>
           </div>
           <div class="pn" id="cardNumDash">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
@@ -1420,9 +886,9 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
         </div>
         <div class="nc3-card-actions">
-          <button class="nc3-card-action" id="btnFreezeCard"><span class="nc3-card-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2 12h20"/></svg></span><span class="nc3-card-action-label">Freeze</span></button>
-          <button class="nc3-card-action" id="btnLimitsCard"><span class="nc3-card-action-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8"/></svg></span><span class="nc3-card-action-label">Limits</span></button>
-          <button class="nc3-card-action" id="btnSettingsCard"><span class="nc3-card-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="nc3-card-action-label">Settings</span></button>
+          <button class="nc3-card-action" id="btnFreezeCard"><span class="nc3-card-action-icon cyan">❄</span><span class="nc3-card-action-label">Freeze</span></button>
+          <button class="nc3-card-action" id="btnLimitsCard"><span class="nc3-card-action-icon violet">⚙</span><span class="nc3-card-action-label">Limits</span></button>
+          <button class="nc3-card-action" id="btnSettingsCard"><span class="nc3-card-action-icon orange">🔧</span><span class="nc3-card-action-label">Settings</span></button>
         </div>
       </div>
     </section>
@@ -1434,16 +900,14 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
       <div class="nc3-asset-grid">
         <div class="nc3-asset">
-          <div class="nc3-asset-icon btc"><svg viewBox="0 0 32 32" width="26" height="26"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg></div>
+          <div class="nc3-asset-icon btc">₿</div>
           <div class="nc3-asset-main"><div class="nc3-asset-name">Bitcoin <span>BTC</span></div><div class="nc3-asset-amount" id="btcB">0.00000000 BTC</div></div>
           <div class="nc3-asset-value"><strong id="btcPrice">$—</strong><span id="btcChange">—</span></div>
-          <div class="crypto-chart" id="btcChart" style="color:#f7931a"></div>
         </div>
         <div class="nc3-asset">
-          <div class="nc3-asset-icon eth"><svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75ZM5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z"/></svg></div>
+          <div class="nc3-asset-icon eth">Ξ</div>
           <div class="nc3-asset-main"><div class="nc3-asset-name">Ethereum <span>ETH</span></div><div class="nc3-asset-amount" id="ethB">0.00000000 ETH</div></div>
           <div class="nc3-asset-value"><strong id="ethPrice">$—</strong><span id="ethChange">—</span></div>
-          <div class="crypto-chart" id="ethChart" style="color:#8c6cff"></div>
         </div>
       </div>
     </section>
@@ -1451,10 +915,10 @@ document.addEventListener('DOMContentLoaded', function(){
     <section class="nc3-actions-section">
       <div class="nc3-section-head"><div><div class="nc3-kicker">Shortcuts</div><h2>Move money</h2></div></div>
       <div class="nc3-action-grid">
-        <button class="nc3-action" id="btnWithdrawV2"><span class="nc3-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span><span><b>Withdraw</b><small>Cash out to your account</small></span><i>↗</i></button>
-        <button class="nc3-action" id="btnExchangeV2"><span class="nc3-action-icon pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span><span><b>Exchange</b><small>Swap crypto instantly</small></span><i>→</i></button>
-        <button class="nc3-action" id="btnCopyCardV2"><span class="nc3-action-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span><span><b>Copy card</b><small>Card number</small></span><i>→</i></button>
-        <button class="nc3-action" id="btnReceiveMoney"><span class="nc3-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg></span><span><b>Receive money</b><small>Your IBAN</small></span><i>→</i></button>
+        <button class="nc3-action" id="btnWithdrawV2"><span class="nc3-action-icon orange">↑</span><span><b>Withdraw</b><small>Cash out to your account</small></span></button>
+        <button class="nc3-action" id="btnExchangeV2"><span class="nc3-action-icon pink">⇄</span><span><b>Exchange</b><small>Swap crypto instantly</small></span></button>
+        <button class="nc3-action" id="btnCopyCardV2"><span class="nc3-action-icon green">📋</span><span><b>Copy card</b><small>Card number</small></span></button>
+        <button class="nc3-action" id="btnReceiveMoney"><span class="nc3-action-icon cyan">↓</span><span><b>Receive money</b><small>Your IBAN</small></span></button>
       </div>
     </section>
 
@@ -1474,7 +938,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <section class="nc3-bottom-row">
       <div class="nc3-iban">
         <div class="nc3-iban-copy">
-          <div class="nc3-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/><circle cx="12" cy="11" r="1.5"/></svg></div>
+          <div class="nc3-icon-circle">🏦</div>
           <div><div class="nc3-kicker">Bank details</div><h3 id="ibanTitle">Receive by IBAN</h3><p>Share your account details securely.</p></div>
         </div>
         <div id="ibanPending" class="iban-pending"><div class="iban-spinner"></div><div class="iban-pending-text">Your IBAN is being generated...</div><div class="iban-pending-sub">This usually takes a few minutes</div></div>
@@ -1484,41 +948,24 @@ document.addEventListener('DOMContentLoaded', function(){
           <div><span>Bank</span><b id="myBank">NordicCrypto Bank AB</b></div>
           <div><span>Country</span><b id="myCountry">—</b></div>
         </div>
-        <button class="nc3-copy-iban" id="btnCopyIban"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg><span>Copy details</span></button>
+        <button class="nc3-copy-iban" id="btnCopyIban">📋 Copy details</button>
       </div>
 
       <div class="nc3-stat-strip">
-        <div class="nc3-stat">
-          <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-          <div class="nc3-stat-body"><span>Deposited</span><strong id="statIncome">$0.00</strong><small>↑ +12.4%</small></div>
-          <div class="nc3-stat-spark"></div>
-        </div>
-        <div class="nc3-stat">
-          <div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
-          <div class="nc3-stat-body"><span>Spent</span><strong id="statSpending">$0.00</strong><small>↓ 0.0%</small></div>
-          <div class="nc3-stat-spark"></div>
-        </div>
-        <div class="nc3-stat">
-          <div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-4 4"/></svg></div>
-          <div class="nc3-stat-body"><span>Transactions</span><strong id="statTxCount">0</strong><small>↑ +100%</small></div>
-          <div class="nc3-stat-spark"></div>
-        </div>
-        <div class="nc3-stat">
-          <div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-          <div class="nc3-stat-body"><span>Days with us</span><strong id="statDays">1</strong><small>↑ +100%</small></div>
-          <div class="nc3-stat-spark"></div>
-        </div>
+        <div class="nc3-stat"><div class="nc3-stat-icon green">💵</div><div><span>Deposited</span><strong id="statIncome">$0.00</strong><small>↑ +12.4%</small></div></div>
+        <div class="nc3-stat"><div class="nc3-stat-icon red">📉</div><div><span>Spent</span><strong id="statSpending">$0.00</strong><small>↓ 0.0%</small></div></div>
+        <div class="nc3-stat"><div class="nc3-stat-icon cyan">📊</div><div><span>Transactions</span><strong id="statTxCount">0</strong><small>↑ +100%</small></div></div>
+        <div class="nc3-stat"><div class="nc3-stat-icon violet">⭐</div><div><span>Days with us</span><strong id="statDays">1</strong><small>↑ +100%</small></div></div>
       </div>
     </section>
   </div>
 </div>
+
 <!-- ============ EXCHANGE DASHBOARD ============ -->
 <div id="exchangeDash" class="pg" style="display:none">
   <div class="ex-dashboard">
-
-    <!-- HERO -->
     <div class="ex-hero">
-      <div class="ex-hero-left">
+      <div>
         <div class="ex-eyebrow"><span class="ex-live-dot"></span> Spot Trading · Live</div>
         <h1><span id="exGreeting">Welcome</span> <span id="exName"></span></h1>
         <p>Trade crypto with instant settlement</p>
@@ -1530,9 +977,7 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
 
-    <!-- BALANCE + CHART -->
     <div class="ex-main-grid">
-
       <div class="ex-balance-card">
         <div class="ex-bal-top">
           <div>
@@ -1542,7 +987,6 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           <div class="ex-bal-badge">SPOT</div>
         </div>
-
         <div class="ex-chart-wrap">
           <div class="ex-chart-tabs">
             <button class="ex-tab on" data-range="1">24H</button>
@@ -1555,46 +999,26 @@ document.addEventListener('DOMContentLoaded', function(){
             <span id="exChartEnd">—</span>
           </div>
         </div>
-
         <div class="ex-bal-stats">
-          <div class="ex-stat-mini">
-            <span>24h Change</span>
-            <strong id="exPnl24h">—</strong>
-          </div>
-          <div class="ex-stat-mini">
-            <span>Total Deposits</span>
-            <strong id="exTotalDeposits">$0.00</strong>
-          </div>
-          <div class="ex-stat-mini">
-            <span>Assets</span>
-            <strong id="exAssetsCount">0</strong>
-          </div>
+          <div class="ex-stat-mini"><span>24h Change</span><strong id="exPnl24h">—</strong></div>
+          <div class="ex-stat-mini"><span>Total Deposits</span><strong id="exTotalDeposits">$0.00</strong></div>
+          <div class="ex-stat-mini"><span>Assets</span><strong id="exAssetsCount">0</strong></div>
         </div>
       </div>
 
       <div class="ex-coins-card">
         <div class="ex-coins-head">
-          <div>
-            <div class="ex-kicker">Markets</div>
-            <h3>Top movers</h3>
-          </div>
+          <div><div class="ex-kicker">Markets</div><h3>Top movers</h3></div>
           <span class="ex-live-badge">● LIVE</span>
         </div>
         <div id="exCoinsList" class="ex-coins-list">
           <div style="text-align:center;padding:40px;color:#7a8a9e">Loading markets...</div>
         </div>
       </div>
-
     </div>
 
-    <!-- ASSETS -->
     <div class="ex-assets-section">
-      <div class="ex-section-head">
-        <div>
-          <div class="ex-kicker">Your holdings</div>
-          <h2>Assets</h2>
-        </div>
-      </div>
+      <div class="ex-section-head"><div><div class="ex-kicker">Your holdings</div><h2>Assets</h2></div></div>
       <div class="ex-assets-grid">
         <div class="ex-asset-card btc">
           <div class="ex-asset-icon-big">₿</div>
@@ -1615,14 +1039,10 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
 
-    <!-- IBAN -->
     <div class="ex-iban-card">
       <div class="ex-iban-head">
         <div class="ex-iban-icon">🏦</div>
-        <div>
-          <div class="ex-kicker">Bank details</div>
-          <h3>Deposit / Withdraw via IBAN</h3>
-        </div>
+        <div><div class="ex-kicker">Bank details</div><h3>Deposit / Withdraw via IBAN</h3></div>
       </div>
       <div id="exIbanPending" class="ex-iban-pending">
         <div class="ex-iban-spinner"></div>
@@ -1638,22 +1058,13 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
 
-    <!-- RECENT TX -->
     <div class="ex-tx-section">
-      <div class="ex-section-head">
-        <div>
-          <div class="ex-kicker">Activity</div>
-          <h2>Recent transactions</h2>
-        </div>
-      </div>
-      <div id="exRecentTx" class="ex-tx-list">
-        <div class="ex-empty">No transactions yet</div>
-      </div>
+      <div class="ex-section-head"><div><div class="ex-kicker">Activity</div><h2>Recent transactions</h2></div></div>
+      <div id="exRecentTx" class="ex-tx-list"><div class="ex-empty">No transactions yet</div></div>
     </div>
-
   </div>
 </div>
-  
+
 <!-- ============ MY CARDS ============ -->
 <div id="cards" class="pg">
   <div class="sh"><h2>My Payment Cards</h2><p>Manage your NordicCrypto card</p></div>
@@ -1661,10 +1072,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="pay" style="max-width:420px" id="cardFull">
       <div class="pay-shine"></div>
       <div class="ptop"><div class="pb" id="cardBrandFull">NORDIC CRYPTO</div><div class="pt" id="cardTypeFull">METAL VISA</div></div>
-      <div class="chip-row">
-        <div class="chip-real"><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-contact"></div><div class="chip-center"></div></div>
-        <svg class="nfc-icon" viewBox="0 0 24 24"><path d="M6 6c2 2 2 8 0 12M10 5c3 3 3 11 0 14M14 4c4 4 4 12 0 16"/></svg>
-      </div>
+      <div class="chip-row"><div class="chip-real"></div></div>
       <div class="pn" id="cardNumFull">— — — — &nbsp; — — — — &nbsp; — — — — &nbsp; — — — —</div>
       <div class="pf">
         <div><div class="pl">CARD HOLDER</div><div class="pv" id="cardNameFull">—</div></div>
@@ -1672,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="card-network" id="cardNetwork2"></div>
       </div>
     </div>
-    <div class="bar" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn b2" id="btnChangeDesign">🎨 Change Design</button>
       <button class="btn b2" id="btnShowCvv">👁 Show CVV</button>
       <button class="btn b2" id="btnFreeze">❄ Freeze Card</button>
@@ -1680,13 +1088,13 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
     <div class="panel" style="margin-top:24px;max-width:520px">
       <h4 style="margin-bottom:16px">Card Details</h4>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Card Number</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detNum">—</span></div>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">CVV</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detCvv">●●●</span></div>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Expires</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detExp">—</span></div>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Cardholder</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detName">—</span></div>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Type</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detType">—</span></div>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);gap:16px"><span style="color:#94a3b8;font-size:13px">Currency</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detCur">—</span></div>
-      <div class="iban-row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:.9rem;gap:16px"><span style="color:#94a3b8;font-size:13px">Status</span><span style="font-family:ui-monospace,monospace;font-weight:600;text-align:right" id="detStatus">Active</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:#94a3b8;font-size:13px">Card Number</span><span style="font-family:ui-monospace;font-weight:600" id="detNum">—</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:#94a3b8;font-size:13px">CVV</span><span style="font-family:ui-monospace;font-weight:600" id="detCvv">●●●</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:#94a3b8;font-size:13px">Expires</span><span style="font-family:ui-monospace;font-weight:600" id="detExp">—</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:#94a3b8;font-size:13px">Cardholder</span><span style="font-family:ui-monospace;font-weight:600" id="detName">—</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:#94a3b8;font-size:13px">Type</span><span style="font-family:ui-monospace;font-weight:600" id="detType">—</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:#94a3b8;font-size:13px">Currency</span><span style="font-family:ui-monospace;font-weight:600" id="detCur">—</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0"><span style="color:#94a3b8;font-size:13px">Status</span><span style="font-family:ui-monospace;font-weight:600" id="detStatus">Active</span></div>
     </div>
     <div class="panel" style="margin-top:24px;max-width:520px">
       <h4 style="margin-bottom:12px">Want a physical card?</h4>
@@ -1700,8 +1108,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <div id="assets" class="pg">
   <div class="sh"><h2>Crypto Portfolio</h2><p>Your crypto holdings</p></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
-    <div class="panel"><div style="font-size:.72rem;color:#94a3b8;letter-spacing:.08em">BITCOIN (BTC)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aBtc">0.00000000</div><div style="color:#94a3b8;font-size:.85rem;margin-top:6px" id="aBtcU">≈ $0.00</div></div>
-    <div class="panel"><div style="font-size:.72rem;color:#94a3b8;letter-spacing:.08em">ETHEREUM (ETH)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace,monospace" id="aEth">0.00000000</div><div style="color:#94a3b8;font-size:.85rem;margin-top:6px" id="aEthU">≈ $0.00</div></div>
+    <div class="panel"><div style="font-size:.72rem;color:#94a3b8">BITCOIN (BTC)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace" id="aBtc">0.00000000</div><div style="color:#94a3b8;font-size:.85rem;margin-top:6px" id="aBtcU">≈ $0.00</div></div>
+    <div class="panel"><div style="font-size:.72rem;color:#94a3b8">ETHEREUM (ETH)</div><div style="font-size:1.6rem;font-weight:700;margin-top:8px;font-family:ui-monospace" id="aEth">0.00000000</div><div style="color:#94a3b8;font-size:.85rem;margin-top:6px" id="aEthU">≈ $0.00</div></div>
   </div>
 </div>
 
@@ -1733,33 +1141,33 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
   <div id="orderTrack" class="hidden">
     <div class="track-wrap">
-      <div class="track-head">
-        <div class="sh" style="margin-bottom:0"><h2>Track Your Card</h2><p>Live tracking</p></div>
-        <div class="track-id-box"><div class="l">Tracking ID</div><div class="v" id="trackId">—</div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:16px">
+        <div><h2>Track Your Card</h2><p style="color:#94a3b8">Live tracking</p></div>
+        <div class="track-id-box"><div style="font-size:.7rem;color:#94a3b8">Tracking ID</div><div style="font-family:ui-monospace;font-weight:700;color:#00d4ff;font-size:1.05rem" id="trackId">—</div></div>
       </div>
       <div class="panel">
         <div class="progress-steps" id="stepsWrap">
-          <div class="step"><div class="step-dot">1</div><div class="step-label">Order Received</div></div>
-          <div class="step"><div class="step-dot">2</div><div class="step-label">Card Minted</div></div>
-          <div class="step"><div class="step-dot">3</div><div class="step-label">Packed</div></div>
-          <div class="step"><div class="step-dot">4</div><div class="step-label">In Transit</div></div>
-          <div class="step"><div class="step-dot">5</div><div class="step-label">Out for Delivery</div></div>
-          <div class="step"><div class="step-dot">6</div><div class="step-label">Delivered</div></div>
+          <div class="step"><div class="step-dot">1</div><div style="font-size:.7rem;color:#94a3b8;text-align:center;max-width:90px">Order Received</div></div>
+          <div class="step"><div class="step-dot">2</div><div style="font-size:.7rem;color:#94a3b8;text-align:center;max-width:90px">Card Minted</div></div>
+          <div class="step"><div class="step-dot">3</div><div style="font-size:.7rem;color:#94a3b8;text-align:center;max-width:90px">Packed</div></div>
+          <div class="step"><div class="step-dot">4</div><div style="font-size:.7rem;color:#94a3b8;text-align:center;max-width:90px">In Transit</div></div>
+          <div class="step"><div class="step-dot">5</div><div style="font-size:.7rem;color:#94a3b8;text-align:center;max-width:90px">Out for Delivery</div></div>
+          <div class="step"><div class="step-dot">6</div><div style="font-size:.7rem;color:#94a3b8;text-align:center;max-width:90px">Delivered</div></div>
         </div>
         <div class="progress-bar-bg"><div class="progress-bar-fill" id="trackBar"></div></div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#94a3b8;margin-bottom:16px"><span id="trackStatus">Processing...</span><span id="trackPct">0%</span></div>
         <div class="info-grid">
-          <div class="info-box"><div class="l">Current Location</div><div class="v" id="trackLoc">NordicCrypto HQ, Stockholm</div></div>
-          <div class="info-box"><div class="l">Destination</div><div class="v" id="trackDest">—</div></div>
-          <div class="info-box"><div class="l">Recipient</div><div class="v" id="trackName">—</div></div>
-          <div class="info-box"><div class="l">Estimated Delivery</div><div class="v" id="trackEta">—</div></div>
+          <div class="info-box"><div style="font-size:.68rem;color:#94a3b8;text-transform:uppercase">Current Location</div><div style="font-weight:600;margin-top:4px" id="trackLoc">NordicCrypto HQ, Stockholm</div></div>
+          <div class="info-box"><div style="font-size:.68rem;color:#94a3b8;text-transform:uppercase">Destination</div><div style="font-weight:600;margin-top:4px" id="trackDest">—</div></div>
+          <div class="info-box"><div style="font-size:.68rem;color:#94a3b8;text-transform:uppercase">Recipient</div><div style="font-weight:600;margin-top:4px" id="trackName">—</div></div>
+          <div class="info-box"><div style="font-size:.68rem;color:#94a3b8;text-transform:uppercase">Estimated Delivery</div><div style="font-weight:600;margin-top:4px" id="trackEta">—</div></div>
         </div>
         <div class="track-actions">
           <button class="btn b2" id="btnContactSupport">Contact Support</button>
           <button class="btn b2" id="btnOrderAnother">Order Another Card</button>
           <button class="btn b3" id="btnCancelOrder">Cancel Order</button>
         </div>
-        <div class="log" id="trackLog"></div>
+        <div class="log" id="trackLog" style="background:rgba(0,0,0,.25);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-top:16px;max-height:220px;overflow-y:auto"></div>
       </div>
     </div>
   </div>
@@ -1786,22 +1194,22 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
     <div class="fg" id="mDestWrap" style="display:none"><label id="mDestLabel">Recipient details</label><input class="fc" id="mDest"></div>
     <div id="mTransferSepa" style="display:none">
-      <div class="fg"><label>Recipient name</label><input class="fc" id="mRecipientName" placeholder="Full name"></div>
-      <div class="fg"><label>IBAN</label><input class="fc" id="mRecipientIban" placeholder="XX00..."></div>
-      <div class="fg"><label>Purpose</label><input class="fc" id="mRecipientPurpose" placeholder="Payment for..."></div>
+      <div class="fg"><label>Recipient name</label><input class="fc" id="mRecipientName"></div>
+      <div class="fg"><label>IBAN</label><input class="fc" id="mRecipientIban"></div>
+      <div class="fg"><label>Purpose</label><input class="fc" id="mRecipientPurpose"></div>
     </div>
     <div id="mTransferSwift" style="display:none">
-      <div class="fg"><label>Recipient name</label><input class="fc" id="mSwiftName" placeholder="Full name"></div>
-      <div class="fg"><label>IBAN / Account</label><input class="fc" id="mSwiftIban" placeholder="XX00..."></div>
-      <div class="fg"><label>SWIFT / BIC</label><input class="fc" id="mSwiftCode" placeholder="XXXXXXXX"></div>
-      <div class="fg"><label>Bank name</label><input class="fc" id="mSwiftBank" placeholder="Bank"></div>
-      <div class="fg"><label>Country</label><input class="fc" id="mSwiftCountry" placeholder="Country"></div>
-      <div class="fg"><label>Purpose</label><input class="fc" id="mSwiftPurpose" placeholder="Payment for..."></div>
+      <div class="fg"><label>Recipient name</label><input class="fc" id="mSwiftName"></div>
+      <div class="fg"><label>IBAN / Account</label><input class="fc" id="mSwiftIban"></div>
+      <div class="fg"><label>SWIFT / BIC</label><input class="fc" id="mSwiftCode"></div>
+      <div class="fg"><label>Bank name</label><input class="fc" id="mSwiftBank"></div>
+      <div class="fg"><label>Country</label><input class="fc" id="mSwiftCountry"></div>
+      <div class="fg"><label>Purpose</label><input class="fc" id="mSwiftPurpose"></div>
     </div>
     <div id="mTransferCard" style="display:none">
-      <div class="fg"><label>Card holder</label><input class="fc" id="mCardHolder" placeholder="Name on card"></div>
-      <div class="fg"><label>Card number</label><input class="fc" id="mCardNum" placeholder="0000 0000 0000 0000" maxlength="19"></div>
-      <div class="fg"><label>Expiry</label><input class="fc" id="mCardExp" placeholder="MM/YY" maxlength="5"></div>
+      <div class="fg"><label>Card holder</label><input class="fc" id="mCardHolder"></div>
+      <div class="fg"><label>Card number</label><input class="fc" id="mCardNum" maxlength="19"></div>
+      <div class="fg"><label>Expiry</label><input class="fc" id="mCardExp" maxlength="5"></div>
     </div>
     <div class="mact">
       <button class="btn b1" style="flex:1;justify-content:center" id="mOk">Confirm</button>
@@ -1813,24 +1221,19 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ ONBOARDING ============ -->
 <div class="onboard" id="onboard">
   <div class="onb-step on" id="onbStep1">
-    <div class="onb-box onb-welcome">
-      <div class="onb-logo"><div class="blogo"><img src="logo.png" alt="NordicCrypto" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block"></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
+    <div class="onb-box" style="text-align:center;padding:44px 38px">
+      <div class="onb-logo" style="justify-content:center"><div class="blogo"><img src="logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <div class="welcome-icon">💎</div>
-      <h1>Welcome to your<br>personal crypto banking</h1>
-      <p class="welcome-sub">Your secure gateway to digital assets.</p>
-      <div class="welcome-features">
-        <div class="feat"><span>🔒</span> Bank-level security</div>
-        <div class="feat"><span>⚡</span> Instant virtual card</div>
-        <div class="feat"><span>🌍</span> Global crypto access</div>
-      </div>
+      <h1 style="font-size:1.8rem;margin-bottom:14px">Welcome to your<br>personal crypto banking</h1>
+      <p style="color:var(--mut);font-size:.95rem;margin-bottom:28px">Your secure gateway to digital assets.</p>
       <button class="btn b1" id="onbNext1" style="width:100%;justify-content:center;padding:16px;font-size:1rem;margin-top:24px">Get started →</button>
     </div>
   </div>
   <div class="onb-step" id="onbStep2">
     <div class="onb-box">
-      <div class="onb-logo"><div class="blogo"><img src="logo.png" alt="NordicCrypto" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block"></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
+      <div class="onb-logo"><div class="blogo"><img src="logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <h1>Enter your name</h1>
-      <p>This will appear on your card.</p>
+      <p style="color:var(--mut);margin-bottom:26px">This will appear on your card.</p>
       <div class="fg"><label>First name</label><input class="fc" id="onbFirst" placeholder="Satoshi" maxlength="20"></div>
       <div class="fg"><label>Middle name (optional)</label><input class="fc" id="onbMiddle" placeholder="N" maxlength="20"></div>
       <div class="fg"><label>Last name</label><input class="fc" id="onbLast" placeholder="Nakamoto" maxlength="20"></div>
@@ -1853,20 +1256,8 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
   <div class="onb-step" id="onbStep3">
     <div class="onb-box">
-      <div class="onb-logo"><div class="blogo"><img src="logo.png" alt="NordicCrypto" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block"></div>Nordic<span style="color:var(--pri)">Crypto</span></div>
       <h1 id="onbStep3Title">Almost done!</h1>
-      <p>Choose your card type and currency.</p>
-      <div class="onb-preview">
-        <div class="pay" style="max-width:100%;height:200px">
-          <div class="ptop"><div class="pb">NORDIC CRYPTO</div><div class="pt" id="prevType">VIRTUAL VISA</div></div>
-          <div class="chip"></div>
-          <div class="pn">•••• •••• •••• ••••</div>
-          <div class="pf">
-            <div><div class="pl">CARD HOLDER</div><div class="pv" id="prevName">YOUR NAME</div></div>
-            <div style="text-align:right"><div class="pl">CURRENCY</div><div class="pv m" id="prevCur">USD</div></div>
-          </div>
-        </div>
-      </div>
+      <p style="color:var(--mut);margin-bottom:26px">Choose your card type and currency.</p>
       <div class="fg">
         <label>Choose design</label>
         <div class="design-picker" id="designPicker">
@@ -1903,6 +1294,7 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
 </div>
+
 <!-- ============ WAIT FOR APPROVAL ============ -->
 <div class="verify-screen" id="pendingScreen">
   <div class="verify-step on">
@@ -1941,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
 </div>
-  
+
 <!-- ============ VERIFICATION ============ -->
 <div class="verify-screen" id="verifyScreen">
   <div class="verify-step on" id="verifyStep1">
@@ -1990,30 +1382,6 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     </div>
   </div>
-  <div class="verify-step" id="verifyStep4">
-    <div class="verify-box">
-      <div class="verify-spinner">🔍</div>
-      <h1>Verifying...</h1>
-      <p class="verify-sub">This usually takes about 2 minutes</p>
-      <div class="verify-timer" id="verifyTimer">02:00</div>
-      <div class="verify-progress"><div class="verify-progress-bar" id="verifyProgressBar"></div></div>
-      <div class="verify-steps-list">
-        <div class="vstep done" id="vstep1"><span class="vstep-check">✓</span> Documents received</div>
-        <div class="vstep" id="vstep2"><span class="vstep-dot">○</span> Checking authenticity</div>
-        <div class="vstep" id="vstep3"><span class="vstep-dot">○</span> Cross-checking</div>
-        <div class="vstep" id="vstep4"><span class="vstep-dot">○</span> Final approval</div>
-      </div>
-    </div>
-  </div>
-  <div class="verify-step" id="verifyStep5">
-    <div class="verify-box">
-      <div class="success-circle">✓</div>
-      <h1>You're verified!</h1>
-      <p class="verify-sub" id="verifySuccessName">Congratulations!</p>
-      <div class="verify-success-note">Your identity has been successfully verified.</div>
-      <button class="btn b1" id="verifyFinish" style="width:100%;justify-content:center;padding:16px">Continue →</button>
-    </div>
-  </div>
 </div>
 
 <!-- ============ DESIGN MODAL ============ -->
@@ -2047,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', function(){
       <h1>Deposit detected!</h1>
       <p class="dep-sub">We found a new deposit</p>
       <div class="dep-amount-card"><div class="dep-amount-crypto" id="depAmountCrypto">+ 0.00000000 BTC</div><div class="dep-amount-usd" id="depAmountUsd">≈ $0.00</div></div>
-      <p class="dep-note">To complete your deposit, answer 3 quick questions.</p>
+      <p class="dep-sub">To complete your deposit, answer 3 quick questions.</p>
       <button class="btn b1" id="depBtnStart" style="width:100%;justify-content:center;padding:16px;margin-top:16px">Start verification →</button>
     </div>
     <div class="dep-step" id="depStep1">
@@ -2077,7 +1445,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="dep-step-label">Step 3 of 3</div>
       <h2>Please confirm</h2>
       <label class="dep-checkbox"><input type="checkbox" id="depConfirmCheck"><span class="dep-checkmark"></span><span class="dep-check-text">I confirm this deposit is mine</span></label>
-      <div class="dep-legal">Funds belong to you and are from a legitimate source.</div>
       <button class="btn b1" id="depBtnConfirm" disabled style="width:100%;justify-content:center;padding:16px;margin-top:16px">Confirm →</button>
     </div>
     <div class="dep-step" id="depStep4">
@@ -2167,7 +1534,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ CHANGE PASSWORD ============ -->
 <div class="mask" id="changePassMask">
   <div class="box">
-    <button class="back-btn" id="cpBack"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <h2 style="margin-top:8px">Change password</h2>
     <div class="fg"><label>Current</label><div class="pass-wrap"><input type="password" class="fc" id="cpOld"><button type="button" class="pass-toggle" data-target="cpOld">👁</button></div></div>
     <div class="fg"><label>New</label><div class="pass-wrap"><input type="password" class="fc" id="cpNew"><button type="button" class="pass-toggle" data-target="cpNew">👁</button></div></div>
@@ -2184,7 +1550,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ ADMIN PANEL ============ -->
 <div class="admin-panel" id="adminPanel">
   <div class="admin-top">
-    <div class="admin-brand"><div class="blogo"><img src="logo.png" alt="NordicCrypto" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block"></div><div>Nordic<span>Crypto</span> · <b style="color:#a78bfa">Admin</b></div></div>
+    <div class="admin-brand"><div class="blogo"><img src="logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div><div>Nordic<span>Crypto</span> · <b style="color:#a78bfa">Admin</b></div></div>
     <div class="admin-top-actions">
       <span class="admin-user" id="adminUser">admin@nordiccrypto.com</span>
       <button class="btn b2" id="adminLogoutBtn">🚪 Log out</button>
@@ -2217,11 +1583,11 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="admin-clients-list" id="adminClientsList"><div class="admin-empty">Loading clients...</div></div>
       </div>
       <div class="admin-section" data-section="verifications">
-  <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-    <button class="btn b2" id="adminRefreshVerifs" onclick="loadAdminVerifications()">🔄 Refresh</button>
-  </div>
-  <div id="adminVerifsList"><div class="admin-empty">Loading verifications...</div></div>
-</div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <button class="btn b2" id="adminRefreshVerifs" onclick="loadAdminVerifications()">🔄 Refresh</button>
+        </div>
+        <div id="adminVerifsList"><div class="admin-empty">Loading verifications...</div></div>
+      </div>
       <div class="admin-section" data-section="chats">
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">
           <button class="btn b2" id="adminRefreshChatsBtn" onclick="loadAdminChats()">🔄 Refresh</button>
@@ -2302,7 +1668,6 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="ready-text" id="readyText">✓ Your card is ready!</div>
   <div class="anim-card" id="animCard">
     <div class="card-top"><div class="pb" id="animBrand">NORDIC CRYPTO</div><div class="pt" id="animType">VIRTUAL VISA</div></div>
-    <div class="chip"></div>
     <div class="card-num-line" id="animNum"></div>
     <div class="card-footer">
       <div><div class="lbl">CARD HOLDER</div><div class="val" id="animName">—</div></div>
@@ -2386,13 +1751,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- ============ TX STATUS ============ -->
 <div class="tx-status" id="txStatus">
   <div class="tx-status-card">
-    <div class="tx-status-icon processing" id="txStatusIcon"><div class="tx-spinner"></div></div>
+    <div class="tx-status-icon processing" id="txStatusIcon" style="background:linear-gradient(135deg,#00d4ff,#a855f7)"><div class="tx-spinner"></div></div>
     <h3 id="txStatusTitle">Processing...</h3>
     <p id="txStatusDesc">Please wait.</p>
-    <div class="tx-status-steps">
-      <div class="tx-status-step done" id="txStep1"></div>
-      <div class="tx-status-step" id="txStep2"></div>
-      <div class="tx-status-step" id="txStep3"></div>
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:24px">
+      <div style="width:40px;height:4px;border-radius:2px;background:#47dcff" id="txStep1"></div>
+      <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.1)" id="txStep2"></div>
+      <div style="width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.1)" id="txStep3"></div>
     </div>
   </div>
 </div>
@@ -2407,7 +1772,6 @@ document.addEventListener('DOMContentLoaded', function(){
 </button>
 
 <div id="chatPanel">
-  <!-- Форма тикета -->
   <div id="chatTicketForm" class="chat-ticket-form">
     <div class="chat-header">
       <div class="chat-agent">
@@ -2426,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', function(){
       <label class="chat-ticket-label">Your email</label>
       <input id="tkEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;">
       <label class="chat-ticket-label">Topic</label>
-      <select id="tkTopic" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;color-scheme:dark;">
+      <select id="tkTopic" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;">
         <option value="withdrawal">💸 Withdrawal issue</option>
         <option value="deposit">💰 Deposit issue</option>
         <option value="kyc">🆔 KYC / Verification</option>
@@ -2435,7 +1799,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <option value="other">❓ Other</option>
       </select>
       <label class="chat-ticket-label">Priority</label>
-      <select id="tkPriority" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;color-scheme:dark;">
+      <select id="tkPriority" style="width:100%;padding:10px 12px;background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;">
         <option value="normal">⭐ Normal</option>
         <option value="high">🔥 High</option>
         <option value="low">⚪ Low</option>
@@ -2447,7 +1811,6 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 
-  <!-- Чат -->
   <div id="chatConversation" class="chat-conversation">
     <div class="chat-header">
       <div class="chat-agent">
@@ -2471,19 +1834,15 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<script src="app.js?v=20261002"></script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('sw.js')
-        .then(function(reg) {
-          console.log('[PWA] Service Worker зарегистрирован:', reg.scope);
-        })
-        .catch(function(err) {
-          console.warn('[PWA] SW registration failed:', err);
-        });
+<script src="app.js?v=20261003"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(err) {
+      console.warn('[PWA] SW registration failed:', err);
     });
-  }
+  });
+}
 </script>
 </body>
 </html>
