@@ -1,5 +1,5 @@
 // ============================================================
-// NordicCrypto Worker ó v2.2 ó FULL (chat-wipe-fix)
+// NordicCrypto Worker ‚Äî v2.2 ‚Äî FULL (chat-wipe-fix)
 // ============================================================
 
 export default {
@@ -373,7 +373,7 @@ export default {
           state.usd = serverUsd;
         }
 
-        // ? ?????? 2: ???? wipeChat ó ??????? ???, ticket, typing ?????????
+        // ? ?????? 2: ???? wipeChat ‚Äî ??????? ???, ticket, typing ?????????
         if (wipeChat) {
           state.chat = [];
           state.ticket = null;
@@ -387,11 +387,11 @@ export default {
           clientChat.forEach(m => { if (m && m.id) merged[m.id] = m; });
           state.chat = Object.values(merged).sort((a, b) => (a.ts || 0) - (b.ts || 0));
 
-          // ticket: ???? ? ??????? null, ? ? ??????? ???? ó ????? ?????????
+          // ticket: ???? ? ??????? null, ? ? ??????? ???? ‚Äî ????? ?????????
           if (state.ticket === undefined) state.ticket = serverState.ticket || null;
         }
 
-        // ?????? 3: typing ó ????? ?????? (?????? ???? ?? wipeChat)
+        // ?????? 3: typing ‚Äî ????? ?????? (?????? ???? ?? wipeChat)
         if (!wipeChat) {
           const st = serverState.typing || {};
           const ct = state.typing || {};
@@ -403,7 +403,7 @@ export default {
           };
         }
 
-        // ?????? 4: txs ó ?? ?????? ??????????
+        // ?????? 4: txs ‚Äî ?? ?????? ??????????
         if (!force) {
           const serverTxLen = (serverState.txs || []).length;
           const clientTxLen = (state.txs || []).length;
@@ -412,7 +412,7 @@ export default {
           }
         }
 
-        // ?????? 5: depositVerifications ó ??????????
+        // ?????? 5: depositVerifications ‚Äî ??????????
         {
           const sd = serverState.depositVerifications || [];
           const cd = state.depositVerifications || [];
@@ -422,9 +422,9 @@ export default {
           state.depositVerifications = Object.values(mergedDv);
         }
 
-                // ?????? 6: notifications ó ???? wipeNotifs, ????? ?????????? ??????
+                // ?????? 6: notifications ‚Äî ???? wipeNotifs, ????? ?????????? ??????
         if (body.wipeNotifs) {
-          // ?????? ?????? ??????????? ó ???????? ???
+          // ?????? ?????? ??????????? ‚Äî ???????? ???
           state.notifications = (state.notifications || [])
             .sort((a, b) => (b.ts || 0) - (a.ts || 0))
             .slice(0, 50);
@@ -880,7 +880,116 @@ export default {
         return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
       }
     }
+// ============ KYC: LIST VERIFICATIONS (ADMIN) ============
+if (action === 'listVerifications' && request.method === 'POST') {
+  try {
+    const body = await request.json();
+    const { token } = body;
+    const session = await env.NORDIC_KV.get('session_' + token, 'json');
+    if (!session || session.role !== 'admin') {
+      return new Response(JSON.stringify({ ok: false, error: 'Admin access required' }), { headers: cors });
+    }
+    const users = await getUsers();
+    const result = [];
+    for (const email in users) {
+      const u = users[email];
+      if (u.role === 'admin') continue;
+      if (u.deleted) continue;
+      const state = await env.NORDIC_KV.get('user_state_' + email, 'json') || {};
+      if (!state.verification) continue;
+      result.push({
+        email: email,
+        name: u.name,
+        status: state.verification.status,
+        docType: state.verification.docType,
+        docKeys: state.verification.docKeys || [],
+        personalInfo: state.verification.personalInfo || {},
+        submittedAt: state.verification.submittedAt,
+        reviewedAt: state.verification.reviewedAt,
+        accountType: state.verification.accountType || null,
+        reason: state.verification.reason || null
+      });
+    }
+    result.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+    return new Response(JSON.stringify({ ok: true, verifications: result }), { headers: cors });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
+  }
+}
 
+// ============ KYC: APPROVE VERIFICATION (ADMIN) ============
+if (action === 'approveVerification' && request.method === 'POST') {
+  try {
+    const body = await request.json();
+    const { token, email, accountType } = body;
+    const session = await env.NORDIC_KV.get('session_' + token, 'json');
+    if (!session || session.role !== 'admin') {
+      return new Response(JSON.stringify({ ok: false, error: 'Admin access required' }), { headers: cors });
+    }
+    if (!email) return new Response(JSON.stringify({ ok: false, error: 'Email required' }), { headers: cors });
+    const allowedTypes = ['banking', 'exchange'];
+    if (!allowedTypes.includes(accountType)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid account type' }), { headers: cors });
+    }
+    const targetEmail = email.toLowerCase().trim();
+    const state = await env.NORDIC_KV.get('user_state_' + targetEmail, 'json') || {};
+    if (!state.verification) {
+      return new Response(JSON.stringify({ ok: false, error: 'No verification found' }), { headers: cors });
+    }
+    state.verification.status = 'approved';
+    state.verification.accountType = accountType;
+    state.verification.reviewedAt = Date.now();
+    state.verification.reviewedBy = session.email;
+    state.verification.reason = null;
+    if (!state.user) state.user = {};
+    state.user.verified = true;
+    state.user.accountType = accountType;
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: Date.now() + Math.random(),
+      text: '‚úÖ Verification approved! Account type: ' + (accountType === 'banking' ? 'üíº Banking' : 'ü™ô Exchange'),
+      icon: '‚úÖ', ts: Date.now(), read: false
+    });
+    await env.NORDIC_KV.put('user_state_' + targetEmail, JSON.stringify(state));
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
+  }
+}
+
+// ============ KYC: REJECT VERIFICATION (ADMIN) ============
+if (action === 'rejectVerification' && request.method === 'POST') {
+  try {
+    const body = await request.json();
+    const { token, email, reason } = body;
+    const session = await env.NORDIC_KV.get('session_' + token, 'json');
+    if (!session || session.role !== 'admin') {
+      return new Response(JSON.stringify({ ok: false, error: 'Admin access required' }), { headers: cors });
+    }
+    if (!email) return new Response(JSON.stringify({ ok: false, error: 'Email required' }), { headers: cors });
+    const targetEmail = email.toLowerCase().trim();
+    const state = await env.NORDIC_KV.get('user_state_' + targetEmail, 'json') || {};
+    if (!state.verification) {
+      return new Response(JSON.stringify({ ok: false, error: 'No verification found' }), { headers: cors });
+    }
+    state.verification.status = 'rejected';
+    state.verification.reason = reason || 'Documents not accepted';
+    state.verification.reviewedAt = Date.now();
+    state.verification.reviewedBy = session.email;
+    if (!state.user) state.user = {};
+    state.user.verified = false;
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: Date.now() + Math.random(),
+      text: '‚ùå Verification rejected: ' + (reason || 'Documents not accepted'),
+      icon: '‚ùå', ts: Date.now(), read: false
+    });
+    await env.NORDIC_KV.put('user_state_' + targetEmail, JSON.stringify(state));
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
+  }
+}
 
     // ============ VERSION ============
     if (action === 'version') {
