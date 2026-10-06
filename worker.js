@@ -1071,6 +1071,51 @@ if (action === 'multiPrices') {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
   }
 }
+    // ============ NOTIFY ADMIN ============
+if (action === 'notifyAdmin' && request.method === 'POST') {
+  try {
+    const body = await request.json();
+    const { token, text, icon } = body;
+    const session = await env.NORDIC_KV.get('session_' + token, 'json');
+    if (!session) return new Response(JSON.stringify({ ok: false }), { headers: cors });
+    const adminState = await env.NORDIC_KV.get('user_state_admin@nordiccrypto.com', 'json') || {};
+    if (!adminState.notifications) adminState.notifications = [];
+    adminState.notifications.unshift({
+      id: Date.now() + Math.random(),
+      text: text || ('From ' + session.email),
+      icon: icon || '🔔', ts: Date.now(), read: false, from: session.email
+    });
+    if (adminState.notifications.length > 100) adminState.notifications.length = 100;
+    await env.NORDIC_KV.put('user_state_admin@nordiccrypto.com', JSON.stringify(adminState));
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
+  }
+}
+
+// ============ MULTI PRICES ============
+if (action === 'multiPrices') {
+  try {
+    const ids = 'bitcoin,ethereum,tether,solana,binancecoin';
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=usd&include_24hr_change=true');
+    const d = await r.json();
+    if (d && d.bitcoin) {
+      return new Response(JSON.stringify({
+        ok: true,
+        coins: [
+          { symbol: 'BTC',  name: 'Bitcoin',   usd: d.bitcoin.usd,       change24h: d.bitcoin.usd_24h_change       || 0, icon: '#f7931a' },
+          { symbol: 'ETH',  name: 'Ethereum',  usd: d.ethereum.usd,      change24h: d.ethereum.usd_24h_change      || 0, icon: '#627eea' },
+          { symbol: 'USDT', name: 'Tether',    usd: d.tether ? d.tether.usd : 1, change24h: d.tether ? (d.tether.usd_24h_change || 0) : 0, icon: '#26a17b' },
+          { symbol: 'SOL',  name: 'Solana',    usd: d.solana ? d.solana.usd : 0, change24h: d.solana ? (d.solana.usd_24h_change || 0) : 0, icon: '#14f195' },
+          { symbol: 'BNB',  name: 'BNB',       usd: d.binancecoin ? d.binancecoin.usd : 0, change24h: d.binancecoin ? (d.binancecoin.usd_24h_change || 0) : 0, icon: '#f3ba2f' }
+        ], ts: Date.now()
+      }), { headers: cors });
+    }
+    return new Response(JSON.stringify({ ok: false }), { headers: cors });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
+  }
+}
     // ============ VERSION ============
     if (action === 'version') {
       const version = await env.NORDIC_KV.get('app_version') || '1.0.0';
