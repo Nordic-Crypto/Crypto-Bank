@@ -1757,12 +1757,16 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script src="app.js?v=20261003"></script>
 <script>
+// Unregister any existing Service Worker + clear caches
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js').catch(function(err) {
-      console.warn('[PWA] SW registration failed:', err);
-    });
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
   });
+  if (window.caches) {
+    caches.keys().then(function(keys){
+      keys.forEach(function(k){ caches.delete(k); });
+    });
+  }
 }
 </script>
 </body>
