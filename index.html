@@ -670,16 +670,6 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
 
 .brand .nm,.login-logo-text,.admin-brand > div:last-child{background:linear-gradient(90deg,#F8FAFC 0%,#00D4FF 25%,#A855F7 50%,#00D4FF 75%,#F8FAFC 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:wordmarkShimmer 5s linear infinite;font-weight:800;letter-spacing:-0.02em}
 @keyframes wordmarkShimmer{0%{background-position:0% center}100%{background-position:-200% center}}
-.top{height:70px;background:rgba(7,10,18,.88);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;padding:0 30px;flex-shrink:0;gap:20px;position:relative;z-index:100;overflow:visible}
-.top-search{flex:1;max-width:480px;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px}
-.top-search svg{width:18px;height:18px;stroke:var(--mut);fill:none;stroke-width:2;flex-shrink:0}
-.top-search input{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-size:.92rem;font-family:inherit}
-.top-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:10px;color:var(--txt);cursor:pointer;transition:.2s}
-.top-icon svg{width:18px;height:18px;stroke:#7dd3fc;fill:none;stroke-width:2}
-.settings-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);cursor:pointer}
-.settings-btn svg{width:18px;height:18px;stroke:var(--txt);fill:none;stroke-width:1.9}
-.st{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mut);background:rgba(0,224,138,.07);border:1px solid rgba(0,224,138,.18);padding:7px 14px;border-radius:999px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
 .curr-switch{position:relative;display:inline-block}
 .curr-btn-top{display:flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);border-radius:999px;color:var(--txt);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600}
 .curr-menu{position:absolute;top:calc(100% + 8px);right:0;background:linear-gradient(180deg,var(--pan2),#0f151e);border:1px solid var(--bd2);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;min-width:220px;display:none;z-index:9999}
@@ -702,8 +692,6 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-
-/* Кнопки: подсветка при hover */
 .btn, .nc3-ghost, .nc3-primary, .nc3-action, .nc3-card-action, .ex-btn, .top-icon, .settings-btn, .notif-bell {
   transition: box-shadow .3s ease, background .25s ease, transform .2s ease;
 }
@@ -721,34 +709,6 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
 .tx-status-icon.processing{background:linear-gradient(135deg,#00d4ff,#a855f7)}
 .tx-status-icon.verifying{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .tx-status-icon.review{background:linear-gradient(135deg,#10b981,#34d399)}
-/* Hover: иконки крутятся */
-.btn svg, .nc3-action svg, .nc3-card-action svg, .mi svg, .top-icon svg, .settings-btn svg, .notif-bell svg, .nc3-ghost svg, .nc3-primary svg, .nc3-copy-iban svg, .ex-btn svg {
-  transition: transform .35s cubic-bezier(.4,0,.2,1);
-  transform-origin: center;
-}
-.btn:hover svg, .nc3-action:hover svg, .nc3-card-action:hover svg, .mi:hover svg, .top-icon:hover svg, .settings-btn:hover svg, .notif-bell:hover svg, .nc3-ghost:hover svg, .nc3-primary:hover svg, .nc3-copy-iban:hover svg, .ex-btn:hover svg {
-  animation: iconSpin360 .7s cubic-bezier(.4,0,.2,1);
-}
-@keyframes iconSpin360 {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Hover: свечение кнопок */
-.btn, .nc3-ghost, .nc3-primary, .nc3-action, .nc3-card-action, .ex-btn, .top-icon, .settings-btn, .notif-bell {
-  transition: box-shadow .3s ease, background .25s ease, transform .2s ease;
-}
-.btn:hover, .nc3-ghost:hover, .nc3-primary:hover {
-  box-shadow: 0 10px 24px rgba(0,212,255,.22), inset 0 0 0 1px rgba(0,212,255,.20);
-}
-.nc3-action:hover, .nc3-card-action:hover, .ex-btn:hover {
-  box-shadow: 0 10px 24px rgba(0,212,255,.18);
-  transform: translateY(-2px);
-}
-.top-icon:hover, .settings-btn:hover, .notif-bell:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0,212,255,.18);
-}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -811,25 +771,25 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
   <ul class="menu">
     <li class="mi on" data-p="dash">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
-  <span class="tx">Dashboard</span>
-</li>
-<li class="mi" data-p="cards">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
-  <span class="tx">My Cards</span>
-</li>
-<li class="mi" data-p="assets">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
-  <span class="tx">Crypto Assets</span>
-</li>
-<li class="mi" data-p="tx">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-  <span class="tx">Transactions</span>
-</li>
-<li class="mi" data-p="order">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-  <span class="tx">Order New Card</span>
-</li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+      <span class="tx">Dashboard</span>
+    </li>
+    <li class="mi" data-p="cards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+      <span class="tx">My Cards</span>
+    </li>
+    <li class="mi" data-p="assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
+      <span class="tx">Crypto Assets</span>
+    </li>
+    <li class="mi" data-p="tx">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+      <span class="tx">Transactions</span>
+    </li>
+    <li class="mi" data-p="order">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+      <span class="tx">Order New Card</span>
+    </li>
   </ul>
   <div class="umi"><div class="av" id="userAvatar">--</div><div class="inf"><h4 id="userName">User</h4><span style="font-size:11px;color:#8b95a5;">Premium Metal</span></div></div>
 </div>
@@ -949,7 +909,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     <section class="nc3-actions-section">
       <div class="nc3-section-head"><div><div class="nc3-kicker">Shortcuts</div><h2>Move money</h2></div></div>
-            <div class="nc3-action-grid">
+      <div class="nc3-action-grid">
         <button class="nc3-action" id="btnWithdrawV2">
           <span class="nc3-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span>
           <span><b>Withdraw</b><small>Cash out to your account</small></span>
@@ -1002,7 +962,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <button class="nc3-copy-iban" id="btnCopyIban">📋 Copy details</button>
       </div>
 
-          <div class="nc3-stat-strip">
+      <div class="nc3-stat-strip">
         <div class="nc3-stat">
           <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
           <span>Deposited</span>
@@ -1028,6 +988,9 @@ document.addEventListener('DOMContentLoaded', function(){
           <small>Since registration</small>
         </div>
       </div>
+    </section>
+  </div>
+</div>
 
 <!-- EXCHANGE DASHBOARD -->
 <div id="exchangeDash" class="pg" style="display:none">
@@ -1228,7 +1191,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
 </div>
 </div>
-
 <!-- MODAL Add/Transfer -->
 <div class="mask" id="mask">
   <div class="box">
@@ -1886,7 +1848,7 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<script src="app.js?v=20261003"></script>
+<script src="app.js?v=20261006"></script>
 <script>
 // Unregister any existing Service Worker + clear caches
 if ('serviceWorker' in navigator) {
@@ -1900,214 +1862,5 @@ if ('serviceWorker' in navigator) {
   }
 }
 </script>
-  <script>
-/* ============ NORDIC HOTFIX v2 — banking only, exchanger safe ============ */
-(function(){
-  'use strict';
-
-  // Проверка: активен ли exchanger сейчас?
-  function isExchangeActive(){
-    var ex = document.getElementById('exchangeDash');
-    if (!ex) return false;
-    // Exchanger активен, если он видим и не display:none
-    var cs = window.getComputedStyle(ex);
-    return cs.display !== 'none' && ex.classList.contains('on');
-  }
-
-  // Проверка: не находится ли элемент внутри exchanger
-  function insideExchange(el){
-    if (!el) return false;
-    return !!el.closest('#exchangeDash');
-  }
-
-  // 1) Чиним график Balance History — ТОЛЬКО в banking
-  function fixChart(){
-    if (isExchangeActive()) return;
-    var wrap = document.getElementById('balanceChartSecondary');
-    if (!wrap || insideExchange(wrap)) return;
-    if (wrap.innerHTML && wrap.innerHTML.indexOf('<svg') !== -1) return;
-    if (typeof window.renderBalanceChart === 'function') {
-      try { window.renderBalanceChart(); } catch(e){ console.warn('[hotfix] chart', e); }
-    }
-  }
-
-  // 2) Чиним stat-strip — ТОЛЬКО в banking
-  function fixStatStrip(){
-    if (isExchangeActive()) return;
-    var strip = document.querySelector('.nc3-stat-strip');
-    if (!strip || insideExchange(strip)) return;
-
-    if (strip.querySelector('.nc3-stat')) {
-      try { refreshStatValues(); } catch(e){}
-      return;
-    }
-    strip.innerHTML =
-      '<div class="nc3-stat">' +
-        '<div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>' +
-        '<span>Deposited</span><strong id="statIncome">$0.00</strong><small>Total income</small>' +
-      '</div>' +
-      '<div class="nc3-stat">' +
-        '<div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>' +
-        '<span>Spent</span><strong id="statSpending">$0.00</strong><small>Total spending</small>' +
-      '</div>' +
-      '<div class="nc3-stat">' +
-        '<div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>' +
-        '<span>Transactions</span><strong id="statTxCount">0</strong><small>All time</small>' +
-      '</div>' +
-      '<div class="nc3-stat">' +
-        '<div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="#fff" stroke="none" width="22" height="22"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>' +
-        '<span>Days with us</span><strong id="statDays">1</strong><small>Since registration</small>' +
-      '</div>';
-    refreshStatValues();
-  }
-
-  function refreshStatValues(){
-    if (!window.st) return;
-    var txs = window.st.txs || [];
-    var income = 0, spending = 0;
-    for (var i=0;i<txs.length;i++){
-      var a = txs[i].amt || 0;
-      if (a>0) income += a; else if (a<0) spending += Math.abs(a);
-    }
-    function fmt(n){ return '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-    var si = document.getElementById('statIncome');
-    var ss = document.getElementById('statSpending');
-    var stc = document.getElementById('statTxCount');
-    var sd = document.getElementById('statDays');
-    if (si && !insideExchange(si)) si.textContent = fmt(income);
-    if (ss && !insideExchange(ss)) ss.textContent = fmt(spending);
-    if (stc && !insideExchange(stc)) stc.textContent = txs.length;
-    if (sd && !insideExchange(sd)) {
-      if (window.st.card && window.st.card.createdAt) {
-        sd.textContent = Math.max(1, Math.ceil((Date.now() - window.st.card.createdAt) / 86400000));
-      } else { sd.textContent = '1'; }
-    }
-  }
-
-  // 3) Форсим подгрузку цен для Assets — ТОЛЬКО в banking
-  function fixAssetPrices(){
-    if (isExchangeActive()) return;
-    var btcEl = document.getElementById('btcPrice');
-    var ethEl = document.getElementById('ethPrice');
-    if (!btcEl && !ethEl) return;
-    if (insideExchange(btcEl) || insideExchange(ethEl)) return;
-
-    var btcEmpty = btcEl && (btcEl.textContent === '$—' || btcEl.textContent === '$' || btcEl.textContent.trim() === '');
-    var ethEmpty = ethEl && (ethEl.textContent === '$—' || ethEl.textContent === '$' || ethEl.textContent.trim() === '');
-    if (!btcEmpty && !ethEmpty) return;
-
-    fetch('https://nordic-deposit-checker.otis-790.workers.dev/?action=prices&_t=' + Date.now())
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (!d) return;
-        if (btcEl && d.btc) btcEl.textContent = '$' + Number(d.btc).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-        if (ethEl && d.eth) ethEl.textContent = '$' + Number(d.eth).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-      })
-      .catch(function(e){ console.warn('[hotfix] prices', e); });
-  }
-
-  function runAll(){
-    try { fixStatStrip(); } catch(e){}
-    try { fixChart(); } catch(e){}
-    try { fixAssetPrices(); } catch(e){}
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){
-      setTimeout(runAll, 800);
-      setTimeout(runAll, 2000);
-      setTimeout(runAll, 4500);
-    });
-  } else {
-    setTimeout(runAll, 800);
-    setTimeout(runAll, 2000);
-    setTimeout(runAll, 4500);
-  }
-
-  // Периодические проверки (только если НЕ exchanger)
-  setInterval(function(){ if (!isExchangeActive()) fixAssetPrices(); }, 8000);
-  setInterval(function(){ if (!isExchangeActive()) fixChart(); }, 5000);
-
-  console.log('%c[NordicCrypto] 🩹 Hotfix v2 (exchanger-safe) applied', 'color:#00e5ff;font-weight:bold');
-})();
-</script>
 </body>
 </html>
-<script>
-/* ============ NORDIC HARD-FIX: Exchange stays Exchange ============ */
-(function(){
-  'use strict';
-
-  function isExchangeAccount(){
-    try {
-      var role = localStorage.getItem('user_role');
-      if (role === 'admin') return false;
-      if (window.adminViewingEmail) return false;
-      var st = window.st || {};
-      var user = st.user || {};
-      return user.accountType === 'exchange';
-    } catch(e){ return false; }
-  }
-
-  function enforceExchange(){
-    // Не трогаем если мы на странице логина/онбординга/верификации/админки
-    var login = document.getElementById('loginScreen');
-    if (login && !login.classList.contains('hidden')) return;
-    var onboard = document.getElementById('onboard');
-    if (onboard && onboard.classList.contains('on')) return;
-    var adminPanel = document.getElementById('adminPanel');
-    if (adminPanel && adminPanel.classList.contains('on')) return;
-
-    if (!isExchangeAccount()) return;
-
-    var dash = document.getElementById('dash');
-    var exDash = document.getElementById('exchangeDash');
-
-    if (!exDash) return;
-
-    // Прячем banking-дашборд
-    if (dash) {
-      dash.classList.remove('on');
-      dash.style.display = 'none';
-    }
-
-    // Показываем exchanger
-    if (exDash.classList.contains('on') === false || exDash.style.display === 'none') {
-      // Скрываем все pg, потом показываем только exchangeDash
-      document.querySelectorAll('.pg').forEach(function(p){
-        if (p.id !== 'exchangeDash') {
-          p.classList.remove('on');
-          if (p.id === 'dash') p.style.display = 'none';
-        }
-      });
-      exDash.style.display = '';
-      exDash.classList.add('on');
-      if (typeof window.renderExchangeDash === 'function') {
-        try { window.renderExchangeDash(); } catch(e){}
-      }
-    }
-
-    // Скрываем карточные элементы из сайдбара (My Cards, Order New Card)
-    var cardsMenu = document.querySelector('.mi[data-p="cards"]');
-    var orderMenu = document.querySelector('.mi[data-p="order"]');
-    if (cardsMenu) cardsMenu.style.display = 'none';
-    if (orderMenu) orderMenu.style.display = 'none';
-  }
-
-  // Запуск: каждые 300мс
-  setInterval(enforceExchange, 300);
-
-  // Плюс при клике на любую навигацию
-  document.addEventListener('click', function(e){
-    setTimeout(enforceExchange, 50);
-    setTimeout(enforceExchange, 300);
-  }, true);
-
-  // Плюс после любого AJAX-обновления баланса
-  setTimeout(enforceExchange, 500);
-  setTimeout(enforceExchange, 1500);
-  setTimeout(enforceExchange, 3000);
-
-  console.log('%c[NordicCrypto] 🔒 Exchange hard-fix active', 'color:#10b981;font-weight:bold');
-})();
-</script>
