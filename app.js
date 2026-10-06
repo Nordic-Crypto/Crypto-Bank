@@ -580,20 +580,32 @@ function fmtCurrency(usdAmount){
 }
 
 function loadExchangeRates(){
-  fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD')
+  fetch(WORKER_URL + '?action=rates')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d && d.data && d.data.rates){
-        var r = d.data.rates;
+      if (d && d.rates){
+        var r = d.rates;
         if (r.EUR) st.eurR = Number(r.EUR);
         if (r.SEK) st.sekR = Number(r.SEK);
         if (r.NOK) st.nokR = Number(r.NOK);
         if (r.DKK) st.dkkR = Number(r.DKK);
         if (r.GBP) st.gbpR = Number(r.GBP);
+
+        var rateEUR = document.getElementById('rateEUR');
+        if (rateEUR) rateEUR.textContent = '1$ = ' + st.eurR.toFixed(2) + '€';
+        var rateSEK = document.getElementById('rateSEK');
+        if (rateSEK) rateSEK.textContent = '1$ = ' + st.sekR.toFixed(2) + 'kr';
+        var rateNOK = document.getElementById('rateNOK');
+        if (rateNOK && r.NOK) rateNOK.textContent = '1$ = ' + Number(r.NOK).toFixed(2) + 'kr';
+        var rateDKK = document.getElementById('rateDKK');
+        if (rateDKK && r.DKK) rateDKK.textContent = '1$ = ' + Number(r.DKK).toFixed(2) + 'kr';
+        var rateGBP = document.getElementById('rateGBP');
+        if (rateGBP && r.GBP) rateGBP.textContent = '1$ = ' + Number(r.GBP).toFixed(2) + '£';
+
         render();
       }
     })
-    .catch(function(){});
+    .catch(function(e){ console.warn('Rates failed', e); });
 }
 
 function setCurrency(cur){
