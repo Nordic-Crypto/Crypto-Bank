@@ -1657,7 +1657,45 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
 </div>
+<!-- ============ WAIT FOR APPROVAL ============ -->
+<div class="verify-screen" id="pendingScreen">
+  <div class="verify-step on">
+    <div class="verify-box">
+      <div class="verify-spinner">⏳</div>
+      <h1>Verification in progress</h1>
+      <p class="verify-sub">Your documents are being reviewed by our compliance team.</p>
+      <div class="verify-success-note" style="background:rgba(255,176,32,.06);border-color:rgba(255,176,32,.2);text-align:left">
+        <div style="margin-bottom:8px"><b>📋 What happens next:</b></div>
+        <div style="font-size:.85rem;line-height:1.6;color:var(--mut)">
+          • Our team reviews your documents<br>
+          • Usually takes 5–30 minutes<br>
+          • You'll get a notification when approved
+        </div>
+      </div>
+      <div class="verify-progress" style="margin-top:20px"><div class="verify-progress-bar" id="pendingBar" style="width:15%"></div></div>
+      <button class="btn b2" id="btnLogoutPending" style="width:100%;justify-content:center;padding:14px;margin-top:16px">Log out</button>
+    </div>
+  </div>
+</div>
 
+<!-- ============ REJECTED SCREEN ============ -->
+<div class="verify-screen" id="rejectedScreen">
+  <div class="verify-step on">
+    <div class="verify-box">
+      <div class="verify-icon" style="color:#ff5470">❌</div>
+      <h1>Verification rejected</h1>
+      <p class="verify-sub" id="rejectedReason">Documents not accepted</p>
+      <div class="verify-success-note" style="background:rgba(255,84,112,.06);border-color:rgba(255,84,112,.2);text-align:left">
+        <div style="font-size:.85rem;line-height:1.6;color:var(--mut)">
+          You can submit new documents or contact support if you believe this is a mistake.
+        </div>
+      </div>
+      <button class="btn b1" id="btnRetryVerification" style="width:100%;justify-content:center;padding:14px;margin-top:16px">Submit new documents</button>
+      <button class="btn b2" id="btnLogoutRejected" style="width:100%;justify-content:center;padding:14px;margin-top:8px">Log out</button>
+    </div>
+  </div>
+</div>
+  
 <!-- ============ VERIFICATION ============ -->
 <div class="verify-screen" id="verifyScreen">
   <div class="verify-step on" id="verifyStep1">
@@ -1910,6 +1948,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <aside class="admin-sidebar">
       <div class="admin-nav-item active" onclick="showAdminTab('stats')" data-tab="stats"><span>📊</span> Dashboard</div>
       <div class="admin-nav-item" onclick="showAdminTab('clients')" data-tab="clients"><span>👥</span> Clients <span class="admin-nav-badge" id="navClientsCount" style="background:rgba(255,255,255,0.1);color:#8b95a5;">0</span></div>
+      <div class="admin-nav-item" onclick="showAdminTab('verifications')" data-tab="verifications"><span>🪪</span> Verifications <span class="admin-nav-badge" id="navVerifCount" style="display:none;">0</span></div>
       <div class="admin-nav-item" onclick="showAdminTab('chats')" data-tab="chats"><span>💬</span> Live chats <span class="admin-nav-badge" id="navChatsCount" style="display:none;">0</span></div>
       <div class="admin-nav-item" onclick="showAdminTab('withdrawals')" data-tab="withdrawals"><span>💸</span> Withdrawals <span class="admin-nav-badge warn" id="navWdsCount" style="display:none;">0</span></div>
       <div class="admin-nav-item" onclick="showAdminTab('deleted')" data-tab="deleted"><span>🗑️</span> Deleted</div>
@@ -1931,6 +1970,12 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
         <div class="admin-clients-list" id="adminClientsList"><div class="admin-empty">Loading clients...</div></div>
       </div>
+      <div class="admin-section" data-section="verifications">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+    <button class="btn b2" id="adminRefreshVerifs" onclick="loadAdminVerifications()">🔄 Refresh</button>
+  </div>
+  <div id="adminVerifsList"><div class="admin-empty">Loading verifications...</div></div>
+</div>
       <div class="admin-section" data-section="chats">
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px;">
           <button class="btn b2" id="adminRefreshChatsBtn" onclick="loadAdminChats()">🔄 Refresh</button>
