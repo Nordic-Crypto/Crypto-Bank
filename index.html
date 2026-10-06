@@ -1002,15 +1002,32 @@ document.addEventListener('DOMContentLoaded', function(){
         <button class="nc3-copy-iban" id="btnCopyIban">📋 Copy details</button>
       </div>
 
-      <div class="nc3-stat-strip">
-        <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
-        <div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
-        <div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
-        <div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="#fff" stroke="none" width="22" height="22"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          <div class="nc3-stat-strip">
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <span>Deposited</span>
+          <strong id="statIncome">$0.00</strong>
+          <small>Total income</small>
+        </div>
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
+          <span>Spent</span>
+          <strong id="statSpending">$0.00</strong>
+          <small>Total spending</small>
+        </div>
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
+          <span>Transactions</span>
+          <strong id="statTxCount">0</strong>
+          <small>All time</small>
+        </div>
+        <div class="nc3-stat">
+          <div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="#fff" stroke="none" width="22" height="22"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          <span>Days with us</span>
+          <strong id="statDays">1</strong>
+          <small>Since registration</small>
+        </div>
       </div>
-    </section>
-  </div>
-</div>
 
 <!-- EXCHANGE DASHBOARD -->
 <div id="exchangeDash" class="pg" style="display:none">
