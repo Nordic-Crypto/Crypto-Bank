@@ -685,6 +685,35 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
 .curr-opt.on{background:rgba(0,212,255,.12);color:var(--pri)}
 .curr-opt span:first-child{font-weight:600;flex:1}
 .curr-rate{color:var(--mut);font-size:.78rem;font-family:ui-monospace,monospace}
+/* Hover: кнопки и иконки крутятся */
+.btn svg, .nc3-action svg, .nc3-card-action svg, .mi svg, .top-icon svg, .settings-btn svg, .notif-bell svg, .nc3-ghost svg, .nc3-primary svg, .nc3-copy-iban svg, .ex-btn svg, .chat-send svg, .chat-attach svg {
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  transform-origin: center;
+  will-change: transform;
+}
+.btn:hover svg, .nc3-action:hover svg, .nc3-card-action:hover svg, .mi:hover svg, .top-icon:hover svg, .settings-btn:hover svg, .notif-bell:hover svg, .nc3-ghost:hover svg, .nc3-primary:hover svg, .nc3-copy-iban:hover svg, .ex-btn:hover svg, .chat-send:hover svg, .chat-attach:hover svg {
+  animation: iconSpin360 .7s cubic-bezier(.4,0,.2,1);
+}
+@keyframes iconSpin360 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Кнопки: подсветка при hover */
+.btn, .nc3-ghost, .nc3-primary, .nc3-action, .nc3-card-action, .ex-btn, .top-icon, .settings-btn, .notif-bell {
+  transition: box-shadow .3s ease, background .25s ease, transform .2s ease;
+}
+.btn:hover, .nc3-ghost:hover, .nc3-primary:hover {
+  box-shadow: 0 10px 24px rgba(0,212,255,.22), inset 0 0 0 1px rgba(0,212,255,.20);
+}
+.nc3-action:hover, .nc3-card-action:hover, .ex-btn:hover {
+  box-shadow: 0 10px 24px rgba(0,212,255,.18);
+  transform: translateY(-2px);
+}
+.top-icon:hover, .settings-btn:hover, .notif-bell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,212,255,.18);
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
