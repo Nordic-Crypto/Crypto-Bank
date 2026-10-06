@@ -1023,20 +1023,26 @@ function renderBalanceChart(){
   var lastCoord = svgPoints[svgPoints.length - 1].split(',');
 
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-    '<defs>' +
-      '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.55"/>' +
-        '<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.02"/>' +
-      '</linearGradient>' +
-      '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
-        '<stop offset="0%" stop-color="#00d4ff"/>' +
-        '<stop offset="100%" stop-color="#a855f7"/>' +
-      '</linearGradient>' +
-    '</defs>' +
-    '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
-    '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<circle cx="' + lastCoord[0] + '" cy="' + lastCoord[1] + '" r="5" fill="#47dcff"><animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/></circle>' +
-  '</svg>';
+  '<defs>' +
+    '<linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="#47dcff" stop-opacity="0.6"/>' +
+      '<stop offset="60%" stop-color="#47dcff" stop-opacity="0.15"/>' +
+      '<stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>' +
+    '</linearGradient>' +
+    '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
+      '<stop offset="0%" stop-color="#47dcff"/>' +
+      '<stop offset="50%" stop-color="#8b5cf6"/>' +
+      '<stop offset="100%" stop-color="#ec4899"/>' +
+    '</linearGradient>' +
+    '<filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">' +
+      '<feGaussianBlur stdDeviation="3" result="blur"/>' +
+      '<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+    '</filter>' +
+  '</defs>' +
+  '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
+  '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>' +
+  pulseCircle +
+'</svg>';
 
   wrap2.innerHTML = svg;
 }
