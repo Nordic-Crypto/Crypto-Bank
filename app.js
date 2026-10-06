@@ -1631,16 +1631,23 @@ function initVerification(){
   if (btn2) btn2.onclick = function(){ playTone(660, 0.08, 'sine', 0.25); showVerifyStep(3); };
   var back3 = document.getElementById('verifyBack3');
   if (back3) back3.onclick = function(){ showVerifyStep(2); };
-  var btn3 = document.getElementById('verifyNext3');
-  if (btn3) btn3.onclick = function(){
-    // ВЫЗОВ РЕАЛЬНОЙ ВЕРИФИКАЦИИ
-    if (typeof window.submitRealVerification === 'function') {
-      window.submitRealVerification();
-    } else {
-      toast('System error — try again', true);
+   // Кнопка verifyNext3 — привязка через delay, чтобы submitRealVerification успела определиться
+  setTimeout(function(){
+    var btn3 = document.getElementById('verifyNext3');
+    if (btn3) {
+      btn3.onclick = null;
+      btn3.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[SUBMIT] clicked, submitRealVerification =', typeof window.submitRealVerification);
+        if (typeof window.submitRealVerification === 'function') {
+          window.submitRealVerification();
+        } else {
+          alert('System error: submitRealVerification not loaded. Reload page (Ctrl+Shift+R)');
+        }
+      });
     }
-  };
-}
+  }, 1500);
 
 /* ---------- Чтение файла в base64 ---------- */
 function fileToBase64(file) {
