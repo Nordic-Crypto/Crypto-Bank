@@ -259,7 +259,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-section-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px}
 .nc3-asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .nc3-asset{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:94px;padding:16px;border:1px solid var(--nc3-line);border-radius:16px;background:rgba(13,19,30,.72);transition:.2s}
-.nc3-asset-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem}
+.nc3-asset-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .25s ease}
+.nc3-asset:hover .nc3-asset-icon{transform:scale(1.08)}
 .nc3-asset-icon.btc{background:rgba(245,158,11,.11);color:#ffbd4c}
 .nc3-asset-icon.eth{background:rgba(139,108,255,.12);color:#aa98ff}
 .nc3-asset-name{font-weight:750;font-size:.83rem}
@@ -370,7 +371,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ex-live-badge{font-size:.68rem;font-weight:800;letter-spacing:.1em;color:#4edca9;background:rgba(78,220,169,.1);border:1px solid rgba(78,220,169,.25);padding:5px 10px;border-radius:999px}
 .ex-coins-list{display:flex;flex-direction:column;gap:8px}
 .ex-coin-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:14px;transition:.2s}
-.ex-coin-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:900;color:#fff}
+.ex-coin-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);transition:transform .25s ease,box-shadow .25s ease}
+.ex-coin-row:hover .ex-coin-icon{transform:scale(1.1);box-shadow:0 4px 16px rgba(0,212,255,.25)}
 .ex-coin-name{font-weight:700;font-size:.92rem;color:#fff}
 .ex-coin-symbol{font-size:.72rem;color:#718098;margin-top:2px}
 .ex-coin-price{text-align:right}
@@ -384,7 +386,7 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .ex-assets-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:760px){.ex-assets-grid{grid-template-columns:1fr}}
 .ex-asset-card{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;padding:20px;background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:18px;transition:.25s}
-.ex-asset-icon-big{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff}
+.ex-asset-icon-big{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
 .ex-asset-card.btc .ex-asset-icon-big{background:linear-gradient(135deg,#f7931a,#ffbd4c)}
 .ex-asset-card.eth .ex-asset-icon-big{background:linear-gradient(135deg,#627eea,#8c6cff)}
 .ex-asset-label{font-size:.75rem;color:#8b8fb0;text-transform:uppercase;font-weight:700;margin-bottom:4px}
@@ -1721,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- TX STATUS -->
 <div class="tx-status" id="txStatus">
   <div class="tx-status-card">
-    <div class="tx-status-icon processing" id="txStatusIcon" style="background:linear-gradient(135deg,#00d4ff,#a855f7)"><div class="tx-spinner"></div></div>
+    <div class="tx-status-icon processing" id="txStatusIcon"><div class="tx-spinner"></div></div>
     <h3 id="txStatusTitle">Processing...</h3>
     <p id="txStatusDesc">Please wait.</p>
     <div style="display:flex;justify-content:center;gap:8px;margin-top:24px">
