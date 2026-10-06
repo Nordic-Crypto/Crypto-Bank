@@ -271,7 +271,12 @@ function showApp() {
     render();
 
     if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
-    if (!st.card){ $('onboard').classList.add('on'); return; }
+    // Показываем онбординг только если НЕТ карты И аккаунт Banking (или ещё не выбран тип)
+var accountType = (st.user && st.user.accountType) || null;
+if (!st.card && accountType !== 'exchange') {
+  $('onboard').classList.add('on');
+  return;
+}
 
     setInterval(loadPrices, 5 * 60 * 1000);
     setInterval(loadExchangeRates, 10 * 60 * 1000);
