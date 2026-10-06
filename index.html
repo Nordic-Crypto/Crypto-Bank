@@ -272,7 +272,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 .nc3-action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 #btnWithdrawV2{grid-column:span 2}
 .nc3-action{border:1px solid var(--nc3-line);border-radius:16px;padding:14px;background:rgba(13,19,30,.72);transition:.2s;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;text-align:left;cursor:pointer;width:100%;color:#e7edf6;font-family:inherit}
-.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.nc3-action-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:18px;box-shadow:0 6px 18px -6px rgba(0,0,0,.5);transition:transform .25s ease}
+.nc3-action:hover .nc3-action-icon{transform:scale(1.08) rotate(4deg)}
 .nc3-action-icon.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .nc3-action-icon.pink{background:linear-gradient(135deg,#ec4899,#f472b6)}
 .nc3-action-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
@@ -317,7 +318,8 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 
 .nc3-stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid var(--nc3-line);border-radius:16px;overflow:hidden;background:var(--nc3-line)}
 .nc3-stat{padding:17px;background:rgba(13,19,30,.8);min-height:110px;display:flex;flex-direction:column;gap:6px}
-.nc3-stat-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+.nc3-stat-icon{width:44px;height:44px;min-width:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:0 6px 18px -6px rgba(0,0,0,.5);transition:transform .25s ease}
+.nc3-stat:hover .nc3-stat-icon{transform:scale(1.08)}
 .nc3-stat-icon.green{background:linear-gradient(135deg,#10b981,#34d399)}
 .nc3-stat-icon.red{background:linear-gradient(135deg,#ef4444,#f87171)}
 .nc3-stat-icon.cyan{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
@@ -719,6 +721,34 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
 .tx-status-icon.processing{background:linear-gradient(135deg,#00d4ff,#a855f7)}
 .tx-status-icon.verifying{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .tx-status-icon.review{background:linear-gradient(135deg,#10b981,#34d399)}
+/* Hover: иконки крутятся */
+.btn svg, .nc3-action svg, .nc3-card-action svg, .mi svg, .top-icon svg, .settings-btn svg, .notif-bell svg, .nc3-ghost svg, .nc3-primary svg, .nc3-copy-iban svg, .ex-btn svg {
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  transform-origin: center;
+}
+.btn:hover svg, .nc3-action:hover svg, .nc3-card-action:hover svg, .mi:hover svg, .top-icon:hover svg, .settings-btn:hover svg, .notif-bell:hover svg, .nc3-ghost:hover svg, .nc3-primary:hover svg, .nc3-copy-iban:hover svg, .ex-btn:hover svg {
+  animation: iconSpin360 .7s cubic-bezier(.4,0,.2,1);
+}
+@keyframes iconSpin360 {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Hover: свечение кнопок */
+.btn, .nc3-ghost, .nc3-primary, .nc3-action, .nc3-card-action, .ex-btn, .top-icon, .settings-btn, .notif-bell {
+  transition: box-shadow .3s ease, background .25s ease, transform .2s ease;
+}
+.btn:hover, .nc3-ghost:hover, .nc3-primary:hover {
+  box-shadow: 0 10px 24px rgba(0,212,255,.22), inset 0 0 0 1px rgba(0,212,255,.20);
+}
+.nc3-action:hover, .nc3-card-action:hover, .ex-btn:hover {
+  box-shadow: 0 10px 24px rgba(0,212,255,.18);
+  transform: translateY(-2px);
+}
+.top-icon:hover, .settings-btn:hover, .notif-bell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,212,255,.18);
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -780,11 +810,26 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="nm">Nordic<span>Crypto</span></div>
   </div>
   <ul class="menu">
-    <li class="mi on" data-p="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="tx">Dashboard</span></li>
-    <li class="mi" data-p="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg><span class="tx">My Cards</span></li>
-    <li class="mi" data-p="assets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg><span class="tx">Crypto Assets</span></li>
-    <li class="mi" data-p="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg><span class="tx">Transactions</span></li>
-    <li class="mi" data-p="order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg><span class="tx">Order New Card</span></li>
+    <li class="mi on" data-p="dash">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+  <span class="tx">Dashboard</span>
+</li>
+<li class="mi" data-p="cards">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+  <span class="tx">My Cards</span>
+</li>
+<li class="mi" data-p="assets">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
+  <span class="tx">Crypto Assets</span>
+</li>
+<li class="mi" data-p="tx">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+  <span class="tx">Transactions</span>
+</li>
+<li class="mi" data-p="order">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+  <span class="tx">Order New Card</span>
+</li>
   </ul>
   <div class="umi"><div class="av" id="userAvatar">--</div><div class="inf"><h4 id="userName">User</h4><span style="font-size:11px;color:#8b95a5;">Premium Metal</span></div></div>
 </div>
@@ -905,10 +950,10 @@ document.addEventListener('DOMContentLoaded', function(){
     <section class="nc3-actions-section">
       <div class="nc3-section-head"><div><div class="nc3-kicker">Shortcuts</div><h2>Move money</h2></div></div>
       <div class="nc3-action-grid">
-        <button class="nc3-action" id="btnWithdrawV2"><span class="nc3-action-icon orange">↑</span><span><b>Withdraw</b><small>Cash out to your account</small></span><span>↗</span></button>
-        <button class="nc3-action" id="btnExchangeV2"><span class="nc3-action-icon pink">⇄</span><span><b>Exchange</b><small>Swap crypto instantly</small></span><span>→</span></button>
-        <button class="nc3-action" id="btnCopyCardV2"><span class="nc3-action-icon green">📋</span><span><b>Copy card</b><small>Card number</small></span><span>→</span></button>
-        <button class="nc3-action" id="btnReceiveMoney"><span class="nc3-action-icon cyan">↓</span><span><b>Receive money</b><small>Your IBAN</small></span><span>→</span></button>
+        <span class="nc3-action-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span>
+        <span class="nc3-action-icon pink"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M7 16V4M7 4L3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg></span>
+        <span class="nc3-action-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>
+        <span class="nc3-action-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg></span>
       </div>
     </section>
 
@@ -942,10 +987,10 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
 
       <div class="nc3-stat-strip">
-        <div class="nc3-stat"><div class="nc3-stat-icon green">💵</div><div><span>Deposited</span><strong id="statIncome">$0.00</strong><small>↑ +12.4%</small></div></div>
-        <div class="nc3-stat"><div class="nc3-stat-icon red">📉</div><div><span>Spent</span><strong id="statSpending">$0.00</strong><small>↓ 0.0%</small></div></div>
-        <div class="nc3-stat"><div class="nc3-stat-icon cyan">📊</div><div><span>Transactions</span><strong id="statTxCount">0</strong><small>↑ +100%</small></div></div>
-        <div class="nc3-stat"><div class="nc3-stat-icon violet">⭐</div><div><span>Days with us</span><strong id="statDays">1</strong><small>↑ +100%</small></div></div>
+        <div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
+        <div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
+        <div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="#fff" stroke="none" width="22" height="22"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       </div>
     </section>
   </div>
