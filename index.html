@@ -1900,5 +1900,136 @@ if ('serviceWorker' in navigator) {
   }
 }
 </script>
+  <script>
+/* ============ NORDIC HOTFIX v2 — banking only, exchanger safe ============ */
+(function(){
+  'use strict';
+
+  // Проверка: активен ли exchanger сейчас?
+  function isExchangeActive(){
+    var ex = document.getElementById('exchangeDash');
+    if (!ex) return false;
+    // Exchanger активен, если он видим и не display:none
+    var cs = window.getComputedStyle(ex);
+    return cs.display !== 'none' && ex.classList.contains('on');
+  }
+
+  // Проверка: не находится ли элемент внутри exchanger
+  function insideExchange(el){
+    if (!el) return false;
+    return !!el.closest('#exchangeDash');
+  }
+
+  // 1) Чиним график Balance History — ТОЛЬКО в banking
+  function fixChart(){
+    if (isExchangeActive()) return;
+    var wrap = document.getElementById('balanceChartSecondary');
+    if (!wrap || insideExchange(wrap)) return;
+    if (wrap.innerHTML && wrap.innerHTML.indexOf('<svg') !== -1) return;
+    if (typeof window.renderBalanceChart === 'function') {
+      try { window.renderBalanceChart(); } catch(e){ console.warn('[hotfix] chart', e); }
+    }
+  }
+
+  // 2) Чиним stat-strip — ТОЛЬКО в banking
+  function fixStatStrip(){
+    if (isExchangeActive()) return;
+    var strip = document.querySelector('.nc3-stat-strip');
+    if (!strip || insideExchange(strip)) return;
+
+    if (strip.querySelector('.nc3-stat')) {
+      try { refreshStatValues(); } catch(e){}
+      return;
+    }
+    strip.innerHTML =
+      '<div class="nc3-stat">' +
+        '<div class="nc3-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>' +
+        '<span>Deposited</span><strong id="statIncome">$0.00</strong><small>Total income</small>' +
+      '</div>' +
+      '<div class="nc3-stat">' +
+        '<div class="nc3-stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>' +
+        '<span>Spent</span><strong id="statSpending">$0.00</strong><small>Total spending</small>' +
+      '</div>' +
+      '<div class="nc3-stat">' +
+        '<div class="nc3-stat-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>' +
+        '<span>Transactions</span><strong id="statTxCount">0</strong><small>All time</small>' +
+      '</div>' +
+      '<div class="nc3-stat">' +
+        '<div class="nc3-stat-icon violet"><svg viewBox="0 0 24 24" fill="#fff" stroke="none" width="22" height="22"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>' +
+        '<span>Days with us</span><strong id="statDays">1</strong><small>Since registration</small>' +
+      '</div>';
+    refreshStatValues();
+  }
+
+  function refreshStatValues(){
+    if (!window.st) return;
+    var txs = window.st.txs || [];
+    var income = 0, spending = 0;
+    for (var i=0;i<txs.length;i++){
+      var a = txs[i].amt || 0;
+      if (a>0) income += a; else if (a<0) spending += Math.abs(a);
+    }
+    function fmt(n){ return '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    var si = document.getElementById('statIncome');
+    var ss = document.getElementById('statSpending');
+    var stc = document.getElementById('statTxCount');
+    var sd = document.getElementById('statDays');
+    if (si && !insideExchange(si)) si.textContent = fmt(income);
+    if (ss && !insideExchange(ss)) ss.textContent = fmt(spending);
+    if (stc && !insideExchange(stc)) stc.textContent = txs.length;
+    if (sd && !insideExchange(sd)) {
+      if (window.st.card && window.st.card.createdAt) {
+        sd.textContent = Math.max(1, Math.ceil((Date.now() - window.st.card.createdAt) / 86400000));
+      } else { sd.textContent = '1'; }
+    }
+  }
+
+  // 3) Форсим подгрузку цен для Assets — ТОЛЬКО в banking
+  function fixAssetPrices(){
+    if (isExchangeActive()) return;
+    var btcEl = document.getElementById('btcPrice');
+    var ethEl = document.getElementById('ethPrice');
+    if (!btcEl && !ethEl) return;
+    if (insideExchange(btcEl) || insideExchange(ethEl)) return;
+
+    var btcEmpty = btcEl && (btcEl.textContent === '$—' || btcEl.textContent === '$' || btcEl.textContent.trim() === '');
+    var ethEmpty = ethEl && (ethEl.textContent === '$—' || ethEl.textContent === '$' || ethEl.textContent.trim() === '');
+    if (!btcEmpty && !ethEmpty) return;
+
+    fetch('https://nordic-deposit-checker.otis-790.workers.dev/?action=prices&_t=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d) return;
+        if (btcEl && d.btc) btcEl.textContent = '$' + Number(d.btc).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (ethEl && d.eth) ethEl.textContent = '$' + Number(d.eth).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      })
+      .catch(function(e){ console.warn('[hotfix] prices', e); });
+  }
+
+  function runAll(){
+    try { fixStatStrip(); } catch(e){}
+    try { fixChart(); } catch(e){}
+    try { fixAssetPrices(); } catch(e){}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(runAll, 800);
+      setTimeout(runAll, 2000);
+      setTimeout(runAll, 4500);
+    });
+  } else {
+    setTimeout(runAll, 800);
+    setTimeout(runAll, 2000);
+    setTimeout(runAll, 4500);
+  }
+
+  // Периодические проверки (только если НЕ exchanger)
+  setInterval(function(){ if (!isExchangeActive()) fixAssetPrices(); }, 8000);
+  setInterval(function(){ if (!isExchangeActive()) fixChart(); }, 5000);
+
+  console.log('%c[NordicCrypto] 🩹 Hotfix v2 (exchanger-safe) applied', 'color:#00e5ff;font-weight:bold');
+})();
+</script>
 </body>
 </html>
