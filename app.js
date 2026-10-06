@@ -3005,7 +3005,6 @@ function hideAdminPanel() {
 async function loadAdminUsers() {
   var listEl = document.getElementById('adminClientsList');
   if (!listEl) return;
-  if (!listEl.querySelector('.admin-client-card')) listEl.innerHTML = '<div class="admin-empty">Loading...</div>';
 
   try {
     var res = await fetch(WORKER_LOGIN_URL + '?action=listUsers', {
@@ -4027,6 +4026,8 @@ async function clearAllChats() {
 
 /* ========== EXCHANGE DASHBOARD ========== */
 function applyAccountType() {
+  if (window.adminViewingEmail) return;
+  if (localStorage.getItem('user_role') === 'admin') return;
   var accountType = (st.user && st.user.accountType) || null;
   var isExchange = accountType === 'exchange';
 
