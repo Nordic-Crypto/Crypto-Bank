@@ -1041,7 +1041,7 @@ function renderBalanceChart(){
   '</defs>' +
   '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
   '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>' +
-  pulseCircle +
+            '' +
 '</svg>';
 
   wrap2.innerHTML = svg;
