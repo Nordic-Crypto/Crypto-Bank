@@ -459,6 +459,111 @@ select.fc option{background:#0f1420;color:#e8f4ff}
 @media(max-width:760px){.side{width:78px}.body{padding:20px 15px 90px}.top{padding:0 15px}.nc3-hero{align-items:flex-start;gap:15px;flex-direction:column}.nc3-overview,.nc3-asset-grid,.nc3-action-grid{grid-template-columns:1fr}.nc3-balance{font-size:2.55rem}.nc3-bank-card{height:215px}.brand .nm,.mi .tx,.umi .inf{display:none}.mi{justify-content:center}.umi{justify-content:center}}
 @media(max-width:500px){.nc3-hero h1{font-size:1.55rem}.nc3-balance-card{padding:19px;min-height:350px}.nc3-card-actions button b{display:none}.nc3-action-grid{grid-template-columns:1fr 1fr}.nc3-action{grid-template-columns:36px 1fr}.nc3-action i{display:none}.nc3-asset{grid-template-columns:38px 1fr auto}}
 @media (max-width:480px){.top-search{display:none}.body{padding:16px 14px}.bottom-grid{grid-template-columns:1fr}}
+/* ============ EXCHANGE DASHBOARD ============ */
+.ex-dashboard{max-width:1480px;margin:0 auto}
+
+/* HERO */
+.ex-hero{display:flex;justify-content:space-between;align-items:flex-end;padding:4px 2px 26px;flex-wrap:wrap;gap:16px}
+.ex-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:9px;color:#8e9bb0;text-transform:uppercase;font-size:.67rem;font-weight:800;letter-spacing:.13em}
+.ex-live-dot{width:7px;height:7px;border-radius:50%;background:#36e2a3;box-shadow:0 0 12px rgba(54,226,163,.7);animation:exPulse 2s infinite}
+@keyframes exPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.ex-hero h1{font-size:2rem;letter-spacing:-.045em;margin:0;color:#fff}
+.ex-hero h1 span:last-child{background:linear-gradient(100deg,#fff,#aeeeff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ex-hero p{margin-top:7px;color:#718098;font-size:.88rem}
+.ex-hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ex-btn{border:0;border-radius:12px;padding:12px 20px;font-weight:700;cursor:pointer;transition:.2s;display:flex;gap:8px;align-items:center;font-family:inherit;font-size:.9rem;color:#fff}
+.ex-btn-deposit{background:linear-gradient(135deg,#10b981,#34d399);box-shadow:0 10px 24px -8px rgba(16,185,129,.7)}
+.ex-btn-withdraw{background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 10px 24px -8px rgba(245,158,11,.6)}
+.ex-btn-trade{background:linear-gradient(135deg,#8b5cf6,#ec4899);box-shadow:0 10px 24px -8px rgba(139,92,246,.7)}
+.ex-btn:hover{transform:translateY(-2px);filter:brightness(1.1)}
+
+/* MAIN GRID */
+.ex-main-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,440px);gap:18px;margin-bottom:24px}
+@media(max-width:1100px){.ex-main-grid{grid-template-columns:1fr}}
+
+/* BALANCE CARD */
+.ex-balance-card{background:radial-gradient(600px 300px at 100% 0%,rgba(139,92,246,.15),transparent 60%),radial-gradient(400px 300px at 0% 100%,rgba(16,185,129,.1),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:22px;padding:26px;box-shadow:0 24px 60px -30px rgba(0,0,0,.7);position:relative;overflow:hidden}
+.ex-balance-card::before{content:'';position:absolute;width:500px;height:250px;right:-180px;top:-150px;background:radial-gradient(circle,rgba(139,92,246,.18),transparent 67%);pointer-events:none}
+.ex-bal-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.ex-kicker{font-size:.68rem;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#a78bfa;opacity:.9}
+.ex-balance{font-size:2.75rem;font-weight:800;letter-spacing:-.055em;margin-top:6px;background:linear-gradient(110deg,#fff,#e8d5ff 55%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1;text-shadow:0 0 40px rgba(167,139,250,.3)}
+@media(max-width:1100px){.ex-balance{font-size:2.2rem}}
+.ex-balance-sub{color:#718098;font-size:.88rem;margin-top:4px}
+.ex-bal-badge{padding:6px 12px;border-radius:999px;font-size:.7rem;font-weight:800;letter-spacing:.1em;background:rgba(139,92,246,.15);color:#c4b5fd;border:1px solid rgba(139,92,246,.3)}
+
+/* CHART */
+.ex-chart-wrap{margin-top:22px;position:relative;z-index:1}
+.ex-chart-tabs{display:flex;gap:6px;margin-bottom:12px}
+.ex-tab{padding:6px 14px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#7a8a9e;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.2s}
+.ex-tab.on{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.4);color:#c4b5fd}
+.ex-portfolio-chart{height:180px;position:relative}
+.ex-portfolio-chart svg{width:100%;height:100%;display:block;overflow:visible}
+.ex-chart-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:.7rem;color:#5e6b80;font-family:ui-monospace,monospace}
+
+/* BAL STATS */
+.ex-bal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px;position:relative;z-index:1}
+.ex-stat-mini{background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);border-radius:12px;padding:10px 12px}
+.ex-stat-mini span{display:block;font-size:10px;color:#8b8fb0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.ex-stat-mini strong{display:block;font-size:15px;color:#c4b5fd;font-weight:700}
+
+/* COINS CARD */
+.ex-coins-card{background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:22px;padding:22px;box-shadow:0 24px 60px -30px rgba(0,0,0,.7)}
+.ex-coins-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.ex-coins-head h3{font-size:1.15rem;margin:4px 0 0;color:#fff}
+.ex-live-badge{font-size:.68rem;font-weight:800;letter-spacing:.1em;color:#4edca9;background:rgba(78,220,169,.1);border:1px solid rgba(78,220,169,.25);padding:5px 10px;border-radius:999px}
+.ex-coins-list{display:flex;flex-direction:column;gap:8px}
+.ex-coin-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:14px;transition:.2s;cursor:pointer}
+.ex-coin-row:hover{background:rgba(139,92,246,.06);border-color:rgba(139,92,246,.25);transform:translateX(3px)}
+.ex-coin-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:900;color:#fff}
+.ex-coin-name{font-weight:700;font-size:.92rem;color:#fff}
+.ex-coin-symbol{font-size:.72rem;color:#718098;margin-top:2px}
+.ex-coin-price{text-align:right}
+.ex-coin-price strong{display:block;font-size:.92rem;color:#fff;font-family:ui-monospace,monospace}
+.ex-coin-change{font-size:.72rem;font-weight:700;margin-top:3px;display:block}
+.ex-coin-change.up{color:#10b981}
+.ex-coin-change.down{color:#ef4444}
+
+/* ASSETS SECTION */
+.ex-assets-section{margin-bottom:24px}
+.ex-section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+.ex-section-head h2{font-size:1.05rem;letter-spacing:-.025em;margin-top:3px;color:#fff}
+.ex-assets-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.ex-assets-grid{grid-template-columns:1fr}}
+.ex-asset-card{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;padding:20px;background:linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(255,255,255,.075);border-radius:18px;transition:.25s;position:relative;overflow:hidden}
+.ex-asset-card::before{content:'';position:absolute;width:200px;height:200px;right:-80px;top:-80px;opacity:.15;border-radius:50%;filter:blur(40px)}
+.ex-asset-card.btc::before{background:#f7931a}
+.ex-asset-card.eth::before{background:#627eea}
+.ex-asset-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -15px rgba(0,0,0,.6)}
+.ex-asset-icon-big{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;position:relative;z-index:1}
+.ex-asset-card.btc .ex-asset-icon-big{background:linear-gradient(135deg,#f7931a,#ffbd4c)}
+.ex-asset-card.eth .ex-asset-icon-big{background:linear-gradient(135deg,#627eea,#8c6cff)}
+.ex-asset-info{position:relative;z-index:1}
+.ex-asset-label{font-size:.75rem;color:#8b8fb0;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:4px}
+.ex-asset-amount{font-size:1.05rem;font-weight:800;color:#fff;font-family:ui-monospace,monospace}
+.ex-asset-value{font-size:.85rem;color:#a78bfa;margin-top:4px;font-weight:700}
+
+/* IBAN CARD */
+.ex-iban-card{background:radial-gradient(400px 200px at 100% 0%,rgba(139,92,246,.12),transparent 60%),linear-gradient(145deg,rgba(16,23,36,.94),rgba(9,14,23,.94));border:1px solid rgba(139,92,246,.25);border-radius:22px;padding:26px;margin-bottom:24px;position:relative;overflow:hidden}
+.ex-iban-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.ex-iban-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 8px 24px -8px rgba(139,92,246,.8)}
+.ex-iban-head h3{font-size:1.1rem;margin:3px 0 0;color:#fff}
+.ex-iban-pending{text-align:center;padding:28px 16px}
+.ex-iban-spinner{width:32px;height:32px;border:3px solid rgba(139,92,246,.2);border-top-color:#a78bfa;border-radius:50%;margin:0 auto 14px;animation:exIbanSpin 1s linear infinite}
+@keyframes exIbanSpin{to{transform:rotate(360deg)}}
+.ex-iban-pending div:nth-child(2){color:#e7edf5;font-weight:700;font-size:.95rem}
+.ex-iban-details{display:flex;flex-direction:column;gap:10px}
+.ex-iban-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);border-radius:12px}
+.ex-iban-row span{font-size:11px;color:#8b8fb0;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.ex-iban-row b{font-family:ui-monospace,monospace;font-size:13px;color:#c4b5fd;font-weight:700}
+.ex-copy-btn{margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#ec4899);border:0;color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit;transition:.2s}
+.ex-copy-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px -10px rgba(139,92,246,.9)}
+
+/* TX LIST */
+.ex-tx-section{margin-bottom:24px}
+.ex-tx-list{display:flex;flex-direction:column;gap:8px}
+.ex-tx-list .recent-tx-item{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px 16px}
+.ex-tx-list .recent-tx-item:hover{background:rgba(139,92,246,.05);border-color:rgba(139,92,246,.2)}
+.ex-empty{text-align:center;padding:50px 20px;color:#7a8a9e;font-size:.9rem;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.08);border-radius:16px}
 /* ============ ONBOARDING ============ */
 .onboard{position:fixed;inset:0;background:radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),var(--bg);display:none;justify-content:center;align-items:center;z-index:3000;overflow-y:auto;padding:40px 20px}
 .onboard.on{display:flex}
@@ -1407,7 +1512,148 @@ document.addEventListener('DOMContentLoaded', function(){
     </section>
   </div>
 </div>
+<!-- ============ EXCHANGE DASHBOARD ============ -->
+<div id="exchangeDash" class="pg" style="display:none">
+  <div class="ex-dashboard">
 
+    <!-- HERO -->
+    <div class="ex-hero">
+      <div class="ex-hero-left">
+        <div class="ex-eyebrow"><span class="ex-live-dot"></span> Spot Trading · Live</div>
+        <h1><span id="exGreeting">Welcome</span> <span id="exName"></span></h1>
+        <p>Trade crypto with instant settlement</p>
+      </div>
+      <div class="ex-hero-actions">
+        <button class="ex-btn ex-btn-deposit" id="exBtnDeposit"><span>💰</span> Deposit</button>
+        <button class="ex-btn ex-btn-withdraw" id="exBtnWithdraw"><span>💸</span> Withdraw</button>
+        <button class="ex-btn ex-btn-trade" id="exBtnTrade"><span>⚡</span> Trade</button>
+      </div>
+    </div>
+
+    <!-- BALANCE + CHART -->
+    <div class="ex-main-grid">
+
+      <div class="ex-balance-card">
+        <div class="ex-bal-top">
+          <div>
+            <div class="ex-kicker">Portfolio value</div>
+            <div class="ex-balance" id="exBalance">$0.00</div>
+            <div class="ex-balance-sub" id="exBalanceBtc">≈ 0.00000000 BTC</div>
+          </div>
+          <div class="ex-bal-badge">SPOT</div>
+        </div>
+
+        <div class="ex-chart-wrap">
+          <div class="ex-chart-tabs">
+            <button class="ex-tab on" data-range="1">24H</button>
+            <button class="ex-tab" data-range="7">7D</button>
+            <button class="ex-tab" data-range="30">30D</button>
+          </div>
+          <div id="exPortfolioChart" class="ex-portfolio-chart"></div>
+          <div class="ex-chart-labels">
+            <span id="exChartStart">—</span>
+            <span id="exChartEnd">—</span>
+          </div>
+        </div>
+
+        <div class="ex-bal-stats">
+          <div class="ex-stat-mini">
+            <span>24h Change</span>
+            <strong id="exPnl24h">—</strong>
+          </div>
+          <div class="ex-stat-mini">
+            <span>Total Deposits</span>
+            <strong id="exTotalDeposits">$0.00</strong>
+          </div>
+          <div class="ex-stat-mini">
+            <span>Assets</span>
+            <strong id="exAssetsCount">0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-coins-card">
+        <div class="ex-coins-head">
+          <div>
+            <div class="ex-kicker">Markets</div>
+            <h3>Top movers</h3>
+          </div>
+          <span class="ex-live-badge">● LIVE</span>
+        </div>
+        <div id="exCoinsList" class="ex-coins-list">
+          <div style="text-align:center;padding:40px;color:#7a8a9e">Loading markets...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ASSETS -->
+    <div class="ex-assets-section">
+      <div class="ex-section-head">
+        <div>
+          <div class="ex-kicker">Your holdings</div>
+          <h2>Assets</h2>
+        </div>
+      </div>
+      <div class="ex-assets-grid">
+        <div class="ex-asset-card btc">
+          <div class="ex-asset-icon-big">₿</div>
+          <div class="ex-asset-info">
+            <div class="ex-asset-label">Bitcoin</div>
+            <div class="ex-asset-amount" id="exBtcAmt">0.00000000 BTC</div>
+            <div class="ex-asset-value" id="exBtcVal">$0.00</div>
+          </div>
+        </div>
+        <div class="ex-asset-card eth">
+          <div class="ex-asset-icon-big">Ξ</div>
+          <div class="ex-asset-info">
+            <div class="ex-asset-label">Ethereum</div>
+            <div class="ex-asset-amount" id="exEthAmt">0.00000000 ETH</div>
+            <div class="ex-asset-value" id="exEthVal">$0.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IBAN -->
+    <div class="ex-iban-card">
+      <div class="ex-iban-head">
+        <div class="ex-iban-icon">🏦</div>
+        <div>
+          <div class="ex-kicker">Bank details</div>
+          <h3>Deposit / Withdraw via IBAN</h3>
+        </div>
+      </div>
+      <div id="exIbanPending" class="ex-iban-pending">
+        <div class="ex-iban-spinner"></div>
+        <div>Your IBAN is being generated...</div>
+        <div style="font-size:11px;color:#7a8a9e;margin-top:6px">Our team is issuing it, this usually takes a few minutes</div>
+      </div>
+      <div id="exIbanReady" class="ex-iban-details" style="display:none">
+        <div class="ex-iban-row"><span>IBAN</span><b id="exMyIban">—</b></div>
+        <div class="ex-iban-row"><span>SWIFT / BIC</span><b id="exMySwift">—</b></div>
+        <div class="ex-iban-row"><span>Bank</span><b id="exMyBank">—</b></div>
+        <div class="ex-iban-row"><span>Country</span><b id="exMyCountry">—</b></div>
+        <button class="ex-copy-btn" id="exCopyIban">📋 Copy IBAN</button>
+      </div>
+    </div>
+
+    <!-- RECENT TX -->
+    <div class="ex-tx-section">
+      <div class="ex-section-head">
+        <div>
+          <div class="ex-kicker">Activity</div>
+          <h2>Recent transactions</h2>
+        </div>
+      </div>
+      <div id="exRecentTx" class="ex-tx-list">
+        <div class="ex-empty">No transactions yet</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+  
 <!-- ============ MY CARDS ============ -->
 <div id="cards" class="pg">
   <div class="sh"><h2>My Payment Cards</h2><p>Manage your NordicCrypto card</p></div>
