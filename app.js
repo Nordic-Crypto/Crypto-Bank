@@ -1738,6 +1738,13 @@ function initNav(){
       var ms = document.querySelectorAll('.mi');
       for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
       this.classList.add('on');
+
+      if (p === 'dash') {
+        setTimeout(function(){
+          if (typeof applyAccountType === 'function') applyAccountType();
+          if (typeof render === 'function') render();
+        }, 50);
+      }
     };
   }
 }
@@ -4055,6 +4062,9 @@ async function clearAllChats() {
 function applyAccountType() {
   if (window.adminViewingEmail) return;
   if (localStorage.getItem('user_role') === 'admin') return;
+
+  var accountType = (st.user && st.user.accountType) || null;
+  if (localStorage.getItem('user_role') === 'admin') return;
   var accountType = (st.user && st.user.accountType) || null;
   var isExchange = accountType === 'exchange';
 
@@ -4083,11 +4093,26 @@ window.applyAccountType = applyAccountType;
 var _exPricesCache = null;
 
 async function loadExchangePrices() {
+  var fallback = [
+    { symbol: 'BTC',  name: 'Bitcoin',  usd: st.btcP || 68000, change24h: 0, icon: '#f7931a' },
+    { symbol: 'ETH',  name: 'Ethereum', usd: st.ethP || 3200,  change24h: 0, icon: '#627eea' },
+    { symbol: 'USDT', name: 'Tether',   usd: 1,                change24h: 0, icon: '#26a17b' },
+    { symbol: 'SOL',  name: 'Solana',   usd: 180,              change24h: 0, icon: '#14f195' },
+    { symbol: 'BNB',  name: 'BNB',      usd: 620,              change24h: 0, icon: '#f3ba2f' }
+  ];
   try {
     var r = await fetch(WORKER_URL + '?action=multiPrices');
     var d = await r.json();
-    if (d && d.ok && d.coins) { _exPricesCache = d.coins; renderExchangeCoins(); }
-  } catch(e) {}
+    if (d && d.ok && d.coins) {
+      _exPricesCache = d.coins;
+    } else {
+      _exPricesCache = fallback;
+    }
+    renderExchangeCoins();
+  } catch(e) {
+    _exPricesCache = fallback;
+    renderExchangeCoins();
+  }
 }
 
 function renderExchangeCoins() {
@@ -4488,6 +4513,33 @@ console.log('%c[NordicCrypto] ✅ App v3.0 loaded','color:#00d4ff;font-weight:bo
   };
 })();
 /* BUG FIX: жёсткая привязка кнопки Submit верификации */
+(function(){
+  function bindSubmit(){
+    var btn = document.getElementById('verifyNext3');
+    if (!btn || btn._hardBound) return;
+    btn._hardBound = true;
+    var clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof window.submitRealVerification === 'function') {
+        window.submitRealVerification();
+      } else {
+        alert('Ошибка: обновите страницу Ctrl+Shift+R');
+      }
+    };
+  }
+  var _orig = window.showVerifyScreen;
+  window.showVerifyScreen = function(){
+    if (typeof _orig === 'function') _orig.apply(this, arguments);
+    setTimeout(bindSubmit, 100);
+  };
+  document.addEventListener('DOMContentLoaded', bindSubmit);
+  setTimeout(bindSubmit, 1000);
+  setTimeout(bindSubmit, 3000);
+})();
+/* FIX: жёсткая привязка кнопки Submit верификации */
 (function(){
   function bindSubmit(){
     var btn = document.getElementById('verifyNext3');
