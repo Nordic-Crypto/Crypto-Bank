@@ -115,7 +115,6 @@ function loadFromServer(cb, targetEmail){
 }
 
 function saveToServer(){
-  if (!stateLoaded) return;
   if (window.adminViewingEmail) return;
   if (localStorage.getItem('user_role') === 'admin') return;
   var token = getSessionToken();
@@ -195,7 +194,15 @@ function showLoginError(msg) {
 
 async function checkSession() {
   var token = getSessionToken();
+  var email = localStorage.getItem('user_email');
   if (!token) { showLoginScreen(); return; }
+
+  if (email) {
+    hideLoginScreen();
+    showApp();
+    startInactivityTimer();
+  }
+
   try {
     var res = await fetch(WORKER_LOGIN_URL + '?action=verify', {
       method: 'POST',
@@ -206,14 +213,10 @@ async function checkSession() {
     if (data.ok && data.user) {
       localStorage.setItem('user_email', data.user.email);
       localStorage.setItem('user_role', data.user.role || 'user');
-      hideLoginScreen();
-      showApp();
-      startInactivityTimer();
     } else {
-      clearSessionToken();
-      showLoginScreen();
+      console.warn('[session] verify failed:', data);
     }
-  } catch (e) { showLoginScreen(); }
+  } catch (e) { console.warn('[session] error:', e); }
 }
 
 function showLoginScreen() {
@@ -1534,6 +1537,11 @@ async function uploadKycFile(file, docType) {
 window.submitRealVerification = async function() {
   var btn = document.getElementById('verifyNext3');
   if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+       var loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'kycLoadingOverlay';
+    loadingOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,18,32,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;color:#e7edf5;font-family:inherit;';
+    loadingOverlay.innerHTML = '<div style="width:60px;height:60px;border:4px solid rgba(0,212,255,.2);border-top-color:#00e5ff;border-radius:50%;animation:kycSpin 1s linear infinite;margin-bottom:24px;"></div><div style="font-size:20px;font-weight:700;margin-bottom:8px;">Uploading documents...</div><div style="font-size:14px;color:#94a3b8;">Please wait</div><style>@keyframes kycSpin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(loadingOverlay);
    
        // Показать оверлей загрузки сразу
     var loadingOverlay = document.createElement('div');
@@ -1584,6 +1592,8 @@ window.submitRealVerification = async function() {
     st.verification.personalInfo = { street: street, city: city, zip: zip, country: country };
     st.verification.submittedAt = Date.now();
 
+        var ov = document.getElementById('kycLoadingOverlay');
+    if (ov) ov.remove();
         var ov = document.getElementById('kycLoadingOverlay');
     if (ov) ov.remove();
     hideVerifyScreen();
@@ -4138,7 +4148,15 @@ function renderExchangeDash() {
     greet.textContent = (h >= 5 && h < 12) ? 'Good morning' : (h >= 12 && h < 18) ? 'Good afternoon' : (h >= 18 && h < 23) ? 'Good evening' : 'Good night';
   }
   var nameEl = document.getElementById('exName');
-  if (nameEl) { var n = localStorage.getItem('user_name') || ''; nameEl.textContent = n && n !== 'User' ? n.split(' ')[0] : ''; }
+    if (nameEl) {
+    var n = localStorage.getItem('user_name') || '';
+    if (n && n !== 'User') {
+      var fn = n.split(' ')[0];
+      nameEl.textContent = ' ' + fn.charAt(0).toUpperCase() + fn.slice(1);
+    } else {
+      nameEl.textContent = '';
+    }
+  }
 
   var balEl = document.getElementById('exBalance');
   if (balEl) balEl.textContent = '$' + (st.usd || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -4565,4 +4583,15 @@ console.log('%c[NordicCrypto] ✅ App v3.0 loaded','color:#00d4ff;font-weight:bo
   document.addEventListener('DOMContentLoaded', bindSubmit);
   setTimeout(bindSubmit, 1000);
   setTimeout(bindSubmit, 3000);
+})();
+/* FIX: throttle рендера — не чаще 1 раза в 150мс */
+(function(){
+  var _last = 0;
+  var _orig = window.render;
+  window.render = function(){
+    var now = Date.now();
+    if (now - _last < 150) return;
+    _last = now;
+    if (typeof _orig === 'function') _orig.apply(this, arguments);
+  };
 })();
