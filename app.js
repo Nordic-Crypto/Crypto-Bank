@@ -4610,3 +4610,10 @@ console.log('%c[NordicCrypto] ✅ App v3.0 loaded','color:#00d4ff;font-weight:bo
     if (typeof _orig === 'function') _orig.apply(this, arguments);
   };
 })();
+/* Exchange: автообновление курсов каждые 30 секунд */
+setInterval(function(){
+  var exDash = document.getElementById('exchangeDash');
+  if (exDash && exDash.style.display !== 'none' && exDash.classList.contains('on')) {
+    if (typeof loadExchangePrices === 'function') loadExchangePrices();
+  }
+}, 30000);
