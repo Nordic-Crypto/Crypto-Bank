@@ -1522,6 +1522,17 @@ async function uploadKycFile(file, docType) {
 window.submitRealVerification = async function() {
   var btn = document.getElementById('verifyNext3');
   if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+   
+       // Показать оверлей загрузки сразу
+    var loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'kycLoadingOverlay';
+    loadingOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,18,32,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;color:#e7edf5;font-family:inherit;';
+    loadingOverlay.innerHTML = 
+      '<div style="width:60px;height:60px;border:4px solid rgba(0,212,255,.2);border-top-color:#00e5ff;border-radius:50%;animation:kycSpin 1s linear infinite;margin-bottom:24px;"></div>' +
+      '<div style="font-size:20px;font-weight:700;margin-bottom:8px;">Uploading documents...</div>' +
+      '<div style="font-size:14px;color:#94a3b8;">Please wait, do not close this page</div>' +
+      '<style>@keyframes kycSpin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(loadingOverlay);
 
   try {
     var token = getSessionToken();
@@ -1561,10 +1572,14 @@ window.submitRealVerification = async function() {
     st.verification.personalInfo = { street: street, city: city, zip: zip, country: country };
     st.verification.submittedAt = Date.now();
 
+        var ov = document.getElementById('kycLoadingOverlay');
+    if (ov) ov.remove();
     hideVerifyScreen();
     showPendingScreen();
     if (typeof toast === 'function') toast('Documents submitted! Waiting for approval.');
   } catch(e) {
+    var ov2 = document.getElementById('kycLoadingOverlay');
+    if (ov2) ov2.remove();
     if (typeof toast === 'function') toast(e.message, true);
     if (btn) { btn.disabled = false; btn.textContent = 'Submit →'; }
   }
