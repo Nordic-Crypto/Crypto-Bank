@@ -2033,3 +2033,81 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
+<script>
+/* ============ NORDIC HARD-FIX: Exchange stays Exchange ============ */
+(function(){
+  'use strict';
+
+  function isExchangeAccount(){
+    try {
+      var role = localStorage.getItem('user_role');
+      if (role === 'admin') return false;
+      if (window.adminViewingEmail) return false;
+      var st = window.st || {};
+      var user = st.user || {};
+      return user.accountType === 'exchange';
+    } catch(e){ return false; }
+  }
+
+  function enforceExchange(){
+    // Не трогаем если мы на странице логина/онбординга/верификации/админки
+    var login = document.getElementById('loginScreen');
+    if (login && !login.classList.contains('hidden')) return;
+    var onboard = document.getElementById('onboard');
+    if (onboard && onboard.classList.contains('on')) return;
+    var adminPanel = document.getElementById('adminPanel');
+    if (adminPanel && adminPanel.classList.contains('on')) return;
+
+    if (!isExchangeAccount()) return;
+
+    var dash = document.getElementById('dash');
+    var exDash = document.getElementById('exchangeDash');
+
+    if (!exDash) return;
+
+    // Прячем banking-дашборд
+    if (dash) {
+      dash.classList.remove('on');
+      dash.style.display = 'none';
+    }
+
+    // Показываем exchanger
+    if (exDash.classList.contains('on') === false || exDash.style.display === 'none') {
+      // Скрываем все pg, потом показываем только exchangeDash
+      document.querySelectorAll('.pg').forEach(function(p){
+        if (p.id !== 'exchangeDash') {
+          p.classList.remove('on');
+          if (p.id === 'dash') p.style.display = 'none';
+        }
+      });
+      exDash.style.display = '';
+      exDash.classList.add('on');
+      if (typeof window.renderExchangeDash === 'function') {
+        try { window.renderExchangeDash(); } catch(e){}
+      }
+    }
+
+    // Скрываем карточные элементы из сайдбара (My Cards, Order New Card)
+    var cardsMenu = document.querySelector('.mi[data-p="cards"]');
+    var orderMenu = document.querySelector('.mi[data-p="order"]');
+    if (cardsMenu) cardsMenu.style.display = 'none';
+    if (orderMenu) orderMenu.style.display = 'none';
+  }
+
+  // Запуск: каждые 300мс
+  setInterval(enforceExchange, 300);
+
+  // Плюс при клике на любую навигацию
+  document.addEventListener('click', function(e){
+    setTimeout(enforceExchange, 50);
+    setTimeout(enforceExchange, 300);
+  }, true);
+
+  // Плюс после любого AJAX-обновления баланса
+  setTimeout(enforceExchange, 500);
+  setTimeout(enforceExchange, 1500);
+  setTimeout(enforceExchange, 3000);
+
+  console.log('%c[NordicCrypto] 🔒 Exchange hard-fix active', 'color:#10b981;font-weight:bold');
+})();
+</script>
