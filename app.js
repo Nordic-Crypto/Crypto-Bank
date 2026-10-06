@@ -7209,3 +7209,481 @@ async function scanAllDeposits() {
   console.log('%c[final-fix] ✅ Auto-deposit + English chat + notifications',
     'color:#00e08a;font-weight:bold');
 })();
+/* ============================================================
+   KYC VERIFICATION FLOW — реальная загрузка + pending/rejected
+   ============================================================ */
+
+/* ---------- Чтение файла в base64 ---------- */
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){ resolve(reader.result); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- Загрузка одного дока в R2 ---------- */
+async function uploadKycFile(file, docType) {
+  var token = getSessionToken();
+  if (!token) throw new Error('Not authenticated');
+  var base64 = await fileToBase64(file);
+  var r = await fetch(WORKER_URL + '?action=uploadKycDoc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      token: token,
+      docType: docType,
+      imageBase64: base64,
+      fileName: file.name
+    })
+  });
+  var data = await r.json();
+  if (!data.ok) throw new Error(data.error || 'Upload failed');
+  return data.key;
+}
+
+/* ---------- Отправка верификации ---------- */
+window.submitRealVerification = async function() {
+  var btn = document.getElementById('verifyNext3');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+
+  try {
+    var token = getSessionToken();
+    if (!token) throw new Error('Not authenticated');
+
+    var docFile    = document.getElementById('docFile').files[0];
+    var selfieFile = document.getElementById('selfieFile').files[0];
+    var street     = document.getElementById('vStreet').value.trim();
+    var city       = document.getElementById('vCity').value.trim();
+    var zip        = document.getElementById('vZip').value.trim();
+    var country    = document.getElementById('vCountry').value;
+
+    if (!docFile)    throw new Error('Please upload document');
+    if (!selfieFile) throw new Error('Please upload selfie');
+    if (!street || !city || !zip) throw new Error('Please fill address');
+
+    var docType = verifyData.docType || 'Passport';
+    var docKey    = await uploadKycFile(docFile, 'passport');
+    var selfieKey = await uploadKycFile(selfieFile, 'selfie');
+
+    var r = await fetch(WORKER_URL + '?action=submitVerification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: token,
+        docType: docType,
+        docKeys: [docKey, selfieKey],
+        personalInfo: { street: street, city: city, zip: zip, country: country }
+      })
+    });
+    var data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Submit failed');
+
+    hideVerifyScreen();
+    showPendingScreen();
+    if (typeof toast === 'function') toast('Documents submitted! Waiting for approval.');
+  } catch(e) {
+    if (typeof toast === 'function') toast(e.message, true);
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit →'; }
+  }
+};
+
+/* ---------- Показать экран "pending" ---------- */
+function showPendingScreen() {
+  var s = document.getElementById('pendingScreen');
+  if (s) s.classList.add('on');
+  var r = document.getElementById('rejectedScreen');
+  if (r) r.classList.remove('on');
+  var v = document.getElementById('verifyScreen');
+  if (v) v.classList.remove('on');
+
+  var bar = document.getElementById('pendingBar');
+  if (bar) {
+    var p = 15;
+    setInterval(function(){
+      p = Math.min(95, p + Math.random() * 8);
+      bar.style.width = p + '%';
+    }, 4000);
+  }
+
+  var btnLogout = document.getElementById('btnLogoutPending');
+  if (btnLogout && !btnLogout._bound) {
+    btnLogout._bound = true;
+    btnLogout.onclick = function(){ doLogout(); };
+  }
+}
+
+/* ---------- Показать экран "rejected" ---------- */
+function showRejectedScreen(reason) {
+  var s = document.getElementById('rejectedScreen');
+  if (s) s.classList.add('on');
+  var p = document.getElementById('pendingScreen');
+  if (p) p.classList.remove('on');
+  var v = document.getElementById('verifyScreen');
+  if (v) v.classList.remove('on');
+
+  var rEl = document.getElementById('rejectedReason');
+  if (rEl) rEl.textContent = reason || 'Documents not accepted';
+
+  var btnRetry = document.getElementById('btnRetryVerification');
+  if (btnRetry && !btnRetry._bound) {
+    btnRetry._bound = true;
+    btnRetry.onclick = function(){
+      document.getElementById('rejectedScreen').classList.remove('on');
+      showVerifyScreen();
+      showVerifyStep(1);
+    };
+  }
+  var btnLogout = document.getElementById('btnLogoutRejected');
+  if (btnLogout && !btnLogout._bound) {
+    btnLogout._bound = true;
+    btnLogout.onclick = function(){ doLogout(); };
+  }
+}
+
+/* ---------- Проверка статуса верификации ---------- */
+async function checkVerificationStatus() {
+  var token = getSessionToken();
+  if (!token) return null;
+  try {
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await r.json();
+    if (!data || data.error) return null;
+    return data.verification || null;
+  } catch(e) { return null; }
+}
+
+/* ---------- Главная проверка при загрузке ---------- */
+async function gateByVerification() {
+  if (localStorage.getItem('user_role') === 'admin') return false;
+  if (window.adminViewingEmail) return false;
+
+  var token = getSessionToken();
+  if (!token) return false;
+
+  var v = await checkVerificationStatus();
+  if (!v) {
+    // нет верификации — показать экран верификации
+    showVerifyScreen();
+    showVerifyStep(1);
+    return true;
+  }
+  if (v.status === 'pending') {
+    showPendingScreen();
+    return true;
+  }
+  if (v.status === 'rejected') {
+    showRejectedScreen(v.reason);
+    return true;
+  }
+  if (v.status === 'approved') {
+    // ок — пускаем в интерфейс
+    var p = document.getElementById('pendingScreen');
+    if (p) p.classList.remove('on');
+    var rr = document.getElementById('rejectedScreen');
+    if (rr) rr.classList.remove('on');
+    var vs = document.getElementById('verifyScreen');
+    if (vs) vs.classList.remove('on');
+    return false;
+  }
+  return false;
+}
+window.gateByVerification = gateByVerification;
+
+/* ---------- Периодическая проверка статуса (пока pending) ---------- */
+setInterval(async function(){
+  var p = document.getElementById('pendingScreen');
+  if (!p || !p.classList.contains('on')) return;
+  var v = await checkVerificationStatus();
+  if (!v) return;
+  if (v.status === 'approved') {
+    if (typeof toast === 'function') toast('✅ Verification approved!');
+    if (typeof playChime === 'function') playChime();
+    p.classList.remove('on');
+    // обновим state и пустим в интерфейс
+    if (typeof loadFromServer === 'function') {
+      loadFromServer(function(){
+        if (typeof render === 'function') render();
+      });
+    }
+  } else if (v.status === 'rejected') {
+    showRejectedScreen(v.reason);
+  }
+}, 8000);
+
+/* ---------- Навешиваем submit на кнопку шага 3 ---------- */
+(function(){
+  var tryBind = function(){
+    var btn = document.getElementById('verifyNext3');
+    if (btn && !btn._realBound) {
+      btn._realBound = true;
+      btn.onclick = function(e){
+        e.preventDefault();
+        window.submitRealVerification();
+      };
+    }
+  };
+  document.addEventListener('DOMContentLoaded', tryBind);
+  setTimeout(tryBind, 500);
+  setTimeout(tryBind, 2000);
+})();
+
+/* ============================================================
+   ADMIN: VERIFICATIONS TAB
+   ============================================================ */
+
+window.loadAdminVerifications = async function() {
+  var box = document.getElementById('adminVerifsList');
+  if (!box) return;
+  box.innerHTML = '<div class="admin-empty">Loading...</div>';
+
+  try {
+    var token = getSessionToken();
+    if (!token) { box.innerHTML = '<div class="admin-empty">No token</div>'; return; }
+
+    var r = await fetch(WORKER_URL + '?action=listVerifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await r.json();
+    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>'; return; }
+
+    var list = data.verifications || [];
+    var pendingCount = list.filter(function(v){ return v.status === 'pending'; }).length;
+    var navBadge = document.getElementById('navVerifCount');
+    if (navBadge) {
+      if (pendingCount > 0) { navBadge.textContent = pendingCount; navBadge.style.display = 'inline-block'; }
+      else { navBadge.style.display = 'none'; }
+    }
+
+    if (!list.length) {
+      box.innerHTML = '<div class="admin-empty">No verifications yet</div>';
+      return;
+    }
+
+    var html = '';
+    list.forEach(function(v){
+      var statusColor = v.status === 'approved' ? '#34d399' : v.status === 'rejected' ? '#f87171' : '#fbbf24';
+      var statusLabel = v.status === 'approved' ? '✅ Approved' : v.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
+      var safeEmail = String(v.email).replace(/'/g, "\\'");
+
+      html += '<div class="admin-client-card" style="margin-bottom:14px;">' +
+        '<div class="admin-client-top">' +
+          '<div class="admin-client-avatar">🪪</div>' +
+          '<div class="admin-client-info">' +
+            '<div class="admin-client-name">' + (v.name || v.email) + '</div>' +
+            '<div class="admin-client-email">' + v.email + '</div>' +
+            '<div style="font-size:11px;color:#8b95a5;margin-top:4px">Doc: ' + (v.docType || '—') + ' • Submitted: ' + (v.submittedAt ? new Date(v.submittedAt).toLocaleString('en-GB') : '—') + '</div>' +
+          '</div>' +
+          '<div class="admin-client-badge" style="background:rgba(255,255,255,0.05);color:' + statusColor + '">' + statusLabel + '</div>' +
+        '</div>' +
+        (v.personalInfo && (v.personalInfo.street || v.personalInfo.city) ?
+          '<div style="font-size:12px;color:#8b95a5;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;">' +
+            '📍 ' + [v.personalInfo.street, v.personalInfo.city, v.personalInfo.zip, v.personalInfo.country].filter(Boolean).join(', ') +
+          '</div>' : '') +
+        (v.status === 'rejected' && v.reason ?
+          '<div style="font-size:12px;color:#ff8a8a;margin:8px 0;">Reason: ' + v.reason + '</div>' : '') +
+        '<div class="admin-client-actions" style="margin-top:12px;flex-wrap:wrap;">' +
+          '<button class="btn b2" onclick="viewKycDocs(\'' + safeEmail + '\')">👁 View docs</button>' +
+          (v.status !== 'approved' ?
+            '<button class="btn b1" onclick="approveKyc(\'' + safeEmail + '\')">✅ Approve</button>' : '') +
+          (v.status !== 'rejected' ?
+            '<button class="btn b3" onclick="rejectKyc(\'' + safeEmail + '\')">❌ Reject</button>' : '') +
+        '</div>' +
+      '</div>';
+    });
+    box.innerHTML = html;
+
+  } catch(e) {
+    box.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+  }
+};
+
+/* ---------- Модалка просмотра фото ---------- */
+window.viewKycDocs = async function(email) {
+  var token = getSessionToken();
+  if (!token) return;
+
+  var old = document.getElementById('kycDocsModal'); if (old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'kycDocsModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto;';
+  modal.innerHTML = '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:700px;width:100%;padding:24px;color:#e7edf5;max-height:90vh;overflow-y:auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+      '<div style="font-weight:700;font-size:16px;">🪪 Documents — ' + email + '</div>' +
+      '<button onclick="document.getElementById(\'kycDocsModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
+    '</div>' +
+    '<div id="kycDocsContent" style="text-align:center;color:#8b95a5;">Loading...</div>' +
+  '</div>';
+  document.body.appendChild(modal);
+
+  try {
+    var r = await fetch(WORKER_URL + '?action=listVerifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await r.json();
+    var v = (data.verifications || []).find(function(x){ return x.email === email; });
+    if (!v || !v.docKeys || !v.docKeys.length) {
+      document.getElementById('kycDocsContent').innerHTML = '<div style="padding:40px;">No documents uploaded</div>';
+      return;
+    }
+
+    var imgsHtml = '';
+    for (var i = 0; i < v.docKeys.length; i++) {
+      var kr = await fetch(WORKER_URL + '?action=getKycDoc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, key: v.docKeys[i] })
+      });
+      var kd = await kr.json();
+      if (kd.ok && kd.dataUrl) {
+        var label = v.docKeys[i].indexOf('selfie') !== -1 ? '🤳 Selfie' : '📘 Document';
+        imgsHtml += '<div style="margin-bottom:16px;">' +
+          '<div style="font-size:12px;color:#8b95a5;margin-bottom:6px;">' + label + '</div>' +
+          '<img src="' + kd.dataUrl + '" style="max-width:100%;border-radius:12px;border:1px solid rgba(255,255,255,0.08);cursor:zoom-in;" onclick="window.open(this.src)">' +
+        '</div>';
+      }
+    }
+    document.getElementById('kycDocsContent').innerHTML = imgsHtml || '<div style="padding:40px;">No images</div>';
+  } catch(e) {
+    document.getElementById('kycDocsContent').innerHTML = '<div style="padding:40px;color:#ff8a8a;">Error: ' + e.message + '</div>';
+  }
+};
+
+/* ---------- Approve с выбором типа ---------- */
+window.approveKyc = function(email) {
+  var old = document.getElementById('kycApproveModal'); if (old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'kycApproveModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10001;padding:20px;';
+  modal.innerHTML = '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:420px;width:100%;padding:24px;color:#e7edf5;">' +
+    '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">Approve verification</div>' +
+    '<div style="font-size:12px;color:#8b95a5;margin-bottom:16px;">' + email + '</div>' +
+    '<div style="font-size:12px;color:#8b95a5;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Choose account type</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">' +
+      '<button id="kycTypeBanking" onclick="_kycPickType(\'banking\')" style="padding:18px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#e7edf5;cursor:pointer;text-align:center;font-family:inherit;">' +
+        '<div style="font-size:28px;margin-bottom:6px;">💼</div>' +
+        '<div style="font-weight:700;">Banking</div>' +
+        '<div style="font-size:10px;color:#8b95a5;margin-top:4px;">Card + IBAN + spending</div>' +
+      '</button>' +
+      '<button id="kycTypeExchange" onclick="_kycPickType(\'exchange\')" style="padding:18px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#e7edf5;cursor:pointer;text-align:center;font-family:inherit;">' +
+        '<div style="font-size:28px;margin-bottom:6px;">🪙</div>' +
+        '<div style="font-weight:700;">Exchange</div>' +
+        '<div style="font-size:10px;color:#8b95a5;margin-top:4px;">Crypto only, like Binance</div>' +
+      '</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button id="kycApproveOk" onclick="_kycDoApprove(\'' + email + '\')" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:not-allowed;opacity:0.4;font-family:inherit;">Approve</button>' +
+      '<button onclick="document.getElementById(\'kycApproveModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(modal);
+  window._kycPickedType = null;
+};
+
+window._kycPickType = function(type) {
+  window._kycPickedType = type;
+  var b = document.getElementById('kycTypeBanking');
+  var e = document.getElementById('kycTypeExchange');
+  var ok = document.getElementById('kycApproveOk');
+  [b, e].forEach(function(el){
+    if (el) { el.style.borderColor = 'rgba(255,255,255,0.08)'; el.style.background = 'rgba(255,255,255,0.03)'; }
+  });
+  var picked = type === 'banking' ? b : e;
+  if (picked) { picked.style.borderColor = '#10b981'; picked.style.background = 'rgba(16,185,129,0.1)'; }
+  if (ok) { ok.disabled = false; ok.style.opacity = '1'; ok.style.cursor = 'pointer'; }
+};
+
+window._kycDoApprove = async function(email) {
+  if (!window._kycPickedType) return;
+  var ok = document.getElementById('kycApproveOk');
+  if (ok) { ok.disabled = true; ok.textContent = 'Approving...'; }
+
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=approveVerification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, accountType: window._kycPickedType })
+    });
+    var data = await r.json();
+    if (data.ok) {
+      if (typeof toast === 'function') toast('✅ Approved: ' + email);
+      document.getElementById('kycApproveModal').remove();
+      loadAdminVerifications();
+    } else {
+      alert('Error: ' + (data.error || 'Failed'));
+      if (ok) { ok.disabled = false; ok.textContent = 'Approve'; }
+    }
+  } catch(e) {
+    alert('Connection error: ' + e.message);
+    if (ok) { ok.disabled = false; ok.textContent = 'Approve'; }
+  }
+};
+
+/* ---------- Reject с причиной ---------- */
+window.rejectKyc = function(email) {
+  var reason = prompt('Reason for rejection:\n\n1. Documents unclear\n2. Documents expired\n3. Selfie does not match\n4. Address not confirmed\n5. Other (enter manually)');
+  if (reason === null) return;
+  var map = {
+    '1': 'Documents are unclear. Please upload higher quality photos.',
+    '2': 'Your documents have expired. Please provide valid documents.',
+    '3': 'The selfie does not match the document photo.',
+    '4': 'We could not confirm your address. Please provide proof of address.',
+    '5': null
+  };
+  var finalReason = map[reason];
+  if (finalReason === null || finalReason === undefined) {
+    finalReason = prompt('Enter reason manually:');
+    if (!finalReason) return;
+  }
+  (async function(){
+    try {
+      var token = getSessionToken();
+      var r = await fetch(WORKER_URL + '?action=rejectVerification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email, reason: finalReason })
+      });
+      var data = await r.json();
+      if (data.ok) {
+        if (typeof toast === 'function') toast('❌ Rejected: ' + email, true);
+        loadAdminVerifications();
+      } else {
+        alert('Error: ' + (data.error || 'Failed'));
+      }
+    } catch(e) { alert('Connection error'); }
+  })();
+};
+
+/* ---------- Обновляем showAdminTab чтобы подгружать верификации ---------- */
+(function(){
+  var _orig = window.showAdminTab;
+  window.showAdminTab = function(tab) {
+    if (typeof _orig === 'function') _orig(tab);
+    if (tab === 'verifications' && typeof loadAdminVerifications === 'function') {
+      loadAdminVerifications();
+    }
+  };
+})();
+
+/* ---------- Обновляем gate при showApp ---------- */
+(function(){
+  var _origShowApp = window.showApp;
+  window.showApp = function() {
+    if (typeof _origShowApp === 'function') _origShowApp();
+    setTimeout(function(){
+      if (typeof gateByVerification === 'function') gateByVerification();
+    }, 300);
+  };
+})();
