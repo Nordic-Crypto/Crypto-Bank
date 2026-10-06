@@ -7692,31 +7692,40 @@ window.rejectKyc = function(email) {
    ACCOUNT TYPE: banking vs exchange
    ============================================================ */
 
-/* ---------- Показать/скрыть карту и IBAN в зависимости от типа ---------- */
+/* ---------- Умный applyAccountType: переключает banking ⇄ exchange ---------- */
 function applyAccountType() {
   var accountType = (st.user && st.user.accountType) || null;
   var isExchange = accountType === 'exchange';
-  var isBanking  = accountType === 'banking';
 
-  // Карта — скрываем у exchange
-  var cardWrap = document.querySelector('.nc3-card-wrap');
-  if (cardWrap) {
-    cardWrap.style.display = isExchange ? 'none' : '';
-  }
+  var dash   = document.getElementById('dash');
+  var exDash = document.getElementById('exchangeDash');
 
-  // Карта в "My Cards" — тоже
-  var cardPage = document.getElementById('cards');
-  if (cardPage) {
-    // если exchange — скрываем пункт меню и страницу карт
+  if (isExchange) {
+    if (dash) dash.style.display = 'none';
+    if (exDash) {
+      exDash.style.display = '';
+      if (!exDash.classList.contains('on')) exDash.classList.add('on');
+    }
     var cardsMenu = document.querySelector('.mi[data-p="cards"]');
-    if (cardsMenu) cardsMenu.style.display = isExchange ? 'none' : '';
+    if (cardsMenu) cardsMenu.style.display = 'none';
+    var orderMenu = document.querySelector('.mi[data-p="order"]');
+    if (orderMenu) orderMenu.style.display = 'none';
+
+    renderExchangeDash();
+  } else {
+    if (dash) dash.style.display = '';
+    if (exDash) {
+      exDash.style.display = 'none';
+      exDash.classList.remove('on');
+    }
+    var cardsMenu2 = document.querySelector('.mi[data-p="cards"]');
+    if (cardsMenu2) cardsMenu2.style.display = '';
+    var orderMenu2 = document.querySelector('.mi[data-p="order"]');
+    if (orderMenu2) orderMenu2.style.display = '';
+
+    var cardWrap = document.querySelector('.nc3-card-wrap');
+    if (cardWrap) cardWrap.style.display = '';
   }
-
-  // Кнопка "Order New Card" — скрываем у exchange
-  var orderMenu = document.querySelector('.mi[data-p="order"]');
-  if (orderMenu) orderMenu.style.display = isExchange ? 'none' : '';
-
-  // Кнопки "Freeze/Limits/Settings" карты — внутри card-wrap, скрываются автоматически
 }
 
 window.applyAccountType = applyAccountType;
@@ -7889,3 +7898,295 @@ window.adminSaveIban = async function(email) {
     if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
   }
 };
+/* ============================================================
+   EXCHANGE DASHBOARD — рендер
+   ============================================================ */
+var _exPricesCache = null;
+
+async function loadExchangePrices() {
+  try {
+    var r = await fetch(WORKER_URL + '?action=multiPrices');
+    var d = await r.json();
+    if (d && d.ok && d.coins) {
+      _exPricesCache = d.coins;
+      renderExchangeCoins();
+      renderExchangeAssets();
+    }
+  } catch(e) {}
+}
+
+function renderExchangeCoins() {
+  var box = document.getElementById('exCoinsList');
+  if (!box || !_exPricesCache) return;
+  var html = '';
+  _exPricesCache.forEach(function(c){
+    var up = c.change24h >= 0;
+    var arrow = up ? '▲' : '▼';
+    html += '<div class="ex-coin-row">' +
+      '<div class="ex-coin-icon" style="background:linear-gradient(135deg,' + c.icon + ',rgba(255,255,255,.2))">' + c.symbol.charAt(0) + '</div>' +
+      '<div>' +
+        '<div class="ex-coin-name">' + c.name + '</div>' +
+        '<div class="ex-coin-symbol">' + c.symbol + ' / USD</div>' +
+      '</div>' +
+      '<div class="ex-coin-price">' +
+        '<strong>$' + Number(c.usd).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</strong>' +
+        '<span class="ex-coin-change ' + (up ? 'up' : 'down') + '">' + arrow + ' ' + Math.abs(c.change24h).toFixed(2) + '%</span>' +
+      '</div>' +
+    '</div>';
+  });
+  box.innerHTML = html;
+}
+
+function renderExchangeAssets() {
+  var btcEl = document.getElementById('exBtcAmt');
+  var ethEl = document.getElementById('exEthAmt');
+  var btcVal = document.getElementById('exBtcVal');
+  var ethVal = document.getElementById('exEthVal');
+  if (btcEl) btcEl.textContent = (st.btc || 0).toFixed(8) + ' BTC';
+  if (ethEl) ethEl.textContent = (st.eth || 0).toFixed(8) + ' ETH';
+  if (btcVal) btcVal.textContent = '$' + ((st.btc || 0) * (st.btcP || 0)).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+  if (ethVal) ethVal.textContent = '$' + ((st.eth || 0) * (st.ethP || 0)).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function renderExchangeDash() {
+  // Приветствие
+  var greet = document.getElementById('exGreeting');
+  if (greet) {
+    var h = new Date().getHours();
+    greet.textContent = (h >= 5 && h < 12) ? 'Good morning' :
+                        (h >= 12 && h < 18) ? 'Good afternoon' :
+                        (h >= 18 && h < 23) ? 'Good evening' : 'Good night';
+  }
+  var nameEl = document.getElementById('exName');
+  if (nameEl) {
+    var n = localStorage.getItem('user_name') || '';
+    nameEl.textContent = n && n !== 'User' ? n.split(' ')[0] : '';
+  }
+
+  // Балансы
+  var balEl = document.getElementById('exBalance');
+  if (balEl) balEl.textContent = '$' + (st.usd || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  var balBtc = document.getElementById('exBalanceBtc');
+  if (balBtc && st.btcP) {
+    var btcEquiv = (st.usd || 0) / st.btcP;
+    balBtc.textContent = '≈ ' + btcEquiv.toFixed(8) + ' BTC';
+  }
+
+  // Stats
+  var pnlEl = document.getElementById('exPnl24h');
+  if (pnlEl) {
+    var deposits = (st.txs || []).filter(function(t){ return t.amt > 0; }).reduce(function(s,t){ return s + t.amt; }, 0);
+    var pnl = (st.usd || 0) - deposits;
+    var pct = deposits > 0 ? (pnl / deposits * 100) : 0;
+    var up = pnl >= 0;
+    pnlEl.textContent = (up ? '+' : '') + pct.toFixed(2) + '%';
+    pnlEl.style.color = up ? '#10b981' : '#ef4444';
+  }
+
+  var depEl = document.getElementById('exTotalDeposits');
+  if (depEl) {
+    var totalDep = (st.txs || []).filter(function(t){ return t.amt > 0; }).reduce(function(s,t){ return s + t.amt; }, 0);
+    depEl.textContent = '$' + totalDep.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+
+  var cntEl = document.getElementById('exAssetsCount');
+  if (cntEl) {
+    var cnt = 0;
+    if ((st.btc || 0) > 0) cnt++;
+    if ((st.eth || 0) > 0) cnt++;
+    if ((st.usd || 0) > 0) cnt++;
+    cntEl.textContent = cnt;
+  }
+
+  // IBAN
+  renderExchangeIban();
+
+  // Recent tx
+  renderExchangeTx();
+
+  // Chart
+  renderExchangeChart('1');
+
+  // Prices
+  loadExchangePrices();
+}
+
+function renderExchangeIban() {
+  var pending = document.getElementById('exIbanPending');
+  var ready   = document.getElementById('exIbanReady');
+  if (!pending || !ready) return;
+
+  var iban = st.user && st.user.iban;
+  if (iban) {
+    pending.style.display = 'none';
+    ready.style.display = 'flex';
+    var el;
+    el = document.getElementById('exMyIban');    if (el) el.textContent = iban.replace(/(.{4})/g, '$1 ').trim();
+    el = document.getElementById('exMySwift');   if (el) el.textContent = st.user.swift || '—';
+    el = document.getElementById('exMyBank');    if (el) el.textContent = st.user.bank || '—';
+    el = document.getElementById('exMyCountry'); if (el) el.textContent = (st.user.country || '—') + ' ' + (st.user.country === 'SE' ? '🇸🇪' : '');
+  } else {
+    pending.style.display = 'block';
+    ready.style.display = 'none';
+  }
+}
+
+function renderExchangeTx() {
+  var box = document.getElementById('exRecentTx');
+  if (!box) return;
+  var txs = (st.txs || []).slice().sort(function(a,b){ return (b.ts||0) - (a.ts||0); }).slice(0, 5);
+  if (!txs.length) {
+    box.innerHTML = '<div class="ex-empty">No transactions yet</div>';
+    return;
+  }
+  var html = '';
+  txs.forEach(function(t){
+    var amt = t.amt || 0;
+    var cls = amt >= 0 ? 'plus' : 'minus';
+    var sym = amt >= 0 ? '+' : '';
+    var badge = '';
+    if (t.status === 'Completed') badge = '<div class="recent-tx-badge ok">✓ Completed</div>';
+    else if (t.status === 'Processing') badge = '<div class="recent-tx-badge proc">⏳ Processing</div>';
+    else if (t.status === 'Under Review') badge = '<div class="recent-tx-badge pend">⏳ Under review</div>';
+    else if (t.status === 'Rejected') badge = '<div class="recent-tx-badge fail">✗ Rejected</div>';
+
+    html += '<div class="recent-tx-item">' +
+      '<div class="recent-tx-icon ' + (amt >= 0 ? 'deposit' : 'withdrawal') + '">' + (amt >= 0 ? '💰' : '💸') + '</div>' +
+      '<div class="recent-tx-info">' +
+        '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
+        '<div class="recent-tx-time">' + (typeof timeAgo === 'function' ? timeAgo(t.ts || Date.now()) : '') + '</div>' +
+        badge +
+      '</div>' +
+      '<div class="recent-tx-amount ' + cls + '">' + sym + '$' + Math.abs(amt).toFixed(2) + '</div>' +
+    '</div>';
+  });
+  box.innerHTML = html;
+}
+
+function renderExchangeChart(range) {
+  var box = document.getElementById('exPortfolioChart');
+  if (!box) return;
+  var labels = document.getElementById('exChartStart');
+  var labelsEnd = document.getElementById('exChartEnd');
+
+  // Строим точки из balanceHistory
+  var hist = st.balanceHistory || [];
+  var points = [];
+
+  if (hist.length > 2) {
+    points = hist.slice(-100).map(function(p){ return { t: p.t, v: p.v }; });
+  } else {
+    // fallback: последние 24 точки
+    for (var i = 0; i < 24; i++) {
+      points.push({ t: Date.now() - (24 - i) * 3600 * 1000, v: st.usd * (0.6 + Math.random() * 0.4) });
+    }
+  }
+
+  if (points.length < 2) {
+    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7a8a9e;font-size:.85rem">No chart data yet</div>';
+    return;
+  }
+
+  var w = 600, h = 180, pad = 12;
+  var minT = points[0].t, maxT = points[points.length-1].t;
+  var minV = Infinity, maxV = -Infinity;
+  points.forEach(function(p){ if (p.v < minV) minV = p.v; if (p.v > maxV) maxV = p.v; });
+  if (maxV === minV) maxV = minV + 1;
+  var padV = (maxV - minV) * 0.15;
+  minV -= padV; maxV += padV;
+
+  var coords = points.map(function(p){
+    var x = pad + ((p.t - minT) / (maxT - minT)) * (w - pad * 2);
+    var y = pad + (1 - (p.v - minV) / (maxV - minV)) * (h - pad * 2);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+
+  var linePath = 'M' + coords.join(' L');
+  var last = coords[coords.length-1].split(',');
+  var fillPath = linePath + ' L' + last[0] + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
+
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+    '<defs>' +
+      '<linearGradient id="exGrad" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/>' +
+        '<stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="exLine" x1="0" y1="0" x2="1" y2="0">' +
+        '<stop offset="0%" stop-color="#8b5cf6"/>' +
+        '<stop offset="100%" stop-color="#ec4899"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    '<path d="' + fillPath + '" fill="url(#exGrad)"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="url(#exLine)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="5" fill="#ec4899"><animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/></circle>' +
+  '</svg>';
+  box.innerHTML = svg;
+
+  if (labels) labels.textContent = new Date(minT).toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+  if (labelsEnd) labelsEnd.textContent = new Date(maxT).toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+}
+
+/* ---------- Табы графика ---------- */
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.ex-tab').forEach(function(tab){
+    tab.onclick = function(){
+      document.querySelectorAll('.ex-tab').forEach(function(t){ t.classList.remove('on'); });
+      this.classList.add('on');
+      renderExchangeChart(this.getAttribute('data-range'));
+    };
+  });
+
+  var btnCopyIban = document.getElementById('exCopyIban');
+  if (btnCopyIban) {
+    btnCopyIban.onclick = function(){
+      if (st.user && st.user.iban) {
+        navigator.clipboard.writeText(st.user.iban).then(function(){
+          if (typeof toast === 'function') toast('IBAN copied');
+        });
+      } else {
+        if (typeof toast === 'function') toast('IBAN not ready yet', true);
+      }
+    };
+  }
+
+  // Кнопки Deposit/Withdraw/Trade
+  var btnDep = document.getElementById('exBtnDeposit');
+  if (btnDep) btnDep.onclick = function(){
+    var b = document.getElementById('btnAdd');
+    if (b) b.click();
+    else if (typeof openModal === 'function') openModal('add');
+  };
+  var btnWd = document.getElementById('exBtnWithdraw');
+  if (btnWd) btnWd.onclick = function(){
+    if (typeof openWithdraw === 'function') openWithdraw();
+  };
+  var btnTrade = document.getElementById('exBtnTrade');
+  if (btnTrade) btnTrade.onclick = function(){
+    if (typeof toast === 'function') toast('Trading terminal: coming soon');
+  };
+});
+
+/* ---------- Обновление цен каждые 60 сек ---------- */
+setInterval(function(){
+  var exDash = document.getElementById('exchangeDash');
+  if (exDash && exDash.style.display !== 'none' && exDash.classList.contains('on')) {
+    loadExchangePrices();
+  }
+}, 60000);
+
+/* ---------- Патчим render() чтобы Exchange обновлялся ---------- */
+(function(){
+  var _origRender = window.render;
+  window.render = function() {
+    if (typeof _origRender === 'function') _origRender.apply(this, arguments);
+    try {
+      var accountType = (st.user && st.user.accountType) || null;
+      if (accountType === 'exchange') {
+        renderExchangeDash();
+      }
+    } catch(e) { console.warn('[exchange render]', e); }
+  };
+})();
+
+console.log('%c[exchange-dash] ✅ Exchange dashboard loaded','color:#a78bfa;font-weight:bold;font-size:13px');
