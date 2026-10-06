@@ -8190,3 +8190,211 @@ setInterval(function(){
 })();
 
 console.log('%c[exchange-dash] ✅ Exchange dashboard loaded','color:#a78bfa;font-weight:bold;font-size:13px');
+/* ============================================================
+   ⚠️ FINAL OVERRIDE — жёстко отключает старую имитацию верификации
+   и подключает новую реальную систему. ВСТАВЛЯТЬ В КОНЕЦ app.js
+   ============================================================ */
+(function(){
+  'use strict';
+  console.log('[FINAL-OVERRIDE] запуск...');
+
+  /* ---------- 1. Отключаем старую startVerification ---------- */
+  window.startVerification = function() {
+    console.log('[FINAL-OVERRIDE] старая startVerification ЗАБЛОКИРОВАНА');
+    // Вместо старой имитации — вызываем реальную отправку
+    if (typeof window.submitRealVerification === 'function') {
+      window.submitRealVerification();
+    }
+  };
+
+  /* ---------- 2. Намертво перепривязываем кнопку verifyNext3 ---------- */
+  function rebindSubmit() {
+    var btn = document.getElementById('verifyNext3');
+    if (!btn) return;
+    // Полностью клонируем кнопку чтобы снять ВСЕ старые обработчики
+    var fresh = btn.cloneNode(true);
+    btn.parentNode.replaceChild(fresh, btn);
+    fresh.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[FINAL-OVERRIDE] Submit нажата → реальная верификация');
+      if (typeof window.submitRealVerification === 'function') {
+        window.submitRealVerification();
+      } else {
+        alert('submitRealVerification not found');
+      }
+    };
+    console.log('[FINAL-OVERRIDE] ✓ Кнопка verifyNext3 перепривязана');
+  }
+
+  /* ---------- 3. Жёсткий gate: проверка верификации при входе ---------- */
+  window._strictGate = async function() {
+    if (localStorage.getItem('user_role') === 'admin') return false;
+    if (window.adminViewingEmail) return false;
+
+    var token = getSessionToken();
+    if (!token) return false;
+
+    try {
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+      var data = await r.json();
+      if (!data || data.error) return false;
+
+      var v = data.verification || null;
+      var side = document.getElementById('sideBar');
+      var main = document.getElementById('mainApp');
+
+      // ❌ Нет верификации — показать верификацию
+      if (!v) {
+        console.log('[GATE] нет верификации → показать экран верификации');
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        var onb = document.getElementById('onboard'); if (onb) onb.classList.remove('on');
+        var vScreen = document.getElementById('verifyScreen');
+        if (vScreen) vScreen.classList.add('on');
+        if (typeof showVerifyStep === 'function') showVerifyStep(1);
+        return true;
+      }
+
+      // ⏳ Pending
+      if (v.status === 'pending') {
+        console.log('[GATE] pending → показать wait screen');
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        var p = document.getElementById('pendingScreen');
+        if (p) p.classList.add('on');
+        var vS = document.getElementById('verifyScreen'); if (vS) vS.classList.remove('on');
+        var onb2 = document.getElementById('onboard'); if (onb2) onb2.classList.remove('on');
+        return true;
+      }
+
+      // ❌ Rejected
+      if (v.status === 'rejected') {
+        console.log('[GATE] rejected → показать rejected screen');
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        var rS = document.getElementById('rejectedScreen');
+        if (rS) rS.classList.add('on');
+        var rEl = document.getElementById('rejectedReason');
+        if (rEl) rEl.textContent = v.reason || 'Documents not accepted';
+        var vS2 = document.getElementById('verifyScreen'); if (vS2) vS2.classList.remove('on');
+        var onb3 = document.getElementById('onboard'); if (onb3) onb3.classList.remove('on');
+        return true;
+      }
+
+      // ✅ Approved — пускаем
+      if (v.status === 'approved') {
+        console.log('[GATE] approved → пускаем в интерфейс');
+        // скрываем все гейт-экраны
+        ['pendingScreen','rejectedScreen','verifyScreen'].forEach(function(id){
+          var el = document.getElementById(id);
+          if (el) el.classList.remove('on');
+        });
+        // НЕ трогаем onboarding здесь — он отдельно
+        return false;
+      }
+
+      return false;
+    } catch(e) {
+      console.warn('[GATE] error', e);
+      return false;
+    }
+  };
+
+  /* ---------- 4. Патчим showApp: после него ставим строгий gate ---------- */
+  var _origShowApp = window.showApp;
+  window.showApp = function() {
+    if (typeof _origShowApp === 'function') _origShowApp.apply(this, arguments);
+    setTimeout(function(){
+      window._strictGate();
+    }, 500);
+    setTimeout(function(){
+      window._strictGate();
+    }, 2000);
+  };
+
+  /* ---------- 5. Обновляем applyAccountType: banking ⇄ exchange ---------- */
+  window.applyAccountType = function() {
+    var accountType = (st.user && st.user.accountType) || null;
+    var isExchange = accountType === 'exchange';
+
+    var dash   = document.getElementById('dash');
+    var exDash = document.getElementById('exchangeDash');
+
+    if (isExchange) {
+      if (dash) dash.style.display = 'none';
+      if (exDash) {
+        exDash.style.display = '';
+        if (!exDash.classList.contains('on')) exDash.classList.add('on');
+      }
+      var cm = document.querySelector('.mi[data-p="cards"]'); if (cm) cm.style.display = 'none';
+      var om = document.querySelector('.mi[data-p="order"]'); if (om) om.style.display = 'none';
+      if (typeof renderExchangeDash === 'function') renderExchangeDash();
+    } else {
+      if (dash) dash.style.display = '';
+      if (exDash) { exDash.style.display = 'none'; exDash.classList.remove('on'); }
+      var cm2 = document.querySelector('.mi[data-p="cards"]'); if (cm2) cm2.style.display = '';
+      var om2 = document.querySelector('.mi[data-p="order"]'); if (om2) om2.style.display = '';
+      var cw = document.querySelector('.nc3-card-wrap'); if (cw) cw.style.display = '';
+    }
+  };
+
+  /* ---------- 6. Рендер Exchange-дашборда ---------- */
+  window.renderExchangeDash = function() {
+    var greet = document.getElementById('exGreeting');
+    if (greet) {
+      var h = new Date().getHours();
+      greet.textContent = (h >= 5 && h < 12) ? 'Good morning' :
+                          (h >= 12 && h < 18) ? 'Good afternoon' :
+                          (h >= 18 && h < 23) ? 'Good evening' : 'Good night';
+    }
+    var nameEl = document.getElementById('exName');
+    if (nameEl) {
+      var n = localStorage.getItem('user_name') || '';
+      nameEl.textContent = n && n !== 'User' ? n.split(' ')[0] : '';
+    }
+
+    var balEl = document.getElementById('exBalance');
+    if (balEl) balEl.textContent = '$' + (st.usd || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    var balBtc = document.getElementById('exBalanceBtc');
+    if (balBtc && st.btcP) balBtc.textContent = '≈ ' + ((st.usd || 0) / st.btcP).toFixed(8) + ' BTC';
+
+    var pnlEl = document.getElementById('exPnl24h');
+    if (pnlEl) {
+      var deposits = (st.txs || []).filter(function(t){ return t.amt > 0; }).reduce(function(s,t){ return s + t.amt; }, 0);
+      var pnl = (st.usd || 0) - deposits;
+      var pct = deposits > 0 ? (pnl / deposits * 100) : 0;
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
+    }
+
+    var depEl = document.getElementById('exTotalDeposits');
+    if (depEl) {
+      var tD = (st.txs || []).filter(function(t){ return t.amt > 0; }).reduce(function(s,t){ return s + t.amt; }, 0);
+      depEl.textContent = '$' + tD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    var cntEl = document.getElementById('exAssetsCount');
+    if (cntEl) {
+      var c = 0;
+      if ((st.btc || 0) > 0) c++;
+      if ((st.eth || 0) > 0) c++;
+      if ((st.usd || 0) > 0) c++;
+      cntEl.textContent = c;
+    }
+
+    // IBAN
+    var pending = document.getElementById('exIbanPending');
+    var ready   = document.getElementById('exIbanReady');
+    var iban = st.user && st.user.iban;
+    if (pending && ready) {
+      if (iban) {
+        pending.style.display = 'none';
+        ready.style.display = 'flex';
+        var el;
+        el = document.getElementById('exMyIban');    if (el) el.textContent
