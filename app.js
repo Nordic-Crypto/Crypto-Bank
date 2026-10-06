@@ -3722,6 +3722,7 @@ async function loadAdminUsers() {
           '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + u.name + '\')">💰 Add balance</button>' +
           '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
          '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + u.name + '\')">🔑 Deposit address</button>' +
+         '<button class="btn b2" onclick="adminSetIban(\'' + u.email + '\')">🏦 Issue IBAN</button>' +
           '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
           '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete</button>' +
         '</div>' +
@@ -7687,3 +7688,204 @@ window.rejectKyc = function(email) {
     }, 300);
   };
 })();
+/* ============================================================
+   ACCOUNT TYPE: banking vs exchange
+   ============================================================ */
+
+/* ---------- Показать/скрыть карту и IBAN в зависимости от типа ---------- */
+function applyAccountType() {
+  var accountType = (st.user && st.user.accountType) || null;
+  var isExchange = accountType === 'exchange';
+  var isBanking  = accountType === 'banking';
+
+  // Карта — скрываем у exchange
+  var cardWrap = document.querySelector('.nc3-card-wrap');
+  if (cardWrap) {
+    cardWrap.style.display = isExchange ? 'none' : '';
+  }
+
+  // Карта в "My Cards" — тоже
+  var cardPage = document.getElementById('cards');
+  if (cardPage) {
+    // если exchange — скрываем пункт меню и страницу карт
+    var cardsMenu = document.querySelector('.mi[data-p="cards"]');
+    if (cardsMenu) cardsMenu.style.display = isExchange ? 'none' : '';
+  }
+
+  // Кнопка "Order New Card" — скрываем у exchange
+  var orderMenu = document.querySelector('.mi[data-p="order"]');
+  if (orderMenu) orderMenu.style.display = isExchange ? 'none' : '';
+
+  // Кнопки "Freeze/Limits/Settings" карты — внутри card-wrap, скрываются автоматически
+}
+
+window.applyAccountType = applyAccountType;
+
+/* ---------- Рендер IBAN: pending vs ready ---------- */
+function renderIbanByAdmin() {
+  var pending = document.getElementById('ibanPending');
+  var ready   = document.getElementById('ibanReady');
+  if (!pending || !ready) return;
+
+  var iban = st.user && st.user.iban;
+
+  if (iban) {
+    pending.style.display = 'none';
+    ready.style.display   = 'block';
+    var ibanEl = document.getElementById('myIban');
+    if (ibanEl) ibanEl.textContent = iban.replace(/(.{4})/g, '$1 ').trim();
+    var swiftEl = document.getElementById('mySwift');
+    if (swiftEl && st.user.swift) swiftEl.textContent = st.user.swift;
+    var bankEl = document.getElementById('myBank');
+    if (bankEl && st.user.bank) bankEl.textContent = st.user.bank;
+    var countryEl = document.getElementById('myCountry');
+    if (countryEl) {
+      var names = { SE:'Sweden', NO:'Norway', DK:'Denmark', FI:'Finland', DE:'Germany', FR:'France', ES:'Spain', IT:'Italy', NL:'Netherlands', GB:'United Kingdom', US:'United States' };
+      var flags = { SE:'🇸🇪', NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', DE:'🇩🇪', FR:'🇫🇷', ES:'🇪🇸', IT:'🇮🇹', NL:'🇳🇱', GB:'🇬🇧', US:'🇺🇸' };
+      var code = st.user.country || 'SE';
+      countryEl.textContent = (flags[code] || '') + ' ' + (names[code] || code) + ' (' + code + ')';
+    }
+  } else {
+    pending.style.display = 'block';
+    ready.style.display   = 'none';
+    // обновим подпись
+    var textEl = pending.querySelector('.iban-pending-text');
+    if (textEl) textEl.textContent = 'Your IBAN is being generated...';
+    var subEl = pending.querySelector('.iban-pending-sub');
+    if (subEl) subEl.textContent = 'This usually takes a few minutes';
+  }
+}
+window.renderIbanByAdmin = renderIbanByAdmin;
+
+/* ---------- Перезаписываем startIbanGeneration чтобы НЕ генерил автоматом ---------- */
+window.startIbanGeneration = function() {
+  // Ничего не делаем — IBAN выдаёт админ вручную
+  renderIbanByAdmin();
+};
+
+/* ---------- Перезаписываем renderIban (старую функцию) ---------- */
+window.renderIban = renderIbanByAdmin;
+
+/* ---------- Патчим render: применяем тип аккаунта + IBAN ---------- */
+(function(){
+  var _origRender = window.render;
+  window.render = function() {
+    if (typeof _origRender === 'function') _origRender.apply(this, arguments);
+    try {
+      applyAccountType();
+      renderIbanByAdmin();
+    } catch(e) {}
+  };
+})();
+
+/* ---------- Вызываем при старте ---------- */
+setTimeout(function(){
+  applyAccountType();
+  renderIbanByAdmin();
+}, 1000);
+setTimeout(function(){
+  applyAccountType();
+  renderIbanByAdmin();
+}, 3000);
+
+/* ---------- Polling IBAN каждые 10 сек (пока pending) ---------- */
+setInterval(async function(){
+  // только для не-админа
+  if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+  if (window.adminViewingEmail) return;
+
+  var pending = document.getElementById('ibanPending');
+  if (!pending || pending.style.display === 'none') return;
+
+  var token = getSessionToken();
+  if (!token) return;
+  try {
+    var r = await fetch(WORKER_URL + '?action=getUserState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await r.json();
+    if (data && data.user && data.user.iban) {
+      st.user = st.user || {};
+      st.user.iban = data.user.iban;
+      st.user.swift = data.user.swift;
+      st.user.bank = data.user.bank;
+      st.user.country = data.user.country;
+      renderIbanByAdmin();
+      if (typeof toast === 'function') toast('🏦 Your IBAN is ready!');
+    }
+  } catch(e) {}
+}, 10000);
+
+/* ============================================================
+   ADMIN: SET IBAN UI
+   ============================================================ */
+
+window.adminSetIban = function(email) {
+  if (!email) return;
+  var old = document.getElementById('adminIbanModal'); if (old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'adminIbanModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:460px;padding:24px;color:#e7edf5;">' +
+      '<div style="font-weight:700;font-size:18px;margin-bottom:4px;">🏦 Issue IBAN</div>' +
+      '<div style="font-size:13px;color:#8b95a5;margin-bottom:20px;">' + email + '</div>' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">IBAN</label>' +
+      '<input id="adminIbanInput" type="text" placeholder="SE1234567890123456789012" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;">' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">SWIFT / BIC</label>' +
+      '<input id="adminSwiftInput" type="text" placeholder="ESSESESSXXX" value="ESSESESSXXX" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;">' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">Bank name</label>' +
+      '<input id="adminBankInput" type="text" placeholder="NordicCrypto Bank AB" value="NordicCrypto Bank AB" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;">' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">Country code</label>' +
+      '<input id="adminCountryInput" type="text" placeholder="SE" value="SE" maxlength="2" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;text-transform:uppercase;">' +
+      '<div id="adminIbanErr" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:20px;">' +
+        '<button id="adminIbanSave" onclick="adminSaveIban(\'' + email + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Save</button>' +
+        '<button onclick="document.getElementById(\'adminIbanModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  setTimeout(function(){ var el = document.getElementById('adminIbanInput'); if (el) el.focus(); }, 100);
+};
+
+window.adminSaveIban = async function(email) {
+  var iban = (document.getElementById('adminIbanInput') || {}).value || '';
+  var swift = (document.getElementById('adminSwiftInput') || {}).value || '';
+  var bank = (document.getElementById('adminBankInput') || {}).value || '';
+  var country = (document.getElementById('adminCountryInput') || {}).value || '';
+  var errEl = document.getElementById('adminIbanErr');
+
+  iban = iban.trim().replace(/\s/g, '').toUpperCase();
+  if (!iban || iban.length < 15) {
+    if (errEl) { errEl.textContent = 'Enter valid IBAN (min 15 chars)'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+
+  var btn = document.getElementById('adminIbanSave');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=setIban', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, iban: iban, swift: swift, bank: bank, country: country })
+    });
+    var data = await r.json();
+    if (data.ok) {
+      if (typeof toast === 'function') toast('✓ IBAN saved');
+      document.getElementById('adminIbanModal').remove();
+      if (typeof loadAdminUsers === 'function') loadAdminUsers();
+    } else {
+      if (errEl) { errEl.textContent = data.error || 'Failed'; errEl.style.display = 'block'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+    }
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Connection error'; errEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  }
+};
