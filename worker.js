@@ -990,7 +990,36 @@ if (action === 'rejectVerification' && request.method === 'POST') {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
   }
 }
-
+// ============ ADMIN: SET IBAN ============
+if (action === 'setIban' && request.method === 'POST') {
+  try {
+    const body = await request.json();
+    const { token, email, iban, swift, bank, country } = body;
+    const session = await env.NORDIC_KV.get('session_' + token, 'json');
+    if (!session || session.role !== 'admin') {
+      return new Response(JSON.stringify({ ok: false, error: 'Admin access required' }), { headers: cors });
+    }
+    if (!email) return new Response(JSON.stringify({ ok: false, error: 'Email required' }), { headers: cors });
+    const targetEmail = email.toLowerCase().trim();
+    const state = await env.NORDIC_KV.get('user_state_' + targetEmail, 'json') || {};
+    if (!state.user) state.user = {};
+    state.user.iban = iban ? String(iban).trim() : null;
+    state.user.swift = swift ? String(swift).trim() : 'ESSESESSXXX';
+    state.user.bank = bank ? String(bank).trim() : 'NordicCrypto Bank AB';
+    state.user.country = country ? String(country).trim() : (state.user.country || 'SE');
+    state.user.ibanCreatedAt = Date.now();
+    if (!state.notifications) state.notifications = [];
+    state.notifications.unshift({
+      id: Date.now() + Math.random(),
+      text: iban ? '🏦 Your IBAN has been issued: ' + iban : '🏦 Your IBAN was updated',
+      icon: '🏦', ts: Date.now(), read: false
+    });
+    await env.NORDIC_KV.put('user_state_' + targetEmail, JSON.stringify(state));
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { headers: cors });
+  }
+}
     // ============ VERSION ============
     if (action === 'version') {
       const version = await env.NORDIC_KV.get('app_version') || '1.0.0';
