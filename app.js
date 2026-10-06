@@ -627,8 +627,11 @@ function setCurrency(cur){
   }
   var menu = document.getElementById('currMenu');
   if (menu) menu.classList.remove('on');
-  render();
-  toast('Currency: ' + cur);
+    render();
+  if (typeof renderExchangeDash === 'function' && st.user && st.user.accountType === 'exchange') {
+    renderExchangeDash();
+  }
+   toast('Currency: ' + cur);
 }
 
 function initCurrencySwitcher(){
@@ -4148,10 +4151,12 @@ function renderExchangeCoins() {
     var arrow = up ? '▲' : '▼';
     var change = c.change24h ? Math.abs(c.change24h).toFixed(2) + '%' : '0.00%';
     var iconSvg = ICONS[c.symbol] || '<div style="width:24px;height:24px;background:' + c.icon + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:11px;">' + c.symbol.charAt(0) + '</div>';
+    // КОНВЕРТИРУЕМ ЦЕНУ В ВЫБРАННУЮ ВАЛЮТУ
+    var priceInCur = fmtCurrency(c.usd);
     html += '<div class="ex-coin-row">' +
       '<div class="ex-coin-icon">' + iconSvg + '</div>' +
-      '<div><div class="ex-coin-name">' + c.name + '</div><div class="ex-coin-symbol">' + c.symbol + ' / USD</div></div>' +
-      '<div class="ex-coin-price"><strong>$' + Number(c.usd).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</strong>' +
+      '<div><div class="ex-coin-name">' + c.name + '</div><div class="ex-coin-symbol">' + c.symbol + ' / ' + (st.currency || 'USD') + '</div></div>' +
+      '<div class="ex-coin-price"><strong>' + priceInCur + '</strong>' +
       '<span class="ex-coin-change ' + (up ? 'up' : 'down') + '">' + arrow + ' ' + change + '</span></div></div>';
   });
   box.innerHTML = html;
@@ -4163,7 +4168,7 @@ function renderExchangeDash() {
     greet.textContent = (h >= 5 && h < 12) ? 'Good morning' : (h >= 12 && h < 18) ? 'Good afternoon' : (h >= 18 && h < 23) ? 'Good evening' : 'Good night';
   }
   var nameEl = document.getElementById('exName');
-    if (nameEl) {
+  if (nameEl) {
     var n = localStorage.getItem('user_name') || '';
     if (n && n !== 'User') {
       var fn = n.split(' ')[0];
@@ -4174,7 +4179,8 @@ function renderExchangeDash() {
   }
 
   var balEl = document.getElementById('exBalance');
-  if (balEl) balEl.textContent = '$' + (st.usd || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (balEl) balEl.textContent = fmtCurrency(st.usd || 0);
+
   var balBtc = document.getElementById('exBalanceBtc');
   if (balBtc && st.btcP) balBtc.textContent = '≈ ' + ((st.usd || 0) / st.btcP).toFixed(8) + ' BTC';
 
@@ -4190,7 +4196,7 @@ function renderExchangeDash() {
   var depEl = document.getElementById('exTotalDeposits');
   if (depEl) {
     var tD = (st.txs || []).filter(function(t){ return t.amt > 0; }).reduce(function(s,t){ return s + t.amt; }, 0);
-    depEl.textContent = '$' + tD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    depEl.textContent = fmtCurrency(tD);
   }
 
   var cntEl = document.getElementById('exAssetsCount');
@@ -4208,8 +4214,16 @@ function renderExchangeDash() {
   var ethVal = document.getElementById('exEthVal');
   if (btcEl) btcEl.textContent = (st.btc || 0).toFixed(8) + ' BTC';
   if (ethEl) ethEl.textContent = (st.eth || 0).toFixed(8) + ' ETH';
-  if (btcVal) btcVal.textContent = '$' + ((st.btc || 0) * (st.btcP || 0)).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
-  if (ethVal) ethVal.textContent = '$' + ((st.eth || 0) * (st.ethP || 0)).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+  if (btcVal) btcVal.textContent = fmtCurrency((st.btc || 0) * (st.btcP || 0));
+  if (ethVal) ethVal.textContent = fmtCurrency((st.eth || 0) * (st.ethP || 0));
+
+  // Курс валюты в топ-5 монетах — тоже пересчитываем
+  if (_exPricesCache) {
+    _exPricesCache.forEach(function(c){
+      c.usd = c.usd; // базовый USD не меняется
+    });
+    renderExchangeCoins();
+  }
 
   renderExchangeIban();
   renderExchangeTx();
