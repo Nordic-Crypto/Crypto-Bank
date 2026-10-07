@@ -1646,14 +1646,47 @@ window.submitRealVerification = async function() {
     st.verification.docKeys = [docKey, selfieKey];
     st.verification.personalInfo = { street: street, city: city, zip: zip, country: country };
     st.verification.submittedAt = Date.now();
+    var ov = document.getElementById('kycLoadingOverlay');
+    if (ov) ov.remove();
 
-        var ov = document.getElementById('kycLoadingOverlay');
-    if (ov) ov.remove();
-        var ov = document.getElementById('kycLoadingOverlay');
-    if (ov) ov.remove();
     hideVerifyScreen();
     showPendingScreen();
+
+    // ✅ ФИКС: ЖЁСТКО показываем pendingScreen — напрямую через style
+    var _p = document.getElementById('pendingScreen');
+    if (_p) {
+      _p.classList.add('on');
+      _p.style.display = 'flex';
+      _p.style.position = 'fixed';
+      _p.style.inset = '0';
+      _p.style.zIndex = '2900';
+      _p.style.background = 'radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),#0B1220';
+      var _step = _p.querySelector('.verify-step');
+      if (_step) _step.classList.add('on');
+    }
+
+    // ✅ Прячем всё остальное
+    var _side = document.getElementById('sideBar'); if (_side) _side.style.display = 'none';
+    var _main = document.getElementById('mainApp'); if (_main) _main.style.display = 'none';
+    var _onb  = document.getElementById('onboard'); if (_onb) _onb.classList.remove('on');
+    var _ver  = document.getElementById('verifyScreen'); if (_ver) { _ver.classList.remove('on'); _ver.style.display = 'none'; }
+    var _rej  = document.getElementById('rejectedScreen'); if (_rej) _rej.classList.remove('on');
+
     if (typeof toast === 'function') toast('Documents submitted! Waiting for approval.');
+
+    // ✅ Подстраховка через 300мс
+    setTimeout(function(){
+      var p2 = document.getElementById('pendingScreen');
+      if (p2) {
+        p2.classList.add('on');
+        p2.style.display = 'flex';
+        p2.style.position = 'fixed';
+        p2.style.inset = '0';
+        p2.style.zIndex = '2900';
+      }
+      var s2 = document.getElementById('sideBar'); if (s2) s2.style.display = 'none';
+      var m2 = document.getElementById('mainApp'); if (m2) m2.style.display = 'none';
+    }, 300);
   } catch(e) {
     var ov2 = document.getElementById('kycLoadingOverlay');
     if (ov2) ov2.remove();
@@ -4714,8 +4747,8 @@ window.renderIban = renderIbanByAdmin;
   var _origShowApp = window.showApp;
   window.showApp = function() {
     if (typeof _origShowApp === 'function') _origShowApp.apply(this, arguments);
-    setTimeout(function(){ if (typeof gateByVerification === 'function') gateByVerification(); }, 500);
-    setTimeout(function(){ if (typeof gateByVerification === 'function') gateByVerification(); }, 2000);
+    // ✅ ФИКС: НЕ запускаем gateByVerification автоматом — 
+    // showApp уже сам проверил KYC
   };
 })();
 
