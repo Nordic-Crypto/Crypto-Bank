@@ -259,3 +259,74 @@
   console.log('%c[NordicCrypto] 🔧 legacy-fix.js v2.0 applied', 'color:#22d3ee;font-weight:bold');
 
 })();
+  /* ============================================================
+     FIX 5: TX Details Modal — гарантированное закрытие
+     ============================================================ */
+  function ensureTxDetailsClose() {
+    // Гарантируем, что closeTxDetails работает
+    if (typeof window.closeTxDetails !== 'function') {
+      window.closeTxDetails = function () {
+        var mask = document.getElementById('txDetailsMask');
+        if (mask) mask.classList.remove('on');
+      };
+    }
+
+    // Привязываем кнопки каждый раз (перебиваем возможные конфликты)
+    var txdClose = document.getElementById('txdClose');
+    if (txdClose) {
+      txdClose.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.closeTxDetails();
+      };
+    }
+
+    var txdCloseBtn = document.getElementById('txdCloseBtn');
+    if (txdCloseBtn) {
+      txdCloseBtn.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.closeTxDetails();
+      };
+    }
+
+    // Закрытие по клику на фон
+    var txdMask = document.getElementById('txDetailsMask');
+    if (txdMask && !txdMask._clickBound) {
+      txdMask._clickBound = true;
+      txdMask.onclick = function (e) {
+        if (e.target === txdMask) window.closeTxDetails();
+      };
+    }
+
+    // Закрытие по Esc — глобальный обработчик (один раз)
+    if (!window._txdEscBound) {
+      window._txdEscBound = true;
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          var mask = document.getElementById('txDetailsMask');
+          if (mask && mask.classList.contains('on')) {
+            window.closeTxDetails();
+          }
+        }
+      });
+    }
+  }
+
+  // Применяем при загрузке + перепроверяем через интервалы
+  ensureTxDetailsClose();
+  setTimeout(ensureTxDetailsClose, 500);
+  setTimeout(ensureTxDetailsClose, 1500);
+  setTimeout(ensureTxDetailsClose, 3000);
+  setTimeout(ensureTxDetailsClose, 5000);
+
+  // Перепроверяем перед каждым открытием модалки
+  var _origOpenTxDetails = window.openTxDetails;
+  if (typeof _origOpenTxDetails === 'function') {
+    window.openTxDetails = function () {
+      _origOpenTxDetails.apply(this, arguments);
+      setTimeout(ensureTxDetailsClose, 100);
+    };
+  }
+
+  console.log('%c[NordicCrypto] 🎯 TX details close fix applied', 'color:#22d3ee');
