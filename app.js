@@ -4564,15 +4564,25 @@ window.clearAllChats = clearAllChats;
   var dash   = document.getElementById('dash');
   var exDash = document.getElementById('exchangeDash');
 
-  if (isExchange) {
+   if (isExchange) {
     if (dash) dash.style.display = 'none';
     if (exDash) {
       exDash.style.display = '';
       if (!exDash.classList.contains('on')) exDash.classList.add('on');
+      // 🎁 Fallback: если renderExchangeDash упадёт — показываем ошибку, а не пустоту
+      try {
+        renderExchangeDash();
+      } catch(e) {
+        console.warn('[applyAccountType] renderExchangeDash failed:', e);
+        exDash.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8">Exchange dashboard error. Contact support.</div>';
+      }
+    } else {
+      // 🎁 Если exchangeDash вообще нет в DOM — fallback на banking
+      if (dash) dash.style.display = '';
+      console.warn('[applyAccountType] #exchangeDash missing — fallback to banking');
     }
     var cm = document.querySelector('.mi[data-p="cards"]'); if (cm) cm.style.display = 'none';
     var om = document.querySelector('.mi[data-p="order"]'); if (om) om.style.display = 'none';
-    renderExchangeDash();
   } else {
     if (dash) dash.style.display = '';
     if (exDash) { exDash.style.display = 'none'; exDash.classList.remove('on'); }
