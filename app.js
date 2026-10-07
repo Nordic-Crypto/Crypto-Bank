@@ -1338,7 +1338,7 @@ function renderRecentTx(){
     '</div>';
   }
   listEl.innerHTML = html;
-}
+
   // 🎁 Клик по карточкам
   var items = listEl.querySelectorAll('.recent-tx-item[data-tx-i]');
   for (var k = 0; k < items.length; k++) {
@@ -1351,6 +1351,7 @@ function renderRecentTx(){
       };
     })(k);
   }
+}
 
 function initRecentTx(){
   var viewAll = document.getElementById('viewAllTx');
