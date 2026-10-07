@@ -4554,7 +4554,7 @@ async function clearAllChats() {
 window.clearAllChats = clearAllChats;
 
 /* ---------- EXCHANGE DASHBOARD ---------- */
-  function applyAccountType() {   
+function applyAccountType() {
   var accountType = (st.user && st.user.accountType) || null;
   // 🚀 Кэш — не дёргаем DOM если тип аккаунта не менялся
   if (window._lastAppliedAccountType === accountType && document.body.dataset.acctApplied === '1') return;
@@ -4566,13 +4566,15 @@ window.clearAllChats = clearAllChats;
   var dash   = document.getElementById('dash');
   var exDash = document.getElementById('exchangeDash');
 
-   if (isExchange) {
-    if (dash) dash.style.display = 'none';
-   if (exDash) {
-      exDash.style.display = 'block';    // ← было '', стало 'block'
-      exDash.classList.add('on');         // ← без проверки, всегда
-    }
-      // 🎁 Fallback: если renderExchangeDash упадёт — показываем ошибку, а не пустоту
+  if (isExchange) {
+    // Скрываем banking
+    if (dash) { dash.style.display = 'none'; dash.classList.remove('on'); }
+
+    // Показываем exchange
+    if (exDash) {
+      exDash.style.display = 'block';
+      exDash.classList.add('on');
+
       try {
         renderExchangeDash();
       } catch(e) {
@@ -4580,14 +4582,16 @@ window.clearAllChats = clearAllChats;
         exDash.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8">Exchange dashboard error. Contact support.</div>';
       }
     } else {
-      // 🎁 Если exchangeDash вообще нет в DOM — fallback на banking
-      if (dash) dash.style.display = '';
+      // 🎁 Если #exchangeDash вообще нет в DOM — fallback на banking
+      if (dash) { dash.style.display = 'block'; dash.classList.add('on'); }
       console.warn('[applyAccountType] #exchangeDash missing — fallback to banking');
     }
+
     var cm = document.querySelector('.mi[data-p="cards"]'); if (cm) cm.style.display = 'none';
     var om = document.querySelector('.mi[data-p="order"]'); if (om) om.style.display = 'none';
   } else {
-    if (dash) dash.style.display = '';
+    // Обычный banking
+    if (dash) { dash.style.display = 'block'; dash.classList.add('on'); }
     if (exDash) { exDash.style.display = 'none'; exDash.classList.remove('on'); }
     var cm2 = document.querySelector('.mi[data-p="cards"]'); if (cm2) cm2.style.display = '';
     var om2 = document.querySelector('.mi[data-p="order"]'); if (om2) om2.style.display = '';
