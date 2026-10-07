@@ -248,10 +248,10 @@ function hideLoginScreen() {
 function showApp() {
   if (isAdmin()) { showAdminPanel(); return; }
   
+  // ✅ ФИКС: НЕ показываем sideBar/mainApp сразу.
+  // Покажем только после проверки KYC.
   var side = document.getElementById('sideBar');
   var main = document.getElementById('mainApp');
-  if (side) side.style.display = 'flex';
-  if (main) main.style.display = 'flex';
 
   loadFromServer(function(){
     loadPrices();
@@ -273,38 +273,33 @@ function showApp() {
 
     if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
 
-    // ✅ ФИКС: жёсткая проверка KYC СРАЗУ
     var accountType = (st.user && st.user.accountType) || null;
-    var isVerified = st.verification && st.verification.status === 'approved';
-    var isPending = st.verification && st.verification.status === 'pending';
-    var isRejected = st.verification && st.verification.status === 'rejected';
-    var hasVerification = !!st.verification;
+    var vStatus = (st.verification && st.verification.status) || null;
 
-    // Если клиент НЕ админ и НЕ verified — НЕ показываем приложение
+    // ✅ ФИКС: проверка KYC ПЕРЕД показом sideBar/mainApp
     if (localStorage.getItem('user_role') !== 'admin' && !window.adminViewingEmail) {
-      if (isPending) {
-        // Показываем pending screen
+      // PENDING — показываем pendingScreen, sideBar/mainApp НЕ трогаем
+      if (vStatus === 'pending') {
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         showPendingScreen();
         return;
       }
-      if (isRejected) {
+      // REJECTED
+      if (vStatus === 'rejected') {
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         showRejectedScreen(st.verification.reason);
         return;
       }
-      if (!hasVerification || (st.verification.status !== 'approved')) {
-        // Нет верификации вообще — на KYC
-        // НО сначала — онбординг, если карты нет
+      // НЕТ KYC — если карты нет, онбординг, иначе KYC
+      if (vStatus !== 'approved') {
         if (!st.card && accountType !== 'exchange') {
           if (side) side.style.display = 'none';
           if (main) main.style.display = 'none';
           $('onboard').classList.add('on');
           return;
         }
-        // Карта есть, но KYC не пройден — на KYC
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         var vScreen = document.getElementById('verifyScreen');
@@ -314,7 +309,11 @@ function showApp() {
       }
     }
 
-    // Если сюда дошли — верификация approved, показываем приложение
+    // ✅ Только здесь показываем sideBar/mainApp — KYC approved или admin
+    if (side) side.style.display = 'flex';
+    if (main) main.style.display = 'flex';
+
+    // Онбординг — если карты нет и не exchange
     if (!st.card && accountType !== 'exchange') {
       $('onboard').classList.add('on');
       return;
