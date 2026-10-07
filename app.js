@@ -4549,96 +4549,166 @@ async function scanAllDeposits() {
   } catch (e) { toast('Scan error', true); }
 }
 
-/* ========== AUTO DEPOSIT CHECK ========== */
+/* ========== AUTO DEPOSIT CHECK (auto-credit) ========== */
 (function(){
   var CHECK_INTERVAL = 15000;
-  var processedHashes = {};
-  try { var saved = localStorage.getItem('_autoDepositProcessed'); if (saved) processedHashes = JSON.parse(saved); } catch(e) {}
-
-  function saveProcessed() {
-    try {
-      var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      Object.keys(processedHashes).forEach(function(h) { if (processedHashes[h] < weekAgo) delete processedHashes[h]; });
-      localStorage.setItem('_autoDepositProcessed', JSON.stringify(processedHashes));
-    } catch(e) {}
-  }
+  var _depositCheckBusy = false;
 
   async function checkDeposits() {
-    var role = localStorage.getItem('user_role');
-    if (role === 'admin') return;
+    // Не админ, не во время просмотра
+    if (localStorage.getItem('user_role') === 'admin') return;
+    if (window.adminViewingEmail) return;
+    if (_depositCheckBusy) return;
+    _depositCheckBusy = true;
+
     var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
-    if (!email) return;
+    if (!email) { _depositCheckBusy = false; return; }
+
+    // Не проверяем если у клиента нет KYC approved (иначе может утечь)
+    var vStatus = (st.verification && st.verification.status) || null;
+    if (vStatus !== 'approved') { _depositCheckBusy = false; return; }
+
     try {
       var token = getSessionToken();
-      if (token) {
-        var freshR = await fetch(WORKER_URL + '?action=getUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token, email: email }) });
+      if (!token) { _depositCheckBusy = false; return; }
+
+      // ✅ 1) Синхронизируем свежий state с сервера (чтобы st.txs был актуален)
+      try {
+        var freshR = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email })
+        });
         var fresh = await freshR.json();
         if (fresh && !fresh.error) {
           if (fresh.cryptoAddress) st.cryptoAddress = fresh.cryptoAddress;
-          if (fresh.txs) st.txs = fresh.txs;
-          if (fresh.depositVerifications) st.depositVerifications = fresh.depositVerifications;
+          if (Array.isArray(fresh.txs)) st.txs = fresh.txs;
+          if (Array.isArray(fresh.depositVerifications)) st.depositVerifications = fresh.depositVerifications;
         }
-      }
-    } catch(e) {}
-    var hasWallet = false;
-    try { hasWallet = !!((window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]) || (st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth))); } catch(e) {}
-    if (!hasWallet) return;
-    try {
+      } catch(e) {}
+
+      // ✅ 2) Есть ли кошелёк?
+      var hasWallet = false;
+      try {
+        hasWallet = !!((window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]) 
+          || (st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth)));
+      } catch(e) {}
+      if (!hasWallet) { _depositCheckBusy = false; return; }
+
+      // ✅ 3) Сканируем блокчейн
       var r = await fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(email) + '&_t=' + Date.now());
       var data = await r.json();
-      if (!data || !data.ok || !data.result) return;
+      if (!data || !data.ok || !data.result) { _depositCheckBusy = false; return; }
+
       var btcList = data.result.btc || [];
       var ethList = data.result.eth || [];
+      var myBtc = getDepositWallet('BTC');
+      var myEth = getDepositWallet('ETH');
       var allTxs = [];
-      btcList.forEach(function(tx) { tx._type = 'BTC'; allTxs.push(tx); });
-      ethList.forEach(function(tx) { tx._type = 'ETH'; allTxs.push(tx); });
+
+      btcList.forEach(function(tx) {
+        if (tx.to && myBtc && tx.to.toLowerCase() !== myBtc.toLowerCase()) return;
+        tx._type = 'BTC'; allTxs.push(tx);
+      });
+      ethList.forEach(function(tx) {
+        if (tx.to && myEth && tx.to.toLowerCase() !== myEth.toLowerCase()) return;
+        tx._type = 'ETH'; allTxs.push(tx);
+      });
+
+      // ✅ 4) Фильтр: только свежие, только новые
       var knownHashes = {};
       (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
       (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
-      
-      // ✅ ФИКС: фильтр по времени — не берём старые транзакции
+
       var DAY_MS = 24 * 60 * 60 * 1000;
       var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
+      var now = Date.now();
+
       var newTxs = allTxs.filter(function(tx) {
+        if (!tx.hash) return false;
         if (knownHashes[tx.hash]) return false;
-        if (processedHashes[tx.hash]) return false;
         var txTime = tx.time ? tx.time * 1000 : 0;
-        // Игнорируем если транзакция старше 24ч
-        if (txTime && (Date.now() - txTime) > DAY_MS) return false;
-        // Игнорируем если транзакция до создания карты
-        if (cardCreatedAt && txTime && txTime < cardCreatedAt) return false;
+        if (!txTime) return false;
+        // Не берём старше 24 часов
+        if ((now - txTime) > DAY_MS) return false;
+        // Не берём до создания карты
+        if (cardCreatedAt && txTime < cardCreatedAt) return false;
+        // Не берём будущее (защита от глюков)
+        if (txTime > now + 60 * 1000) return false;
         return true;
       });
-      if (newTxs.length === 0) return;
+
+      if (newTxs.length === 0) { _depositCheckBusy = false; return; }
+
+      // ✅ 5) Авто-зачисляем + открываем модалку для подтверждения
       var totalUsd = 0;
-      newTxs.forEach(function(tx) {
-        var price = tx._type === 'BTC' ? (st.btcP || 90000) : (st.ethP || 3000);
+      var added = 0;
+
+      for (var i = 0; i < newTxs.length; i++) {
+        var tx = newTxs[i];
+        var price = tx._type === 'BTC' ? (st.btcP || 68000) : (st.ethP || 3200);
         var credit = tx.amount * price;
-        if (credit <= 0) return;
+        if (credit <= 0) continue;
+
+        // Помечаем как known, чтобы не зачислить 2 раза
+        knownHashes[tx.hash] = true;
+
+        // Добавляем в state
         st.usd = (st.usd || 0) + credit;
         if (tx._type === 'BTC') st.btc = (st.btc || 0) + tx.amount;
         else st.eth = (st.eth || 0) + tx.amount;
-        totalUsd += credit;
+
         if (!Array.isArray(st.txs)) st.txs = [];
-        st.txs.unshift({ date: new Date().toISOString().slice(0, 10), ts: Date.now(), desc: 'Crypto deposit — ' + tx.amount.toFixed(8) + ' ' + tx._type, amt: credit, status: 'Completed', hash: tx.hash, crypto: tx.amount, symbol: tx._type });
+        st.txs.unshift({
+          date: new Date().toISOString().slice(0, 10),
+          ts: tx.time ? tx.time * 1000 : Date.now(),
+          desc: 'Crypto deposit — ' + Number(tx.amount).toFixed(8) + ' ' + tx._type,
+          amt: credit,
+          status: 'Completed',
+          hash: tx.hash,
+          crypto: tx.amount,
+          symbol: tx._type
+        });
         if (!st.depositVerifications) st.depositVerifications = [];
-        st.depositVerifications.push({ txHash: tx.hash, cryptoAmt: tx.amount, symbol: tx._type, usdValue: credit, source: 'auto', completedAt: Date.now() });
-        processedHashes[tx.hash] = Date.now();
-      });
-      saveProcessed();
-      var token = getSessionToken();
-      if (token) {
-        await fetch(WORKER_URL + '?action=setUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token, state: st, force: true }) }).catch(function(){});
+        st.depositVerifications.push({
+          txHash: tx.hash,
+          cryptoAmt: tx.amount,
+          symbol: tx._type,
+          usdValue: credit,
+          source: 'auto',
+          completedAt: Date.now()
+        });
+
+        totalUsd += credit;
+        added++;
       }
+
+      if (added === 0) { _depositCheckBusy = false; return; }
+
+      // ✅ 6) Сохраняем на сервер (force: true — чтобы точно перезаписать)
+      await fetch(WORKER_URL + '?action=setUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, state: st, force: true })
+      }).catch(function(){});
+
+      // ✅ 7) Обновляем UI
       if (typeof render === 'function') render();
-      if (typeof addNotification === 'function') addNotification('💰 Deposit received: +$' + totalUsd.toFixed(2), '💰');
-      if (typeof toast === 'function') toast('💰 Deposit received!');
+      if (typeof addNotification === 'function') {
+        addNotification('💰 Deposit received: +$' + totalUsd.toFixed(2), '💰');
+      }
+      if (typeof toast === 'function') toast('💰 Deposit received! +$' + totalUsd.toFixed(2));
       if (typeof playChime === 'function') playChime();
       if (typeof spawnConfetti === 'function') spawnConfetti();
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[checkDeposits]', e);
+    } finally {
+      _depositCheckBusy = false;
+    }
   }
 
-  setTimeout(checkDeposits, 5000);
+  // ✅ Стартуем только для залогиненных НЕ админов
+  setTimeout(checkDeposits, 8000);
   setInterval(checkDeposits, CHECK_INTERVAL);
 })();
 
