@@ -2034,6 +2034,12 @@ function renderTx(){
   }
   b.innerHTML = h;
 }
+/* 🎁 Открыть детали транзакции из таблицы */
+window.openTxDetailsFromTable = function(i) {
+  var t = (st.txs || [])[i];
+  if (!t) return;
+  openTxDetails(t);
+};
 (function(){
   var required = [
     'openTxDetailsFromTable','openTxDetails','closeTxDetails',
@@ -5025,6 +5031,18 @@ setInterval(function(){ var ctx = getAudioCtx(); if (ctx && ctx.state === 'suspe
 
 document.addEventListener('DOMContentLoaded', function(){
   var btn = document.getElementById('chatToggle');
+    // 🎁 TX Details modal bindings
+  var txdClose = document.getElementById('txdClose');
+  if (txdClose) txdClose.onclick = closeTxDetails;
+  var txdCloseBtn = document.getElementById('txdCloseBtn');
+  if (txdCloseBtn) txdCloseBtn.onclick = closeTxDetails;
+  var txdMask = document.getElementById('txDetailsMask');
+  if (txdMask) {
+    txdMask.onclick = function(e){ if (e.target === txdMask) closeTxDetails(); };
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeTxDetails();
+  });
   if (btn) btn.onclick = toggleChat;
   updateChatBadge();
 
