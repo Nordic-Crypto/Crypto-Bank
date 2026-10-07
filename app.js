@@ -1286,6 +1286,134 @@ function showWithdrawStatus(method, amount) {
 }
 
 /* ---------- RECENT TX ---------- */
+/* ============================================================
+   🎁 TX DETAILS MODAL — открывает окно с деталями транзакции
+   ============================================================ */
+
+function txStatusLabel(s) {
+  if (s === 'Completed')   return { text: '✓ Completed',    bg: 'rgba(0,224,138,.14)',  color: '#00e08a' };
+  if (s === 'Processing')  return { text: '⏳ Processing',   bg: 'rgba(0,212,255,.14)',  color: '#47dcff' };
+  if (s === 'Under Review')return { text: '⏳ Under review', bg: 'rgba(255,176,32,.14)', color: '#ffb020' };
+  if (s === 'Rejected')    return { text: '✗ Rejected',     bg: 'rgba(255,84,112,.14)', color: '#ff5470' };
+  return { text: s || '—', bg: 'rgba(255,255,255,.06)', color: '#94a3b8' };
+}
+
+function txdRow(label, value, mono) {
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px">' +
+    '<span style="color:#94a3b8;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0">' + escapeHtml(label) + '</span>' +
+    '<b style="' + (mono ? 'font-family:ui-monospace,monospace;' : '') + 'font-size:.85rem;text-align:right;word-break:break-all;max-width:65%">' + value + '</b>' +
+  '</div>';
+}
+
+function openTxDetails(tx) {
+  var mask = document.getElementById('txDetailsMask');
+  if (!mask) {
+    console.warn('[txd] txDetailsMask not found in DOM');
+    toast(tx.desc + ' — ' + fmtCurrency(tx.amt) + ' (' + tx.status + ')');
+    return;
+  }
+
+  var isWithdrawal = !!tx.isWithdrawal;
+  var amount = tx.amt || 0;
+  var status = tx.status || '—';
+  var badge = txStatusLabel(status);
+
+  // Kicker
+  var kicker = document.getElementById('txdKicker');
+  if (kicker) {
+    if (isWithdrawal) kicker.textContent = '📤 Withdrawal';
+    else if ((tx.desc || '').toLowerCase().indexOf('deposit') !== -1) kicker.textContent = '💰 Deposit';
+    else if ((tx.desc || '').toLowerCase().indexOf('transfer') !== -1) kicker.textContent = '🔁 Transfer';
+    else kicker.textContent = '💳 Transaction';
+  }
+
+  // Amount
+  var amtEl = document.getElementById('txdAmount');
+  if (amtEl) {
+    amtEl.textContent = (amount > 0 ? '+' : '') + fmtCurrency(amount);
+    amtEl.style.color = amount >= 0 ? '#00e08a' : '#ff5470';
+  }
+
+  // Badge
+  var badgeEl = document.getElementById('txdStatusBadge');
+  if (badgeEl) {
+    badgeEl.textContent = badge.text;
+    badgeEl.style.background = badge.bg;
+    badgeEl.style.color = badge.color;
+  }
+
+  // Body
+  var body = document.getElementById('txdBody');
+  if (!body) return;
+  var rows = '';
+
+  rows += txdRow('Date', new Date(tx.ts || Date.now()).toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  }));
+  rows += txdRow('Description', escapeHtml(tx.desc || '—'));
+
+  if (isWithdrawal) {
+    var wd = (st.withdrawals || []).find(function(w){ return w.id === tx.wdId; });
+    if (wd) {
+      rows += txdRow('Method', (wd.method || 'iban').toUpperCase());
+      if (wd.details) {
+        var d = wd.details;
+        if (d.name)       rows += txdRow('Recipient', escapeHtml(d.name));
+        if (d.iban)       rows += txdRow('IBAN', escapeHtml(d.iban), true);
+        if (d.swift)      rows += txdRow('SWIFT / BIC', escapeHtml(d.swift), true);
+        if (d.bank)       rows += txdRow('Bank', escapeHtml(d.bank));
+        if (d.country)    rows += txdRow('Country', escapeHtml(d.country));
+        if (d.cardName)   rows += txdRow('Card holder', escapeHtml(d.cardName));
+        if (d.cardNumber) rows += txdRow('Card number', escapeHtml(d.cardNumber), true);
+        if (d.expiry)     rows += txdRow('Card expiry', escapeHtml(d.expiry));
+        if (d.network)    rows += txdRow('Network', escapeHtml(d.network));
+        if (d.coin)       rows += txdRow('Coin', escapeHtml(d.coin));
+        if (d.address)    rows += txdRow('Wallet', escapeHtml(d.address), true);
+        if (d.memo)       rows += txdRow('Memo', escapeHtml(d.memo));
+      }
+      if (wd.status === 'rejected' && wd.reason) {
+        rows += '<div style="padding:12px 14px;background:rgba(255,84,112,.08);border:1px solid rgba(255,84,112,.3);border-radius:10px;color:#ff8a8a;font-size:.85rem;margin-top:4px">' +
+          '<b>❌ Rejection reason:</b><br>' + escapeHtml(wd.reason) + '</div>';
+      }
+    } else {
+      rows += txdRow('Method', 'IBAN');
+    }
+  } else {
+    if (tx.hash) {
+      var explorer = '';
+      var symbol = (tx.symbol || '').toUpperCase();
+      if (symbol === 'BTC') explorer = 'https://mempool.space/tx/' + tx.hash;
+      else if (symbol === 'ETH') explorer = 'https://etherscan.io/tx/' + tx.hash;
+
+      var hashDisplay = tx.hash.slice(0, 14) + '…' + tx.hash.slice(-10);
+      var hashHtml = explorer
+        ? '<a href="' + explorer + '" target="_blank" rel="noopener" style="color:#47dcff;text-decoration:none">' + escapeHtml(hashDisplay) + ' ↗</a>'
+        : escapeHtml(hashDisplay);
+
+      rows += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px">' +
+        '<span style="color:#94a3b8;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em">TX hash</span>' +
+        '<span style="text-align:right;max-width:65%">' +
+          '<b style="font-family:ui-monospace;font-size:.85rem;word-break:break-all">' + hashHtml + '</b>' +
+          '<button onclick="event.stopPropagation();copyText(\'' + tx.hash + '\',\'TX hash copied\')" style="margin-left:6px;background:transparent;border:none;color:#47dcff;cursor:pointer;font-size:14px" title="Copy">📋</button>' +
+        '</span>' +
+      '</div>';
+    }
+    if (tx.symbol) rows += txdRow('Symbol', escapeHtml(tx.symbol));
+    if (tx.crypto) rows += txdRow('Crypto amount', Number(tx.crypto).toFixed(8) + ' ' + escapeHtml(tx.symbol || ''));
+    if (tx.to)     rows += txdRow('To address', escapeHtml(tx.to), true);
+  }
+
+  var txId = tx.hash || tx.wdId || ('tx_' + (tx.ts || Date.now()));
+  rows += txdRow('Transaction ID', '#' + String(txId).slice(0, 24) + (String(txId).length > 24 ? '…' : ''));
+
+  body.innerHTML = rows;
+  mask.classList.add('on');
+}
+
+function closeTxDetails() {
+  var mask = document.getElementById('txDetailsMask');
+  if (mask) mask.classList.remove('on');
+}
 function renderRecentTx(){
   var listEl = document.getElementById('recentTxList');
   if (!listEl) return;
