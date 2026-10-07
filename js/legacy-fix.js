@@ -1,51 +1,66 @@
 /* ============================================================
-   NORDIC CRYPTO — LEGACY-FIX.JS v1.0
+   NORDIC CRYPTO — LEGACY-FIX.JS v2.0
    ============================================================
-   Загружается ПОСЛЕ app.legacy.js.
-   Патчит 3 функции, чтобы клики работали
-   с applyAccountType() и inline display:none.
+   Loaded AFTER app.legacy.js.
+   
+   Provides safe monkey-patches for functions that break with
+   applyAccountType() and inline display:none.
+   
+   Fixes included:
+     • FIX 1: initNav       — account-type-aware navigation
+     • FIX 2: initRecentTx  — "View all" button
+     • FIX 3: initCardActions → btnGoOrder
+     • FIX 4: Exchange dashboard buttons (Deposit/Withdraw/Trade)
+   
+   v2.0 changes:
+     • Removed count-up animation (was corrupting balance)
+     • Fixed IIFE closing brace (was mid-file → FIX 4 never ran)
+     • Removed applyAccountType wrapper (caused render loops)
+     • All comments now in English
    ============================================================ */
 
 (function () {
   'use strict';
 
-    // ---------- FIX 1: initNav — навигация по сайдбару + account type awareness ----------
-    window.initNav = function () {
+  /* ============================================================
+     FIX 1: initNav — account-type-aware sidebar navigation
+     ============================================================ */
+  window.initNav = function () {
     var mis = document.querySelectorAll('.mi');
     for (var i = 0; i < mis.length; i++) {
       mis[i].onclick = function () {
         var p = this.getAttribute('data-p');
 
-        // 🎯 Определяем тип аккаунта
+        // Determine account type
         var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
         var isExchange = (accountType === 'exchange');
 
-        // Если exchange клиент и кликает на "Dashboard" → показываем exchangeDash
+        // Exchange clients → "Dashboard" maps to exchangeDash
         var targetPage = p;
         if (isExchange && p === 'dash') {
           targetPage = 'exchangeDash';
         }
 
-        // Скрываем все .pg
+        // Hide all .pg pages
         var pgs = document.querySelectorAll('.pg');
         for (var j = 0; j < pgs.length; j++) {
           pgs[j].classList.remove('on');
           pgs[j].style.display = 'none';
         }
 
-        // Показываем нужную страницу
+        // Show target page
         var page = document.getElementById(targetPage);
         if (page) {
           page.classList.add('on');
           page.style.display = 'block';
         }
 
-        // Подсветка активного пункта меню
+        // Highlight active menu item
         var ms = document.querySelectorAll('.mi');
         for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
         this.classList.add('on');
 
-        // Если вернулись на dashboard — обновляем данные
+        // Refresh data when returning to a dashboard
         if (targetPage === 'dash' || targetPage === 'exchangeDash') {
           setTimeout(function () {
             if (typeof window.render === 'function') window.render();
@@ -55,7 +70,9 @@
     }
   };
 
-  // FIX 2: initRecentTx — кнопка "View all"
+  /* ============================================================
+     FIX 2: initRecentTx — "View all" button
+     ============================================================ */
   window.initRecentTx = function () {
     var viewAll = document.getElementById('viewAllTx');
     if (viewAll) viewAll.onclick = function (e) {
@@ -77,12 +94,15 @@
     };
   };
 
-  // FIX 3: initCardActions — кнопка "Order Physical Card"
+  /* ============================================================
+     FIX 3: initCardActions → btnGoOrder ("Order Physical Card")
+     ============================================================ */
   var _origInitCardActions = window.initCardActions;
   window.initCardActions = function () {
     if (typeof _origInitCardActions === 'function') {
       try { _origInitCardActions(); } catch (e) { console.warn('[fix] initCardActions error:', e); }
     }
+
     var btnGoOrder = document.getElementById('btnGoOrder');
     if (btnGoOrder) {
       btnGoOrder.onclick = function () {
@@ -104,73 +124,11 @@
     }
   };
 
-  // Перезапускаем с патчами (legacy уже вызвал их один раз)
-    setTimeout(function () {
-    if (typeof window.initNav === 'function') window.initNav();
-    if (typeof window.initRecentTx === 'function') window.initRecentTx();
-    if (typeof window.initCardActions === 'function') window.initCardActions();
-    console.log('%c[NordicCrypto] 🔧 legacy-fix.js applied', 'color:#22d3ee;font-weight:bold');
-  }, 100);
-
-  // ============================================================
-  // COUNT-UP АНИМАЦИЯ БАЛАНСА
-  // ============================================================
-  function animateNumber(el, targetText) {
-    if (!el) return;
-    var cleaned = targetText.replace(/[^0-9.]/g, '');
-    var target = parseFloat(cleaned);
-    if (!isFinite(target) || target === 0) {
-      el.textContent = targetText;
-      return;
-    }
-    var duration = 1200;
-    var start = performance.now();
-    var prefix = targetText.match(/^[^\d]*/)[0] || '';
-    var suffix = targetText.match(/[^\d]*$/)[0] || '';
-    function tick(now) {
-      var progress = Math.min((now - start) / duration, 1);
-      var eased = 1 - Math.pow(1 - progress, 3);
-      var current = target * eased;
-      var formatted = current.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-      el.textContent = prefix + formatted + suffix;
-      if (progress < 1) requestAnimationFrame(tick);
-      else el.textContent = targetText;
-    }
-    requestAnimationFrame(tick);
-  }
-
-  var _balanceObserver = null;
-  function watchBalance() {
-    var balEl = document.getElementById('bal');
-    if (!balEl || _balanceObserver) return;
-    var lastText = '';
-    _balanceObserver = new MutationObserver(function () {
-      var txt = balEl.textContent;
-      if (txt === lastText) return;
-      lastText = txt;
-      if (/[\d]/.test(txt)) animateNumber(balEl, txt);
-    });
-    _balanceObserver.observe(balEl, { childList: true, characterData: true, subtree: true });
-  }
-
-  watchBalance();
-  setTimeout(watchBalance, 1000);
-  setTimeout(watchBalance, 2500);
-
-  console.log('%c[NordicCrypto] 💫 count-up animation ready', 'color:#22d3ee');
-
-})();     // ← это последняя строка, оставь её
-  // ============================================================
-  // FIX 4: EXCHANGE DASHBOARD BUTTONS
-  // ============================================================
-  // Кнопки в exchange dashboard биндятся в DOMContentLoaded,
-  // который к моменту загрузки legacy уже прошёл. Перебиваем их.
-
+  /* ============================================================
+     FIX 4: Exchange dashboard buttons (Deposit / Withdraw / Trade)
+     ============================================================ */
   function bindExchangeButtons() {
-    // Deposit — открывает ту же модалку, что и "Add funds"
+    // Deposit → same modal as "Add funds"
     var btnExDep = document.getElementById('exBtnDeposit');
     if (btnExDep) {
       btnExDep.onclick = function (e) {
@@ -184,7 +142,7 @@
       };
     }
 
-    // Withdraw — открывает withdraw modal
+    // Withdraw → withdraw modal
     var btnExWd = document.getElementById('exBtnWithdraw');
     if (btnExWd) {
       btnExWd.onclick = function (e) {
@@ -197,7 +155,7 @@
       };
     }
 
-    // Trade — заглушка + hint про терминал
+    // Trade → terminal preview modal
     var btnExTrade = document.getElementById('exBtnTrade');
     if (btnExTrade) {
       btnExTrade.onclick = function (e) {
@@ -207,7 +165,9 @@
     }
   }
 
-  // ----- Trade Terminal — премиум-заглушка -----
+  /* ============================================================
+     Trade Terminal — premium preview modal (v5.0 placeholder)
+     ============================================================ */
   function openTradeTerminal() {
     var old = document.getElementById('tradeTerminalModal');
     if (old) { old.remove(); return; }
@@ -280,19 +240,22 @@
   }
   window.openTradeTerminal = openTradeTerminal;
 
-  // Запускаем бинды при загрузке и после переключения на exchange
-  bindExchangeButtons();
-  setTimeout(bindExchangeButtons, 500);
-  setTimeout(bindExchangeButtons, 1500);
-  setTimeout(bindExchangeButtons, 3000);
-
-  // Плюс следим, чтобы кнопки были забанены после applyAccountType
-  var _origApplyAccountType = window.applyAccountType;
-  if (typeof _origApplyAccountType === 'function') {
-    window.applyAccountType = function () {
-      _origApplyAccountType.apply(this, arguments);
-      setTimeout(bindExchangeButtons, 100);
-    };
+  /* ============================================================
+     INIT — Apply all patches
+     ============================================================ */
+  function applyAllPatches() {
+    if (typeof window.initNav === 'function') window.initNav();
+    if (typeof window.initRecentTx === 'function') window.initRecentTx();
+    if (typeof window.initCardActions === 'function') window.initCardActions();
+    bindExchangeButtons();
   }
 
-  console.log('%c[NordicCrypto] 💱 exchange buttons bound', 'color:#22d3ee');
+  // Apply on load, then re-apply a few times to catch late DOM mutations
+  applyAllPatches();
+  setTimeout(applyAllPatches, 500);
+  setTimeout(applyAllPatches, 1500);
+  setTimeout(applyAllPatches, 3000);
+
+  console.log('%c[NordicCrypto] 🔧 legacy-fix.js v2.0 applied', 'color:#22d3ee;font-weight:bold');
+
+})();
