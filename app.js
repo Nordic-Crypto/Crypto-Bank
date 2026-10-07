@@ -1810,7 +1810,38 @@ function showPendingScreen() {
   if (main) main.style.display = 'none';
   var onb = document.getElementById('onboard');
   if (onb) onb.classList.remove('on');
-
+   
+  // 🎁 Кнопка проверки KYC
+  var btnCheck = document.getElementById('btnCheckKycStatus');
+  if (btnCheck && !btnCheck._bound) {
+    btnCheck._bound = true;
+    btnCheck.onclick = async function() {
+      btnCheck.disabled = true;
+      btnCheck.textContent = '⏳ Checking...';
+      var v = await checkVerificationStatus();
+      btnCheck.disabled = false;
+      btnCheck.textContent = '🔄 Check status';
+      if (!v) { toast('Check failed', true); return; }
+      if (v.status === 'approved') {
+        toast('✅ Approved! Loading...');
+        loadFromServer(function(){
+          var p = document.getElementById('pendingScreen');
+          if (p) { p.classList.remove('on'); p.style.display = 'none'; }
+          var side = document.getElementById('sideBar');
+          var main = document.getElementById('mainApp');
+          if (side) side.style.display = 'flex';
+          if (main) main.style.display = 'flex';
+          render();
+          if (typeof applyAccountType === 'function') applyAccountType();
+        });
+      } else if (v.status === 'pending') {
+        toast('⏳ Still pending review', true);
+      } else if (v.status === 'rejected') {
+        showRejectedScreen(v.reason);
+      }
+    };
+  }
+   
   var btnLogout = document.getElementById('btnLogoutPending');
   if (btnLogout && !btnLogout._bound) {
     btnLogout._bound = true;
