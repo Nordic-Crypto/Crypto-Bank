@@ -4549,34 +4549,31 @@ async function scanAllDeposits() {
   } catch (e) { toast('Scan error', true); }
 }
 
-/* ========== AUTO DEPOSIT CHECK (auto-credit) ========== */
+/* ========== AUTO DEPOSIT CHECK — отправляет в PENDING, не зачисляет ========== */
 (function(){
   var CHECK_INTERVAL = 15000;
-  var _depositCheckBusy = false;
+  var _busy = false;
 
   async function checkDeposits() {
-    // Не админ, не во время просмотра
     if (localStorage.getItem('user_role') === 'admin') return;
     if (window.adminViewingEmail) return;
-    if (_depositCheckBusy) return;
-    _depositCheckBusy = true;
+    if (_busy) return;
+    _busy = true;
 
-    var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
-    if (!email) { _depositCheckBusy = false; return; }
+    var email = (localStorage.getItem('user_email') || '').toLowerCase();
+    if (!email) { _busy = false; return; }
 
-    // Не проверяем если у клиента нет KYC approved (иначе может утечь)
     var vStatus = (st.verification && st.verification.status) || null;
-    if (vStatus !== 'approved') { _depositCheckBusy = false; return; }
+    if (vStatus !== 'approved') { _busy = false; return; }
 
     try {
       var token = getSessionToken();
-      if (!token) { _depositCheckBusy = false; return; }
+      if (!token) { _busy = false; return; }
 
-      // ✅ 1) Синхронизируем свежий state с сервера (чтобы st.txs был актуален)
+      // Синхронизируем state
       try {
         var freshR = await fetch(WORKER_URL + '?action=getUserState', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: token, email: email })
         });
         var fresh = await freshR.json();
@@ -4584,28 +4581,25 @@ async function scanAllDeposits() {
           if (fresh.cryptoAddress) st.cryptoAddress = fresh.cryptoAddress;
           if (Array.isArray(fresh.txs)) st.txs = fresh.txs;
           if (Array.isArray(fresh.depositVerifications)) st.depositVerifications = fresh.depositVerifications;
+          if (Array.isArray(fresh.pendingDeposits)) st.pendingDeposits = fresh.pendingDeposits;
         }
       } catch(e) {}
 
-      // ✅ 2) Есть ли кошелёк?
-      var hasWallet = false;
-      try {
-        hasWallet = !!((window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]) 
-          || (st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth)));
-      } catch(e) {}
-      if (!hasWallet) { _depositCheckBusy = false; return; }
+      var hasWallet = !!(st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth));
+      if (!hasWallet) {
+        try { hasWallet = !!(window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]); } catch(e) {}
+      }
+      if (!hasWallet) { _busy = false; return; }
 
-      // ✅ 3) Сканируем блокчейн
       var r = await fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(email) + '&_t=' + Date.now());
       var data = await r.json();
-      if (!data || !data.ok || !data.result) { _depositCheckBusy = false; return; }
+      if (!data || !data.ok || !data.result) { _busy = false; return; }
 
       var btcList = data.result.btc || [];
       var ethList = data.result.eth || [];
       var myBtc = getDepositWallet('BTC');
       var myEth = getDepositWallet('ETH');
       var allTxs = [];
-
       btcList.forEach(function(tx) {
         if (tx.to && myBtc && tx.to.toLowerCase() !== myBtc.toLowerCase()) return;
         tx._type = 'BTC'; allTxs.push(tx);
@@ -4615,10 +4609,10 @@ async function scanAllDeposits() {
         tx._type = 'ETH'; allTxs.push(tx);
       });
 
-      // ✅ 4) Фильтр: только свежие, только новые
       var knownHashes = {};
       (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
       (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
+      (st.pendingDeposits || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
 
       var DAY_MS = 24 * 60 * 60 * 1000;
       var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
@@ -4629,85 +4623,65 @@ async function scanAllDeposits() {
         if (knownHashes[tx.hash]) return false;
         var txTime = tx.time ? tx.time * 1000 : 0;
         if (!txTime) return false;
-        // Не берём старше 24 часов
         if ((now - txTime) > DAY_MS) return false;
-        // Не берём до создания карты
         if (cardCreatedAt && txTime < cardCreatedAt) return false;
-        // Не берём будущее (защита от глюков)
         if (txTime > now + 60 * 1000) return false;
         return true;
       });
 
-      if (newTxs.length === 0) { _depositCheckBusy = false; return; }
+      if (newTxs.length === 0) { _busy = false; return; }
 
-      // ✅ 5) Авто-зачисляем + открываем модалку для подтверждения
-      var totalUsd = 0;
-      var added = 0;
-
+      // ✅ Отправляем в PENDING (не зачисляем!)
       for (var i = 0; i < newTxs.length; i++) {
         var tx = newTxs[i];
         var price = tx._type === 'BTC' ? (st.btcP || 68000) : (st.ethP || 3200);
         var credit = tx.amount * price;
         if (credit <= 0) continue;
 
-        // Помечаем как known, чтобы не зачислить 2 раза
-        knownHashes[tx.hash] = true;
-
-        // Добавляем в state
-        st.usd = (st.usd || 0) + credit;
-        if (tx._type === 'BTC') st.btc = (st.btc || 0) + tx.amount;
-        else st.eth = (st.eth || 0) + tx.amount;
-
-        if (!Array.isArray(st.txs)) st.txs = [];
-        st.txs.unshift({
-          date: new Date().toISOString().slice(0, 10),
-          ts: tx.time ? tx.time * 1000 : Date.now(),
-          desc: 'Crypto deposit — ' + Number(tx.amount).toFixed(8) + ' ' + tx._type,
-          amt: credit,
-          status: 'Completed',
-          hash: tx.hash,
-          crypto: tx.amount,
-          symbol: tx._type
-        });
-        if (!st.depositVerifications) st.depositVerifications = [];
-        st.depositVerifications.push({
-          txHash: tx.hash,
-          cryptoAmt: tx.amount,
-          symbol: tx._type,
-          usdValue: credit,
-          source: 'auto',
-          completedAt: Date.now()
-        });
-
-        totalUsd += credit;
-        added++;
+        try {
+          await fetch(WORKER_URL + '?action=addPendingDeposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: token,
+              txHash: tx.hash,
+              cryptoAmt: tx.amount,
+              symbol: tx._type,
+              usdValue: credit,
+              to: tx.to,
+              time: tx.time
+            })
+          });
+          knownHashes[tx.hash] = true;
+        } catch(e) {}
       }
 
-      if (added === 0) { _depositCheckBusy = false; return; }
+      // Обновляем стейт с сервера (там уже лежат pendingDeposits)
+      try {
+        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email })
+        });
+        var fresh2 = await r2.json();
+        if (fresh2 && !fresh2.error) {
+          if (Array.isArray(fresh2.pendingDeposits)) st.pendingDeposits = fresh2.pendingDeposits;
+          if (Array.isArray(fresh2.txs)) st.txs = fresh2.txs;
+          if (typeof fresh2.usd === 'number') st.usd = fresh2.usd;
+        }
+      } catch(e) {}
 
-      // ✅ 6) Сохраняем на сервер (force: true — чтобы точно перезаписать)
-      await fetch(WORKER_URL + '?action=setUserState', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, state: st, force: true })
-      }).catch(function(){});
-
-      // ✅ 7) Обновляем UI
       if (typeof render === 'function') render();
       if (typeof addNotification === 'function') {
-        addNotification('💰 Deposit received: +$' + totalUsd.toFixed(2), '💰');
+        addNotification('💰 Deposit pending review', '⏳');
       }
-      if (typeof toast === 'function') toast('💰 Deposit received! +$' + totalUsd.toFixed(2));
-      if (typeof playChime === 'function') playChime();
-      if (typeof spawnConfetti === 'function') spawnConfetti();
+      if (typeof toast === 'function') toast('💰 Deposit pending review');
     } catch(e) {
       console.warn('[checkDeposits]', e);
     } finally {
-      _depositCheckBusy = false;
+      _busy = false;
     }
   }
 
-  // ✅ Стартуем только для залогиненных НЕ админов
   setTimeout(checkDeposits, 8000);
   setInterval(checkDeposits, CHECK_INTERVAL);
 })();
