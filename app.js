@@ -1970,7 +1970,7 @@ setInterval(async function(){
 
   if (vStatus !== 'pending' && !pVisible) return;
 
-  var v = await checkVerificationStatus();с
+  var v = await checkVerificationStatus();
   if (!v) return;
 
   if (v.status === 'approved') {
