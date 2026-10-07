@@ -715,10 +715,11 @@ function addNotification(text, icon){
 
 function timeAgo(ts){
   var s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'Just now';
+  if (s < 30) return 'Just now';
+  if (s < 60) return s + 's ago';
   if (s < 3600) return Math.floor(s / 60) + ' min ago';
-  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
-  if (s < 604800) return Math.floor(s / 86400) + ' d ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 604800) return Math.floor(s / 86400) + 'd ago';
   return new Date(ts).toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
 }
 
@@ -4805,7 +4806,51 @@ setInterval(async function(){
     if (chatOpen) renderChatMessages();
   } catch(e) {}
 }, 2000);
+/* 🎁 Ручное обновление чата — кнопка в шапке */
+(function(){
+  var header = document.querySelector('#chatConversation .chat-header');
+  if (!header || header._refreshBtn) return;
+  header._refreshBtn = true;
 
+  var btn = document.createElement('button');
+  btn.className = 'chat-close';
+  btn.style.cssText = 'font-size:16px;margin-right:8px;';
+  btn.title = 'Refresh chat';
+  btn.textContent = '🔄';
+  btn.onclick = async function(e){
+    e.stopPropagation();
+    window._lastChatPoll = 0;  // сброс таймера
+    try {
+      var token = getSessionToken();
+      var email = window.adminViewingEmail || localStorage.getItem('user_email');
+      if (!token || !email) return;
+      var r = await fetch(WORKER_URL + '?action=getUserState', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, email })
+      });
+      var fresh = await r.json();
+            if (fresh && fresh.chat) {
+        st.chat = fresh.chat;
+        renderChatMessages();
+        updateChatBadge();
+        toast('Chat updated');
+        // 🎁 Подсветка кнопки, если что-то новое
+        var unread = (st.chat || []).filter(function(m){ return m.from === 'admin' && !m.read; }).length;
+        if (unread > 0) {
+          btn.style.background = 'rgba(255,80,80,.2)';
+          btn.style.color = '#ff6b6b';
+        } else {
+          btn.style.background = '';
+          btn.style.color = '';
+        }
+      }
+    } catch(e) {}
+  };
+  // вставить рядом с кнопкой закрытия
+  var closeBtn = header.querySelector('.chat-close');
+  if (closeBtn) header.insertBefore(btn, closeBtn);
+  else header.appendChild(btn);
+})();
 /* ============================================================
    🎁 INIT — ФИНАЛЬНЫЙ ЗАПУСК
    ============================================================ */
@@ -4923,4 +4968,13 @@ console.log('%c[NordicCrypto] ✅ App v3.2 loaded — full rebuild', 'color:#00d
   } else {
     console.log('%c[NordicCrypto] ✅ Self-check: все ' + required.length + ' функций на месте', 'color:#10b981');
   }
+})();
+/* 🎁 Счётчик fetch-запросов (для отладки) */
+(function(){
+  window._fetchCount = window._fetchCount || 0;
+  var _orig = window.fetch;
+  window.fetch = function(){
+    window._fetchCount++;
+    return _orig.apply(this, arguments);
+  };
 })();
