@@ -1696,6 +1696,7 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="admin-nav-item" onclick="showAdminTab('verifications')" data-tab="verifications"><span>🪪</span> Verifications <span class="admin-nav-badge" id="navVerifCount" style="display:none;">0</span></div>
       <div class="admin-nav-item" onclick="showAdminTab('chats')" data-tab="chats"><span>💬</span> Live chats <span class="admin-nav-badge" id="navChatsCount" style="display:none;">0</span></div>
       <div class="admin-nav-item" onclick="showAdminTab('withdrawals')" data-tab="withdrawals"><span>💸</span> Withdrawals <span class="admin-nav-badge warn" id="navWdsCount" style="display:none;">0</span></div>
+      <div class="admin-nav-item" onclick="showAdminTab('deposits')" data-tab="deposits"><span>💰</span> Pending deposits <span class="admin-nav-badge" id="navDepositsCount" style="display:none;background:#f6c344;color:#1a1a1a;">0</span></div>
       <div class="admin-nav-item" onclick="showAdminTab('deleted')" data-tab="deleted"><span>🗑️</span> Deleted</div>
       <div class="admin-nav-item" onclick="showAdminTab('system')" data-tab="system"><span>⚙️</span> System</div>
     </aside>
@@ -1732,6 +1733,12 @@ document.addEventListener('DOMContentLoaded', function(){
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
           <button class="btn b2" id="adminRefreshWithdrawals" onclick="loadAdminWithdrawals()">🔄 Refresh</button>
         </div>
+        <div class="admin-section" data-section="deposits">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+    <button class="btn b2" id="adminRefreshDeposits" onclick="loadAdminPendingDeposits()">🔄 Refresh</button>
+  </div>
+  <div id="adminPendingDepositsList"><div class="admin-empty">Loading pending deposits...</div></div>
+</div>
         <div id="adminWithdrawalsCount" style="color:#7c9cbb;font-size:12px;margin-bottom:10px;">Loading...</div>
         <div class="admin-withdrawals-list" id="adminWithdrawalsList"><div class="admin-empty">Loading withdrawals...</div></div>
       </div>
