@@ -4117,6 +4117,9 @@ function adminViewClient(email) {
   localStorage.setItem('user_role', 'user');
   st = JSON.parse(JSON.stringify(def));
   stateLoaded = false;
+     // 🎁 Сброс кэша applyAccountType — чтобы переключило на тип клиента
+  window._lastAppliedAccountType = undefined;
+  document.body.dataset.acctApplied = '';
 
   hideAdminPanel();
   var side = document.getElementById('sideBar');
@@ -4172,6 +4175,8 @@ function backToAdmin() {
   }
   st = JSON.parse(JSON.stringify(def));
   stateLoaded = false;
+  window._lastAppliedAccountType = undefined;
+  document.body.dataset.acctApplied = '';
   showAdminPanel();
 }
 
