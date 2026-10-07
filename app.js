@@ -1,8 +1,9 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v3.0 — CLEAN
+   NORDIC CRYPTO — APP.JS v3.1 — CLEAN
    ============================================================ */
 
 var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
+var WORKER_URL = WORKER_LOGIN_URL;
 
 var DEPOSIT_WALLETS = {
   'lundgrenhem@gmail.com': {
@@ -10,6 +11,35 @@ var DEPOSIT_WALLETS = {
     eth: '0xFB7A7956Af77061D3B5f3B357ef9c0a22CD60e97'
   }
 };
+
+var SESSION_TIMEOUT_MS = 5 * 60 * 1000;
+var LOGOUT_COUNTDOWN = 60;
+var sessionTimer = null, countdownTimer = null, countdownLeft = 60;
+
+function $(i){ return document.getElementById(i); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function fmt(n){ return '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function eurF(n){ return '≈ €' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function now(){ return new Date().toISOString().slice(0,10); }
+function getSessionToken(){ return localStorage.getItem('session_token'); }
+function setSessionToken(t){ localStorage.setItem('session_token', t); }
+function clearSessionToken(){ localStorage.removeItem('session_token'); }
+
+var def = {
+  usd:0, btc:0, eth:0, btcP:68000, ethP:3200, eurR:0.92, sekR:10.45,
+  currency:'USD', txs:[], order:null, card:null,
+  notifications:[], withdrawals:[], balanceHistory:[], pendingDeposits:[], depositVerifications:[]
+};
+var st = JSON.parse(JSON.stringify(def));
+var stateLoaded = false;
+var mode = null, tt = null;
+var autoCheckTimer = null, autoCheckKnown = {};
+var cvvVisible = false, cvvTimer = null;
+var selectedDesign = 'cosmic', onbType = 'Visa', onbCur = 'USD';
 
 function getDepositWallet(coin){
   if (st && st.cryptoAddress) {
@@ -21,46 +51,8 @@ function getDepositWallet(coin){
   if (!w) return null;
   return coin === 'BTC' ? w.btc : w.eth;
 }
-var WORKER_URL = WORKER_LOGIN_URL;
-var SESSION_TIMEOUT_MS = 5 * 60 * 1000;
-var LOGOUT_COUNTDOWN = 60;
-var sessionTimer = null;
-var countdownTimer = null;
-var countdownLeft = 60;
 
-function $(i){ return document.getElementById(i); }
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
-function fmt(n){ return '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function eurF(n){ return '≈ €' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function now(){ return new Date().toISOString().slice(0,10); }
-
-var def = {
-  usd:0, btc:0, eth:0,
-  btcP:68000, ethP:3200,
-  eurR:0.92, sekR:10.45,
-  currency:'USD',
-  txs:[], order:null, card:null,
-  notifications:[], withdrawals:[], balanceHistory:[]
-};
-var st = JSON.parse(JSON.stringify(def));
-var stateLoaded = false;
-var mode = null, tt = null;
-var autoCheckTimer = null;
-var autoCheckKnown = {};
-var cvvVisible = false;
-var cvvTimer = null;
-var selectedDesign = 'cosmic';
-var onbType = 'Visa';
-var onbCur = 'USD';
-
-function getSessionToken() { return localStorage.getItem('session_token'); }
-function setSessionToken(t) { localStorage.setItem('session_token', t); }
-function clearSessionToken() { localStorage.removeItem('session_token'); }
-
+/* ---------- SERVER SYNC ---------- */
 function loadFromServer(cb, targetEmail){
   var token = getSessionToken();
   if (!token) {
@@ -73,20 +65,18 @@ function loadFromServer(cb, targetEmail){
   if (targetEmail) body.email = targetEmail;
 
   fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (data && data.ok === false) {
-        st = JSON.parse(JSON.stringify(def));
-      } else {
-        st = data || JSON.parse(JSON.stringify(def));
-      }
+      if (data && data.ok === false) st = JSON.parse(JSON.stringify(def));
+      else st = data || JSON.parse(JSON.stringify(def));
       if (!st.txs) st.txs = [];
       if (!st.balanceHistory) st.balanceHistory = [];
       if (!st.withdrawals) st.withdrawals = [];
+      if (!st.pendingDeposits) st.pendingDeposits = [];
+      if (!st.depositVerifications) st.depositVerifications = [];
       if (!st.card || typeof st.card !== 'object') st.card = null;
       if (!st.chat) st.chat = [];
       if (!st.ticket) st.ticket = null;
@@ -118,18 +108,14 @@ function saveToServer(){
   if (window.adminViewingEmail) return;
   if (localStorage.getItem('user_role') === 'admin') return;
   var token = getSessionToken();
-  if (!token) return;
+  if (!token || !stateLoaded) return;
   fetch(WORKER_LOGIN_URL + '?action=setUserState', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      token: token,
-      state: st,
-      email: window.adminViewingEmail || undefined
-    })
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
   }).catch(function(){});
 }
 
+/* ---------- AUTH ---------- */
 async function doLogin() {
   var emailEl = document.getElementById('loginEmail');
   var passEl  = document.getElementById('loginPassword');
@@ -149,8 +135,7 @@ async function doLogin() {
 
   try {
     var res = await fetch(WORKER_LOGIN_URL + '?action=login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email, password: password })
     });
     var data = await res.json();
@@ -205,8 +190,7 @@ async function checkSession() {
 
   try {
     var res = await fetch(WORKER_LOGIN_URL + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token })
     });
     var data = await res.json();
@@ -214,7 +198,11 @@ async function checkSession() {
       localStorage.setItem('user_email', data.user.email);
       localStorage.setItem('user_role', data.user.role || 'user');
     } else {
-      console.warn('[session] verify failed:', data);
+      clearSessionToken();
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      showLoginScreen();
     }
   } catch (e) { console.warn('[session] error:', e); }
 }
@@ -247,9 +235,7 @@ function hideLoginScreen() {
 
 function showApp() {
   if (isAdmin()) { showAdminPanel(); return; }
-  
-  // ✅ ФИКС: НЕ показываем sideBar/mainApp сразу.
-  // Покажем только после проверки KYC.
+
   var side = document.getElementById('sideBar');
   var main = document.getElementById('mainApp');
 
@@ -276,23 +262,19 @@ function showApp() {
     var accountType = (st.user && st.user.accountType) || null;
     var vStatus = (st.verification && st.verification.status) || null;
 
-    // ✅ ФИКС: проверка KYC ПЕРЕД показом sideBar/mainApp
     if (localStorage.getItem('user_role') !== 'admin' && !window.adminViewingEmail) {
-      // PENDING — показываем pendingScreen, sideBar/mainApp НЕ трогаем
       if (vStatus === 'pending') {
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         showPendingScreen();
         return;
       }
-      // REJECTED
       if (vStatus === 'rejected') {
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         showRejectedScreen(st.verification.reason);
         return;
       }
-      // НЕТ KYC — если карты нет, онбординг, иначе KYC
       if (vStatus !== 'approved') {
         if (!st.card && accountType !== 'exchange') {
           if (side) side.style.display = 'none';
@@ -309,11 +291,9 @@ function showApp() {
       }
     }
 
-    // ✅ Только здесь показываем sideBar/mainApp — KYC approved или admin
     if (side) side.style.display = 'flex';
     if (main) main.style.display = 'flex';
 
-    // Онбординг — если карты нет и не exchange
     if (!st.card && accountType !== 'exchange') {
       $('onboard').classList.add('on');
       return;
@@ -330,8 +310,7 @@ async function doLogout() {
   if (token) {
     try {
       await fetch(WORKER_LOGIN_URL + '?action=logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: token })
       });
     } catch (e) {}
@@ -343,6 +322,10 @@ async function doLogout() {
   clearInterval(sessionTimer);
   clearInterval(countdownTimer);
   hideInactivityModal();
+  window.adminViewingEmail = null;
+  window.adminOriginalEmail = null;
+  window.adminOriginalRole = null;
+  _exPricesCache = null;
 
   document.querySelectorAll('.mask').forEach(function(m){ m.classList.remove('on'); });
   document.querySelectorAll('.overlay, .inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage').forEach(function(m){ m.classList.remove('on'); });
@@ -376,9 +359,12 @@ function initLoginLogout() {
   if (btnLogout)    btnLogout.onclick    = function(){ doLogout(); };
 }
 
+var _inactivityListenersAttached = false;
 function startInactivityTimer() {
   clearTimeout(sessionTimer);
   sessionTimer = setTimeout(showInactivityModal, SESSION_TIMEOUT_MS);
+  if (_inactivityListenersAttached) return;
+  _inactivityListenersAttached = true;
   ['click', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach(function(evt){
     document.addEventListener(evt, resetInactivityTimer, { passive: true });
   });
@@ -416,6 +402,7 @@ function hideInactivityModal() {
   clearInterval(countdownTimer);
 }
 
+/* ---------- SETTINGS ---------- */
 function initSettings() {
   var btnSettings    = document.getElementById('settingsBtn');
   var mask           = document.getElementById('settingsMask');
@@ -486,16 +473,15 @@ function initSettings() {
     cpSave.textContent = 'Changing...';
     try {
       var res = await fetch(WORKER_LOGIN_URL + '?action=changePassword', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: getSessionToken(), oldPassword: oldP, newPassword: newP })
       });
       var data = await res.json();
       if (data.ok) {
-        okEl.textContent = '✓ Password changed successfully';
+        okEl.textContent = '✓ Password changed. Please log in again.';
         okEl.style.display = 'block';
         playChime();
-        setTimeout(function(){ if (changePassMask) changePassMask.classList.remove('on'); }, 2000);
+        setTimeout(function(){ doLogout(); }, 1500);
       } else {
         errEl.textContent = data.error || 'Failed to change password';
         errEl.style.display = 'block';
@@ -505,7 +491,7 @@ function initSettings() {
       errEl.style.display = 'block';
     }
     cpSave.disabled = false;
-    cpSave.textContent = 'Change password';
+    cpSave.textContent = 'Change';
   };
 
   if (deleteBtn) deleteBtn.onclick = function(){
@@ -519,7 +505,36 @@ function initSettings() {
     setTimeout(function(){ doLogout(); }, 1500);
   };
 }
-/* ========== PRICES ========== */
+
+/* ---------- PRICES ---------- */
+var _lastRender = 0;
+function render(){
+  var n = Date.now();
+  if (n - _lastRender < 150) return;
+  _lastRender = n;
+  _renderAll();
+}
+
+function _renderAll(){
+  var balEl = $('bal'); if (balEl) balEl.textContent = fmtCurrency(st.usd);
+  var balEurEl = $('balEur'); if (balEurEl) balEurEl.textContent = eurF(st.usd * st.eurR);
+  var btcBEl = $('btcB'); if (btcBEl) btcBEl.textContent = st.btc.toFixed(8) + ' BTC';
+  var ethBEl = $('ethB'); if (ethBEl) ethBEl.textContent = st.eth.toFixed(8) + ' ETH';
+  var aBtcEl = $('aBtc'); if (aBtcEl) aBtcEl.textContent = st.btc.toFixed(8);
+  var aEthEl = $('aEth'); if (aEthEl) aEthEl.textContent = st.eth.toFixed(8);
+  var aBtcUEl = $('aBtcU'); if (aBtcUEl) aBtcUEl.textContent = '≈ ' + fmt(st.btc * st.btcP);
+  var aEthUEl = $('aEthU'); if (aEthUEl) aEthUEl.textContent = '≈ ' + fmt(st.eth * st.ethP);
+  renderTx();
+  renderOrder();
+  renderCard();
+  renderNotifications();
+  renderRecentTx();
+  renderStats();
+  renderBalanceChart();
+  renderIbanByAdmin();
+  applyAccountType();
+}
+
 function loadPrices(){
   fetch(WORKER_URL + '?action=prices')
     .then(function(r){ return r.json(); })
@@ -549,11 +564,8 @@ function loadPrices(){
         st.balanceHistory = st.balanceHistory.filter(function(p){
           return p.t > weekAgo && p.v > 0 && p.v < 1000000;
         });
-        if (st.balanceHistory.length > 3000) {
-          st.balanceHistory = st.balanceHistory.slice(-3000);
-        }
-        if (typeof saveToServer === 'function') saveToServer();
-        renderBalanceChart();
+        if (st.balanceHistory.length > 3000) st.balanceHistory = st.balanceHistory.slice(-3000);
+        saveToServer();
         render();
       }
     })
@@ -563,11 +575,11 @@ function loadPrices(){
 function updateCryptoTrends(prevBtc, prevEth) {
   var btcTrend = document.getElementById('btcChange');
   var ethTrend = document.getElementById('ethChange');
-  if (btcTrend) {
+  if (btcTrend && prevBtc) {
     var btcChg = ((st.btcP - prevBtc) / prevBtc) * 100;
     btcTrend.textContent = (btcChg >= 0 ? '▲ +' : '▼ ') + btcChg.toFixed(2) + '%';
   }
-  if (ethTrend) {
+  if (ethTrend && prevEth) {
     var ethChg = ((st.ethP - prevEth) / prevEth) * 100;
     ethTrend.textContent = (ethChg >= 0 ? '▲ +' : '▼ ') + ethChg.toFixed(2) + '%';
   }
@@ -581,8 +593,7 @@ function refreshBalanceFromServer(){
   if (!email) return;
 
   fetch(WORKER_LOGIN_URL + '?action=getUserState', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: token, email: window.adminViewingEmail || undefined })
   })
   .then(function(r){ return r.json(); })
@@ -593,7 +604,7 @@ function refreshBalanceFromServer(){
     if (Math.abs(newUsd - (st.usd || 0)) > 0.01) { st.usd = newUsd; changed = true; }
     if (d.currency) st.currency = d.currency;
     if (d.card !== undefined) st.card = d.card;
-    if (d.txs) st.txs = d.txs;
+    if (d.txs && d.txs.length >= (st.txs || []).length) st.txs = d.txs;
     if (d.notifications) st.notifications = d.notifications;
     if (d.user) st.user = d.user;
     if (d.balanceHistory) st.balanceHistory = d.balanceHistory;
@@ -602,6 +613,7 @@ function refreshBalanceFromServer(){
     if (d.ticket !== undefined) st.ticket = d.ticket;
     if (d.cryptoAddress) st.cryptoAddress = d.cryptoAddress;
     if (d.verification) st.verification = d.verification;
+    if (d.pendingDeposits) st.pendingDeposits = d.pendingDeposits;
     if (changed) render();
     if (typeof updateChatBadge === 'function') updateChatBadge();
   })
@@ -616,11 +628,9 @@ setInterval(function(){
 
 function fmtCurrency(usdAmount){
   var cur = st.currency || 'USD';
-  var amount = usdAmount;
-  var symbol = '$';
-  var suffix = '';
+  var amount = usdAmount, symbol = '$', suffix = '';
   if (cur === 'EUR'){ amount = usdAmount * st.eurR; symbol = '€'; }
-  else if (cur === 'SEK'){ amount = usdAmount * st.sekR; symbol = 'kr '; }
+  else if (cur === 'SEK'){ amount = usdAmount * st.sekR; symbol = 'kr '; suffix = ' SEK'; }
   else if (cur === 'NOK'){ amount = usdAmount * (st.nokR || 10.5); symbol = 'kr '; suffix = ' NOK'; }
   else if (cur === 'DKK'){ amount = usdAmount * (st.dkkR || 6.9); symbol = 'kr '; suffix = ' DKK'; }
   else if (cur === 'GBP'){ amount = usdAmount * (st.gbpR || 0.79); symbol = '£'; }
@@ -668,11 +678,11 @@ function setCurrency(cur){
   }
   var menu = document.getElementById('currMenu');
   if (menu) menu.classList.remove('on');
-    render();
+  render();
   if (typeof renderExchangeDash === 'function' && st.user && st.user.accountType === 'exchange') {
     renderExchangeDash();
   }
-   toast('Currency: ' + cur);
+  toast('Currency: ' + cur);
 }
 
 function initCurrencySwitcher(){
@@ -693,6 +703,7 @@ function initCurrencySwitcher(){
   if (codeEl) codeEl.textContent = st.currency || 'USD';
 }
 
+/* ---------- NOTIFICATIONS ---------- */
 function playNotificationSound(){
   playTone(880, 0.12, 'sine', 0.35);
   setTimeout(function(){ playTone(1320, 0.18, 'sine', 0.28); }, 100);
@@ -701,11 +712,8 @@ function playNotificationSound(){
 function addNotification(text, icon){
   if (!st.notifications) st.notifications = [];
   st.notifications.unshift({
-    id: Date.now() + Math.random(),
-    text: text,
-    icon: icon || '🔔',
-    ts: Date.now(),
-    read: false
+    id: Date.now() + Math.random(), text, icon: icon || '🔔',
+    ts: Date.now(), read: false
   });
   if (st.notifications.length > 50) st.notifications.length = 50;
   saveToServer();
@@ -758,9 +766,7 @@ function renderNotifications(){
   listEl.innerHTML = html;
   var items = listEl.querySelectorAll('.notif-item');
   for (var k = 0; k < items.length; k++){
-    items[k].onclick = function(){
-      markRead(Number(this.getAttribute('data-id')));
-    };
+    items[k].onclick = function(){ markRead(Number(this.getAttribute('data-id'))); };
   }
 }
 
@@ -772,9 +778,8 @@ function deleteNotification(id){
     var token = getSessionToken();
     if (token && stateLoaded){
       fetch(WORKER_URL + '?action=setUserState', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined, force: true, wipeNotifs: true })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, state: st, email: window.adminViewingEmail || undefined, force: true, wipeNotifs: true })
       }).catch(function(){});
     }
     renderNotifications();
@@ -817,16 +822,15 @@ function initNotifications(){
   if (closeBtn) closeBtn.onclick = closePanel;
 }
 
+/* ---------- CHARTS ---------- */
 function loadCharts(){
   fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=7')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d && d.prices && d.prices.length){
         var prices = d.prices.map(function(p){ return p[1]; });
-        drawChart('btcChart', prices, '#f7931a');
         var change = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
         updateChange('btcChange', change);
-        renderBalanceChart();
       }
     })
     .catch(function(){});
@@ -836,43 +840,11 @@ function loadCharts(){
     .then(function(d){
       if (d && d.prices && d.prices.length){
         var prices = d.prices.map(function(p){ return p[1]; });
-        drawChart('ethChart', prices, '#627eea');
         var change = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
         updateChange('ethChange', change);
-        renderBalanceChart();
       }
     })
     .catch(function(){});
-}
-
-function drawChart(elId, prices, color){
-  var el = document.getElementById(elId);
-  if (!el || !prices || prices.length < 2) return;
-  var w = 200, h = 42, pad = 4;
-  var min = Math.min.apply(null, prices);
-  var max = Math.max.apply(null, prices);
-  var range = max - min || 1;
-  var points = [];
-  for (var i = 0; i < prices.length; i++){
-    var x = pad + (i / (prices.length - 1)) * (w - pad * 2);
-    var y = pad + (1 - (prices[i] - min) / range) * (h - pad * 2);
-    points.push(x.toFixed(1) + ',' + y.toFixed(1));
-  }
-  var linePath = 'M' + points.join(' L');
-  var lastPoint = points[points.length - 1];
-  var lastX = lastPoint.split(',')[0];
-  var firstPoint = points[0];
-  var firstX = firstPoint.split(',')[0];
-  var fillPath = linePath + ' L' + lastX + ',' + (h - pad) + ' L' + firstX + ',' + (h - pad) + ' Z';
-  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-    '<defs><linearGradient id="grad_' + elId + '" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.55"/>' +
-      '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
-    '</linearGradient></defs>' +
-    '<path d="' + fillPath + '" fill="url(#grad_' + elId + ')"/>' +
-    '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
-  '</svg>';
-  el.innerHTML = svg;
 }
 
 function updateChange(elId, change){
@@ -882,11 +854,12 @@ function updateChange(elId, change){
   el.textContent = sign + change.toFixed(2) + '%';
 }
 
+/* ---------- DEPOSIT VERIFICATION MODAL ---------- */
 var depPendingTx = null;
 var depAnswers = { source: null, origin: null };
 
 function openDepositVerification(tx, cryptoAmt, symbol, usdValue){
-  depPendingTx = { tx: tx, cryptoAmt: cryptoAmt, symbol: symbol, usdValue: usdValue };
+  depPendingTx = { tx, cryptoAmt, symbol, usdValue };
   depAnswers = { source: null, origin: null };
 
   var cryptoEl = document.getElementById('depAmountCrypto');
@@ -920,9 +893,7 @@ function showDepStep(n){
 
 function initDepositVerification(){
   var btnStart = document.getElementById('depBtnStart');
-  if (btnStart){
-    btnStart.onclick = function(){ showDepStep(1); };
-  }
+  if (btnStart) btnStart.onclick = function(){ showDepStep(1); };
   var allOpts = document.querySelectorAll('.dep-opt');
   for (var i = 0; i < allOpts.length; i++){
     allOpts[i].onclick = function(){
@@ -937,12 +908,8 @@ function initDepositVerification(){
   }
   var check = document.getElementById('depConfirmCheck');
   var btnConfirm = document.getElementById('depBtnConfirm');
-  if (check && btnConfirm){
-    check.onchange = function(){ btnConfirm.disabled = !this.checked; };
-  }
-  if (btnConfirm){
-    btnConfirm.onclick = function(){ if (depPendingTx) finalizeDeposit(); };
-  }
+  if (check && btnConfirm) check.onchange = function(){ btnConfirm.disabled = !this.checked; };
+  if (btnConfirm) btnConfirm.onclick = function(){ if (depPendingTx) finalizeDeposit(); };
   var btnDone = document.getElementById('depBtnDone');
   if (btnDone) btnDone.onclick = closeDepositVerification;
 }
@@ -965,18 +932,17 @@ function finalizeDeposit(){
   else if (symbol === 'ETH') st.eth += cryptoAmt;
 
   if (!Array.isArray(st.txs)) st.txs = [];
-
   st.txs.unshift({
     date: now(), ts: Date.now(),
     desc: 'Crypto deposit — ' + Number(cryptoAmt).toFixed(8) + ' ' + symbol,
     amt: credit, status: 'Processing', hash: tx.hash,
-    crypto: cryptoAmt, symbol: symbol,
+    crypto: cryptoAmt, symbol,
     verification: { source: depAnswers.source, origin: depAnswers.origin }
   });
 
   if (!st.depositVerifications) st.depositVerifications = [];
   st.depositVerifications.push({
-    txHash: tx.hash, cryptoAmt: cryptoAmt, symbol: symbol, usdValue: credit,
+    txHash: tx.hash, cryptoAmt, symbol, usdValue: credit,
     source: depAnswers.source, origin: depAnswers.origin, completedAt: Date.now()
   });
 
@@ -996,6 +962,7 @@ function finalizeDeposit(){
   addNotification('Deposit verified: ' + cryptoAmt.toFixed(8) + ' ' + symbol, '✅');
 }
 
+/* ---------- BALANCE CHART ---------- */
 function renderBalanceChart(){
   var wrap2   = document.getElementById('balanceChartSecondary');
   var current = document.getElementById('balanceCurrent');
@@ -1008,11 +975,8 @@ function renderBalanceChart(){
     return;
   }
 
-  var days = 7;
-  var dayMs = 24 * 60 * 60 * 1000;
-  var nowT = Date.now();
+  var days = 7, dayMs = 24 * 60 * 60 * 1000, nowT = Date.now();
   var points = [];
-
   var balanceHistory = st.balanceHistory || [];
   if (balanceHistory.length > 2) {
     balanceHistory.forEach(function(p) { points.push({ t: p.t, v: p.v }); });
@@ -1061,7 +1025,6 @@ function renderBalanceChart(){
 
   var linePath = 'M' + svgPoints.join(' L');
   var fillPath = linePath + ' L' + (w - pad) + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
-  var lastCoord = svgPoints[svgPoints.length - 1].split(',');
 
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
   '<defs>' +
@@ -1082,11 +1045,11 @@ function renderBalanceChart(){
   '</defs>' +
   '<path d="' + fillPath + '" fill="url(#balanceGrad)"/>' +
   '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>' +
-            '' +
 '</svg>';
-
   wrap2.innerHTML = svg;
 }
+
+/* ---------- STATS ---------- */
 function renderStats(){
   var txs = st.txs || [];
   var income = 0, spending = 0;
@@ -1153,6 +1116,7 @@ function renderStats(){
   }
 }
 
+/* ---------- WITHDRAW ---------- */
 function openWithdraw() {
   var modal = document.getElementById('withdrawModal');
   if (!modal) return;
@@ -1198,6 +1162,8 @@ function wdSwitchCryptoDest() {
   if (mEl) mEl.style.display = (dEl.value === 'external') ? 'block' : 'none';
 }
 
+function _val(id){ var el = document.getElementById(id); return el ? el.value : ''; }
+
 function submitWithdraw() {
   var amountEl = document.getElementById('wdAmount');
   var methodEl = document.getElementById('wdMethod');
@@ -1213,52 +1179,45 @@ function submitWithdraw() {
   if (amount > st.usd) return showErr('Amount exceeds available balance');
 
   var wd = {
-    id: 'wd_' + Date.now(), amount: amount, currency: (st.currency || 'SEK'),
-    method: method, status: 'pending', createdAt: Date.now(),
+    id: 'wd_' + Date.now(), amount, currency: (st.currency || 'USD'),
+    method, status: 'pending', createdAt: Date.now(),
     reviewedAt: null, reason: '', reviewedBy: '', details: {}
   };
 
   if (method === 'iban') {
-    var name    = (document.getElementById('wdIbanName')?.value    || '').trim();
-    var iban    = (document.getElementById('wdIbanNumber')?.value  || '').trim();
-    var swift   = (document.getElementById('wdIbanSwift')?.value   || '').trim();
-    var bank    = (document.getElementById('wdIbanBank')?.value    || '').trim();
-    var country = (document.getElementById('wdIbanCountry')?.value || '').trim();
+    var name    = _val('wdIbanName').trim();
+    var iban    = _val('wdIbanNumber').trim();
+    var swift   = _val('wdIbanSwift').trim();
+    var bank    = _val('wdIbanBank').trim();
+    var country = _val('wdIbanCountry').trim();
     if (name.length < 2) return showErr('Enter recipient name');
     if (iban.replace(/\s/g, '').length < 15) return showErr('Enter valid IBAN');
     if (swift.length < 6) return showErr('Enter valid SWIFT / BIC');
-    wd.details = { name: name, iban: iban, swift: swift, bank: bank, country: country };
+    wd.details = { name, iban, swift, bank, country };
   } else if (method === 'card') {
-    var cn  = (document.getElementById('wdCardName')?.value   || '').trim();
-    var num = (document.getElementById('wdCardNumber')?.value || '').trim();
-    var exp = (document.getElementById('wdCardExpiry')?.value || '').trim();
+    var cn  = _val('wdCardName').trim();
+    var num = _val('wdCardNumber').trim();
+    var exp = _val('wdCardExpiry').trim();
     if (cn.length < 2) return showErr('Enter card holder name');
     if (num.replace(/\s/g, '').length < 16) return showErr('Enter valid card number');
     if (!/^\d{2}\/\d{2}$/.test(exp)) return showErr('Expiry must be MM/YY');
     wd.details = { cardName: cn, cardNumber: num, expiry: exp };
   } else if (method === 'crypto') {
-    var dest = document.getElementById('wdCryptoDest')?.value;
-    var net  = document.getElementById('wdCryptoNetwork')?.value;
-    var coin = document.getElementById('wdCryptoCoin')?.value;
-    var addr = (document.getElementById('wdCryptoAddress')?.value || '').trim();
-    var memo = (document.getElementById('wdCryptoMemo')?.value    || '').trim();
+    var dest = _val('wdCryptoDest');
+    var net  = _val('wdCryptoNetwork');
+    var coin = _val('wdCryptoCoin');
+    var addr = _val('wdCryptoAddress').trim();
+    var memo = _val('wdCryptoMemo').trim();
     if (addr.length < 10) return showErr('Enter valid wallet address');
-    wd.details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
+    wd.details = { destination: dest, network: net, coin, address: addr, memo };
   }
 
   if (!st.withdrawals) st.withdrawals = [];
   st.withdrawals.unshift(wd);
   closeWithdraw();
-  if (typeof render === 'function') render();
+  render();
   showWithdrawStatus(method, amount);
-
-  var token = getSessionToken();
-  if (token) {
-    fetch(WORKER_LOGIN_URL + '?action=setUserState', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
-    }).catch(function(){});
-  }
+  saveToServer();
 }
 
 function showWithdrawStatus(method, amount) {
@@ -1294,6 +1253,7 @@ function showWithdrawStatus(method, amount) {
   }, 5500);
 }
 
+/* ---------- RECENT TX ---------- */
 function renderRecentTx(){
   var listEl = document.getElementById('recentTxList');
   if (!listEl) return;
@@ -1363,6 +1323,7 @@ function initRecentTx(){
   };
 }
 
+/* ---------- CARD DESIGN ---------- */
 function applyCardDesign(){
   if (!st.card || !st.card.design) return;
   var design = st.card.design || 'cosmic';
@@ -1388,13 +1349,9 @@ function initDesignPicker(){
   if (picker){
     var opts = picker.querySelectorAll('.design-opt');
     for (var i = 0; i < opts.length; i++){
-      opts[i].onclick = function(){
-        var d = this.getAttribute('data-design');
-        setSelectedDesign(d);
-      };
+      opts[i].onclick = function(){ setSelectedDesign(this.getAttribute('data-design')); };
     }
   }
-
   var modalPicker = document.getElementById('designPickerModal');
   if (modalPicker){
     var mopts = modalPicker.querySelectorAll('.design-opt');
@@ -1406,7 +1363,6 @@ function initDesignPicker(){
       };
     }
   }
-
   var btnChange = document.getElementById('btnChangeDesign');
   if (btnChange){
     btnChange.onclick = function(){
@@ -1420,7 +1376,6 @@ function initDesignPicker(){
       if (mask) mask.classList.add('on');
     };
   }
-
   var btnSave = document.getElementById('designSave');
   if (btnSave){
     btnSave.onclick = function(){
@@ -1439,16 +1394,14 @@ function initDesignPicker(){
       });
     };
   }
-
   var btnCancel = document.getElementById('designCancel');
-  if (btnCancel){
-    btnCancel.onclick = function(){
-      var mask = document.getElementById('designMask');
-      if (mask) mask.classList.remove('on');
-    };
-  }
+  if (btnCancel) btnCancel.onclick = function(){
+    var mask = document.getElementById('designMask');
+    if (mask) mask.classList.remove('on');
+  };
 }
 
+/* ---------- IBAN ---------- */
 function renderIbanByAdmin() {
   var pending = document.getElementById('ibanPending');
   var ready   = document.getElementById('ibanReady');
@@ -1477,7 +1430,7 @@ function renderIbanByAdmin() {
   }
 }
 
-/* ========== VERIFICATION (REAL KYC) ========== */
+/* ---------- KYC ---------- */
 var verifyData = { docType: 'Passport', docFile: null, selfieFile: null, address: null };
 
 function showVerifyScreen(){
@@ -1548,20 +1501,15 @@ function initVerification(){
   var back3 = document.getElementById('verifyBack3');
   if (back3) back3.onclick = function(){ showVerifyStep(2); };
 
-  // Кнопка Submit на шаге 3 — привязка через setTimeout чтобы submitRealVerification была готова
   setTimeout(function(){
     var btn3 = document.getElementById('verifyNext3');
-    if (btn3) {
-      btn3.onclick = null;
-      btn3.addEventListener('click', function(e){
+    if (btn3 && !btn3._hardBound) {
+      btn3._hardBound = true;
+      btn3.onclick = function(e){
         e.preventDefault();
         e.stopPropagation();
-        if (typeof window.submitRealVerification === 'function') {
-          window.submitRealVerification();
-        } else {
-          alert('System error: reload page (Ctrl+Shift+R)');
-        }
-      });
+        if (typeof window.submitRealVerification === 'function') window.submitRealVerification();
+      };
     }
   }, 500);
 }
@@ -1570,7 +1518,7 @@ function fileToBase64(file) {
   return new Promise(function(resolve, reject){
     var reader = new FileReader();
     reader.onload = function(){ resolve(reader.result); };
-    reader.onerror = reject;
+    reader.onerror = function(e){ reject(e); };
     reader.readAsDataURL(file);
   });
 }
@@ -1580,9 +1528,8 @@ async function uploadKycFile(file, docType) {
   if (!token) throw new Error('Not authenticated');
   var base64 = await fileToBase64(file);
   var r = await fetch(WORKER_URL + '?action=uploadKycDoc', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token, docType: docType, imageBase64: base64, fileName: file.name })
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, docType, imageBase64: base64, fileName: file.name })
   });
   var data = await r.json();
   if (!data.ok) throw new Error(data.error || 'Upload failed');
@@ -1593,14 +1540,12 @@ window.submitRealVerification = async function() {
   var btn = document.getElementById('verifyNext3');
   if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
 
-  // ✅ ФИКС: создаём оверлей ОДИН раз (не два!)
-  // Удаляем старые оверлеи, если остались
   document.querySelectorAll('#kycLoadingOverlay').forEach(function(el){ el.remove(); });
 
   var loadingOverlay = document.createElement('div');
   loadingOverlay.id = 'kycLoadingOverlay';
   loadingOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,18,32,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;color:#e7edf5;font-family:inherit;';
-  loadingOverlay.innerHTML = 
+  loadingOverlay.innerHTML =
     '<div style="width:60px;height:60px;border:4px solid rgba(0,212,255,.2);border-top-color:#00e5ff;border-radius:50%;animation:kycSpin 1s linear infinite;margin-bottom:24px;"></div>' +
     '<div style="font-size:20px;font-weight:700;margin-bottom:8px;">Uploading documents...</div>' +
     '<div style="font-size:14px;color:#94a3b8;">Please wait, do not close this page</div>' +
@@ -1609,17 +1554,18 @@ window.submitRealVerification = async function() {
 
   try {
     var token = getSessionToken();
-     
     if (!token) throw new Error('Not authenticated');
 
-    var docFile    = document.getElementById('docFile').files[0];
-    var selfieFile = document.getElementById('selfieFile').files[0];
-    var street     = document.getElementById('vStreet').value.trim();
-    var city       = document.getElementById('vCity').value.trim();
-    var zip        = document.getElementById('vZip').value.trim();
-    var country    = document.getElementById('vCountry').value;
+    var docEl = document.getElementById('docFile');
+    var selfieEl = document.getElementById('selfieFile');
+    var docFile = docEl && docEl.files ? docEl.files[0] : null;
+    var selfieFile = selfieEl && selfieEl.files ? selfieEl.files[0] : null;
+    var street = document.getElementById('vStreet').value.trim();
+    var city = document.getElementById('vCity').value.trim();
+    var zip = document.getElementById('vZip').value.trim();
+    var country = document.getElementById('vCountry').value;
 
-    if (!docFile)    throw new Error('Please upload document');
+    if (!docFile) throw new Error('Please upload document');
     if (!selfieFile) throw new Error('Please upload selfie');
     if (!street || !city || !zip) throw new Error('Please fill address');
 
@@ -1628,12 +1574,11 @@ window.submitRealVerification = async function() {
     var selfieKey = await uploadKycFile(selfieFile, 'selfie');
 
     var r = await fetch(WORKER_URL + '?action=submitVerification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token: token, docType: docType,
+        token, docType,
         docKeys: [docKey, selfieKey],
-        personalInfo: { street: street, city: city, zip: zip, country: country }
+        personalInfo: { street, city, zip, country }
       })
     });
     var data = await r.json();
@@ -1643,15 +1588,14 @@ window.submitRealVerification = async function() {
     st.verification.status = 'pending';
     st.verification.docType = docType;
     st.verification.docKeys = [docKey, selfieKey];
-    st.verification.personalInfo = { street: street, city: city, zip: zip, country: country };
+    st.verification.personalInfo = { street, city, zip, country };
     st.verification.submittedAt = Date.now();
-   // ✅ ФИКС: удаляем ВСЕ оверлеи
+
     document.querySelectorAll('#kycLoadingOverlay').forEach(function(el){ el.remove(); });
 
     hideVerifyScreen();
     showPendingScreen();
 
-    // ✅ ФИКС: ЖЁСТКО показываем pendingScreen — напрямую через style
     var _p = document.getElementById('pendingScreen');
     if (_p) {
       _p.classList.add('on');
@@ -1659,12 +1603,10 @@ window.submitRealVerification = async function() {
       _p.style.position = 'fixed';
       _p.style.inset = '0';
       _p.style.zIndex = '2900';
-      _p.style.background = 'radial-gradient(900px 500px at 30% 10%,rgba(0,212,255,.12),transparent 60%),radial-gradient(800px 500px at 70% 90%,rgba(124,58,237,.14),transparent 60%),#0B1220';
       var _step = _p.querySelector('.verify-step');
       if (_step) _step.classList.add('on');
     }
 
-    // ✅ Прячем всё остальное
     var _side = document.getElementById('sideBar'); if (_side) _side.style.display = 'none';
     var _main = document.getElementById('mainApp'); if (_main) _main.style.display = 'none';
     var _onb  = document.getElementById('onboard'); if (_onb) _onb.classList.remove('on');
@@ -1673,21 +1615,13 @@ window.submitRealVerification = async function() {
 
     if (typeof toast === 'function') toast('Documents submitted! Waiting for approval.');
 
-    // ✅ Подстраховка через 300мс
     setTimeout(function(){
       var p2 = document.getElementById('pendingScreen');
-      if (p2) {
-        p2.classList.add('on');
-        p2.style.display = 'flex';
-        p2.style.position = 'fixed';
-        p2.style.inset = '0';
-        p2.style.zIndex = '2900';
-      }
+      if (p2) { p2.classList.add('on'); p2.style.display = 'flex'; p2.style.position = 'fixed'; p2.style.inset = '0'; p2.style.zIndex = '2900'; }
       var s2 = document.getElementById('sideBar'); if (s2) s2.style.display = 'none';
       var m2 = document.getElementById('mainApp'); if (m2) m2.style.display = 'none';
     }, 300);
-    } catch(e) {
-    // ✅ ФИКС: удаляем ВСЕ оверлеи
+  } catch(e) {
     document.querySelectorAll('#kycLoadingOverlay').forEach(function(el){ el.remove(); });
     if (typeof toast === 'function') toast(e.message, true);
     if (btn) { btn.disabled = false; btn.textContent = 'Submit →'; }
@@ -1751,9 +1685,8 @@ async function checkVerificationStatus() {
   if (!token) return null;
   try {
     var r = await fetch(WORKER_URL + '?action=getUserState', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
     });
     var data = await r.json();
     if (!data || data.error) return null;
@@ -1769,7 +1702,6 @@ async function gateByVerification() {
   if (!token) return false;
 
   var v = await checkVerificationStatus();
-
   var side = document.getElementById('sideBar');
   var main = document.getElementById('mainApp');
   var onboard = document.getElementById('onboard');
@@ -1810,19 +1742,16 @@ setInterval(async function(){
     if (typeof toast === 'function') toast('✅ Verification approved!');
     if (typeof playChime === 'function') playChime();
     p.classList.remove('on');
-    if (typeof loadFromServer === 'function') {
-      loadFromServer(function(){
-        if (typeof render === 'function') render();
-        if (typeof gateByVerification === 'function') gateByVerification();
-      });
-    }
+    loadFromServer(function(){
+      render();
+      gateByVerification();
+    });
   } else if (v.status === 'rejected') {
     showRejectedScreen(v.reason);
   }
 }, 8000);
 
-var titles = {dash:'Dashboard',cards:'My Cards',assets:'Crypto Assets',tx:'Transactions',order:'Order New Card'};
-
+/* ---------- NAV ---------- */
 function initNav(){
   var mis = document.querySelectorAll('.mi');
   for (var i = 0; i < mis.length; i++){
@@ -1839,33 +1768,14 @@ function initNav(){
       if (p === 'dash') {
         setTimeout(function(){
           if (typeof applyAccountType === 'function') applyAccountType();
-          if (typeof render === 'function') render();
+          render();
         }, 50);
       }
     };
   }
 }
 
-function render(){
-  var balEl = $('bal'); if (balEl) balEl.textContent = fmtCurrency(st.usd);
-  var balEurEl = $('balEur'); if (balEurEl) balEurEl.textContent = eurF(st.usd * st.eurR);
-  var btcBEl = $('btcB'); if (btcBEl) btcBEl.textContent = st.btc.toFixed(8) + ' BTC';
-  var ethBEl = $('ethB'); if (ethBEl) ethBEl.textContent = st.eth.toFixed(8) + ' ETH';
-  var aBtcEl = $('aBtc'); if (aBtcEl) aBtcEl.textContent = st.btc.toFixed(8);
-  var aEthEl = $('aEth'); if (aEthEl) aEthEl.textContent = st.eth.toFixed(8);
-  var aBtcUEl = $('aBtcU'); if (aBtcUEl) aBtcUEl.textContent = '≈ ' + fmt(st.btc * st.btcP);
-  var aEthUEl = $('aEthU'); if (aEthUEl) aEthUEl.textContent = '≈ ' + fmt(st.eth * st.ethP);
-  renderTx();
-  renderOrder();
-  renderCard();
-  renderNotifications();
-  renderRecentTx();
-  renderStats();
-  renderBalanceChart();
-  renderIbanByAdmin();
-  applyAccountType();
-}
-
+/* ---------- TX TABLE ---------- */
 function badgeClass(s){
   if (s === 'Completed') return 'badge ok';
   if (s === 'Under Review') return 'badge pend';
@@ -1886,13 +1796,13 @@ function renderTx(){
     var t = st.txs[i];
     var c = t.amt >= 0 ? 'var(--ok)' : 'var(--bad)';
     var s = t.amt >= 0 ? '+' : '';
-    h += '<tr><td>' + t.date + '</td><td>' + t.desc + '</td><td style="color:' + c + ';font-weight:600">' + s + fmt(t.amt) + '</td><td><span class="' + badgeClass(t.status) + '">' + t.status + '</span></td></tr>';
+    h += '<tr><td>' + t.date + '</td><td>' + escapeHtml(t.desc) + '</td><td style="color:' + c + ';font-weight:600">' + s + fmt(t.amt) + '</td><td><span class="' + badgeClass(t.status) + '">' + t.status + '</span></td></tr>';
   }
   b.innerHTML = h;
 }
 
 function addTx(desc, amt, status){
-  st.txs.unshift({ date: now(), ts: Date.now(), desc: desc, amt: amt, status: status || 'Completed' });
+  st.txs.unshift({ date: now(), ts: Date.now(), desc, amt, status: status || 'Completed' });
   renderTx();
   saveToServer();
 }
@@ -1914,14 +1824,14 @@ function toast(msg, warn){
   clearTimeout(tt);
   tt = setTimeout(function(){ t.classList.remove('on'); }, 3200);
 }
+
+/* ---------- CARD GEN ---------- */
 function genCardNumber(prefix){
   var s = prefix;
   for (var i = 0; i < 12; i++) s += Math.floor(Math.random() * 10);
   return s;
 }
-function fmtCard(num){
-  return String(num).replace(/(.{4})/g, '$1 ').trim();
-}
+function fmtCard(num){ return String(num).replace(/(.{4})/g, '$1 ').trim(); }
 function genCvv(){
   var s = '';
   for (var i = 0; i < 3; i++) s += Math.floor(Math.random() * 10);
@@ -1943,12 +1853,11 @@ function createVirtualCard(name, type, cur){
 
   var finalName = name;
   if (!finalName || !finalName.trim() || finalName === 'YOUR NAME'){
-    var stored = localStorage.getItem('user_name') || 'CARD HOLDER';
-    finalName = stored;
+    finalName = localStorage.getItem('user_name') || 'CARD HOLDER';
   }
 
   st.card = {
-    num: num, cvv: cvv, expiry: expiry,
+    num, cvv, expiry,
     name: finalName.toUpperCase(),
     type: type || 'Visa', cur: cur || 'USD',
     status: 'Active', design: selectedDesign || 'cosmic',
@@ -1984,7 +1893,6 @@ function renderCard(){
   }
 
   var c = st.card;
-
   if (!c.name || c.name === '—' || c.name === 'CARD HOLDER'){
     c.name = (localStorage.getItem('user_name') || 'CARD HOLDER').toUpperCase();
   }
@@ -2009,10 +1917,8 @@ function renderCard(){
   } else {
     networkHTML = '<svg viewBox="0 0 100 40"><text x="50" y="28" text-anchor="middle" font-family="Arial Black, Arial" font-size="22" font-weight="900" fill="currentColor" font-style="italic" letter-spacing="1">VISA</text></svg>';
   }
-  var net1 = document.getElementById('cardNetwork1');
-  if (net1) net1.innerHTML = networkHTML;
-  var net2 = document.getElementById('cardNetwork2');
-  if (net2) net2.innerHTML = networkHTML;
+  var net1 = document.getElementById('cardNetwork1'); if (net1) net1.innerHTML = networkHTML;
+  var net2 = document.getElementById('cardNetwork2'); if (net2) net2.innerHTML = networkHTML;
 
   if ($('cardDash')) $('cardDash').classList.toggle('frozen', frozen);
   if ($('cardNumDash')) $('cardNumDash').textContent = numFormatted;
@@ -2043,6 +1949,7 @@ function renderCard(){
   applyCardDesign();
 }
 
+/* ---------- MODAL (Add/Transfer) ---------- */
 function destHint(method){
   if (method === 'Bank Transfer (SEPA)')  return { show:true, label:'Recipient IBAN', ph:'XX00 0000 0000 0000 0000 00' };
   if (method === 'Bank Transfer (SWIFT)') return { show:false };
@@ -2059,14 +1966,10 @@ function refreshDest(){
   var hint = destHint(m);
   var isAdd = (mode === 'add');
 
-  var mDestWrap = $('mDestWrap');
-  if (mDestWrap) mDestWrap.style.display = 'none';
-  var sepa  = $('mTransferSepa');
-  var swift = $('mTransferSwift');
-  var card  = $('mTransferCard');
-  if (sepa)  sepa.style.display  = 'none';
-  if (swift) swift.style.display = 'none';
-  if (card)  card.style.display  = 'none';
+  var mDestWrap = $('mDestWrap'); if (mDestWrap) mDestWrap.style.display = 'none';
+  var sepa  = $('mTransferSepa');  if (sepa)  sepa.style.display  = 'none';
+  var swift = $('mTransferSwift'); if (swift) swift.style.display = 'none';
+  var card  = $('mTransferCard');  if (card)  card.style.display  = 'none';
 
   if (isAdd) {
     if (hint.show) {
@@ -2207,12 +2110,14 @@ function confirmModal(){
   saveToServer();
 }
 
+/* ---------- COPY ---------- */
 function copyText(txt, okMsg){
   if (navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(function(){ toast(okMsg); }).catch(function(){ toast(okMsg); });
   } else { toast(okMsg); }
 }
 
+/* ---------- ORDER TRACKING ---------- */
 var STEPS = [
   { name:'Order Received',   loc:'NordicCrypto HQ, Oslo',        day: 0 },
   { name:'Card Minted',      loc:'Production Facility, Oslo',    day: 3 },
@@ -2247,7 +2152,7 @@ function placeOrder(){
   var type    = $('oType')?.value;
   if (!name || !city || !street || !zip || !phone){ toast('Please fill in all fields', true); return; }
   st.order = {
-    id: genTrackId(), name: name, type: type,
+    id: genTrackId(), name, type,
     address: street + ', ' + city + ', ' + zip + ', ' + country,
     dest: city + ', ' + country, createdAt: Date.now()
   };
@@ -2332,6 +2237,7 @@ function initTrackingActions(){
   };
 }
 
+/* ---------- AUTO CHECK ---------- */
 function startAutoCheck(){
   stopAutoCheck();
   autoCheckKnown = {};
@@ -2367,26 +2273,16 @@ function doAutoCheck(){
       if (!data || !data.result) return;
       var list = isBtc ? data.result.btc : data.result.eth;
       if (!list || list.length === 0) return;
-           var DAY_MS = 24 * 60 * 60 * 1000;
+      var DAY_MS = 24 * 60 * 60 * 1000;
       var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
       for (var i = 0; i < list.length; i++){
         var tx = list[i];
         var id = tx.hash;
         if (autoCheckKnown[id]) continue;
         if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){ autoCheckKnown[id] = true; continue; }
-        
-        // ✅ ФИКС: игнорируем транзакции до создания карты
         var txTime = tx.time ? tx.time * 1000 : 0;
-        if (cardCreatedAt && txTime && txTime < cardCreatedAt) {
-          autoCheckKnown[id] = true;
-          continue;
-        }
-        // ✅ ФИКС: игнорируем транзакции старше 24 часов
-        if (txTime && (Date.now() - txTime) > DAY_MS) {
-          autoCheckKnown[id] = true;
-          continue;
-        }
-        
+        if (cardCreatedAt && txTime && txTime < cardCreatedAt) { autoCheckKnown[id] = true; continue; }
+        if (txTime && (Date.now() - txTime) > DAY_MS) { autoCheckKnown[id] = true; continue; }
         var already = false;
         for (var j = 0; j < st.txs.length; j++){ if (st.txs[j].hash === id){ already = true; break; } }
         if (already){ autoCheckKnown[id] = true; continue; }
@@ -2433,6 +2329,7 @@ function attachCardFormatter(input) {
   });
 }
 
+/* ---------- ONBOARDING ---------- */
 function updateOnbPreview(){
   var typeEl = $('prevType');
   var nameEl = $('prevName');
@@ -2493,14 +2390,13 @@ function initOnboarding(){
       if (dashMi) dashMi.classList.add('on');
       renderCard();
       setTimeout(function(){
-  // ✅ ФИКС: жёстко скрываем дашборд и показываем KYC
-  var sideEl = document.getElementById('sideBar'); if (sideEl) sideEl.style.display = 'none';
-  var mainEl = document.getElementById('mainApp'); if (mainEl) mainEl.style.display = 'none';
-  var dashEl = document.getElementById('dash'); if (dashEl) dashEl.classList.remove('on');
-  var vScreen = document.getElementById('verifyScreen');
-  if (vScreen) { vScreen.classList.add('on'); vScreen.style.display = 'flex'; }
-  if (typeof showVerifyStep === 'function') showVerifyStep(1);
-}, 500);
+        var sideEl = document.getElementById('sideBar'); if (sideEl) sideEl.style.display = 'none';
+        var mainEl = document.getElementById('mainApp'); if (mainEl) mainEl.style.display = 'none';
+        var dashEl = document.getElementById('dash'); if (dashEl) dashEl.classList.remove('on');
+        var vScreen = document.getElementById('verifyScreen');
+        if (vScreen) { vScreen.classList.add('on'); vScreen.style.display = 'flex'; }
+        if (typeof showVerifyStep === 'function') showVerifyStep(1);
+      }, 500);
     });
   };
 }
@@ -2534,6 +2430,7 @@ function updateStep3Title(){
   if (el) el.textContent = 'Almost done, ' + fn + '!';
 }
 
+/* ---------- CARD ACTIONS ---------- */
 function initCardActions(){
   var btnShowCvv = document.getElementById('btnShowCvv');
   if (btnShowCvv) btnShowCvv.onclick = function(){
@@ -2593,6 +2490,7 @@ function initCardActions(){
   };
 }
 
+/* ---------- INIT EVENTS ---------- */
 function initEvents(){
   var btnAdd = document.getElementById('btnAdd');
   if (btnAdd) btnAdd.onclick = function(){ openModal('add'); };
@@ -2633,6 +2531,7 @@ function initEvents(){
 
 setInterval(function(){ updateTxStatuses(); renderOrder(); }, 30000);
 
+/* ---------- CARD CREATION ANIMATION ---------- */
 function playCardCreationAnimation(cardData, onComplete){
   var stage    = document.getElementById('animStage');
   var card     = document.getElementById('animCard');
@@ -2681,6 +2580,7 @@ function playCardCreationAnimation(cardData, onComplete){
   }, 5200);
 }
 
+/* ---------- AUDIO ---------- */
 var audioCtx = null;
 function getAudioCtx(){
   if (!audioCtx){
@@ -2729,7 +2629,7 @@ function spawnConfetti(){
   var wrap = document.getElementById('confettiWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
-  var total = 30;
+  var total = 20;
   var types = ['coin', 'spark'];
   var symbols = ['₿', 'Ξ'];
   for (var i = 0; i < total; i++){
@@ -2742,10 +2642,8 @@ function spawnConfetti(){
     p.style.height = size + 'px';
     var angle = Math.random() * Math.PI * 2;
     var distance = 200 + Math.random() * 400;
-    var tx = Math.cos(angle) * distance;
-    var ty = Math.sin(angle) * distance - 100;
-    p.style.setProperty('--tx', tx + 'px');
-    p.style.setProperty('--ty', ty + 'px');
+    p.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+    p.style.setProperty('--ty', Math.sin(angle) * distance - 100 + 'px');
     p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
     p.style.animation = 'confettiFly ' + (1.2 + Math.random() * 0.8) + 's cubic-bezier(.2,.8,.4,1) forwards';
     p.style.animationDelay = (Math.random() * 0.3) + 's';
@@ -2754,6 +2652,7 @@ function spawnConfetti(){
   setTimeout(function(){ wrap.innerHTML = ''; }, 2500);
 }
 
+/* ---------- SIGNUP ---------- */
 function initSignup() {
   var btnGoToSignup = document.getElementById('btnGoToSignup');
   var mask        = document.getElementById('signupMask');
@@ -2824,7 +2723,7 @@ function initSignup() {
     fetch(WORKER_LOGIN_URL + '?action=register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, password: password })
+      body: JSON.stringify({ name, email, password })
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -2862,6 +2761,7 @@ function initSignup() {
   }
 }
 
+/* ---------- PASSWORD CONFIRM ---------- */
 var passwordConfirmCallback = null;
 
 function openPasswordConfirm(message, callback) {
@@ -2909,7 +2809,7 @@ function initPasswordConfirm() {
     fetch(WORKER_LOGIN_URL + '?action=verifyPassword', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken(), password: password })
+      body: JSON.stringify({ token: getSessionToken(), password })
     })
       .then(function(r){ return r.json(); })
       .then(function(data){
@@ -2944,13 +2844,14 @@ function initCountryCurrencyLink() {
     toast('Currency set to ' + currency);
   });
 }
-/* ========== CHAT CLIENT ========== */
+
+/* ---------- CHAT ---------- */
 async function toggleChat() {
   var p = document.getElementById('chatPanel');
   if (!p) return;
   var open = p.style.display === 'flex';
   p.style.display = open ? 'none' : 'flex';
-  if (open) return;
+  if (open) { window._adminTyping = false; return; }
 
   if (!st.ticket || !st.ticket.id) {
     try {
@@ -2959,7 +2860,7 @@ async function toggleChat() {
       if (token && email) {
         var r = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({token: token, email: email})
+          body: JSON.stringify({token, email})
         });
         var d = await r.json();
         if (d && d.ticket && d.ticket.id) {
@@ -3035,7 +2936,7 @@ async function sendChatMsg() {
   if (!st.chat) st.chat = [];
   st.chat.push({
     id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-    from: 'client', text: text, ts: Date.now(), read: false
+    from: 'client', text, ts: Date.now(), read: false
   });
   renderChatMessages();
   var token = getSessionToken();
@@ -3044,7 +2945,7 @@ async function sendChatMsg() {
     try {
       await fetch(WORKER_URL + '?action=setUserState', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: targetEmail, state: st, force: true })
+        body: JSON.stringify({ token, email: targetEmail, state: st, force: true })
       });
     } catch(e) {}
   }
@@ -3057,7 +2958,7 @@ async function markChatRead() {
   try {
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, email: email })
+      body: JSON.stringify({ token, email })
     });
     var fresh = await r.json();
     if (!fresh || !fresh.chat) return;
@@ -3067,7 +2968,7 @@ async function markChatRead() {
     if (!changed) { updateChatBadge(); return; }
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, email: email, state: st, force: true })
+      body: JSON.stringify({ token, email, state: st, force: true })
     });
     updateChatBadge();
   } catch(e) {}
@@ -3097,7 +2998,7 @@ async function startTicket() {
   if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Please enter a valid email'); return; }
   if (desc.length < 5) { alert('Please describe your issue'); return; }
 
-  st.ticket = { id: 'tk_' + Date.now(), email: email, topic: topic, priority: priority, createdAt: Date.now(), status: 'open' };
+  st.ticket = { id: 'tk_' + Date.now(), email, topic, priority, createdAt: Date.now(), status: 'open' };
   if (!st.chat) st.chat = [];
   st.chat.push({
     id: 'msg_' + Date.now(), from: 'client',
@@ -3111,7 +3012,7 @@ async function startTicket() {
     try {
       await fetch(WORKER_URL + '?action=setUserState', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: targetEmail, state: st, force: true })
+        body: JSON.stringify({ token, email: targetEmail, state: st, force: true })
       });
     } catch(e) {}
   }
@@ -3122,11 +3023,10 @@ async function startTicket() {
   renderChatMessages();
 }
 
-/* ========== ADMIN PANEL ========== */
+/* ---------- ADMIN PANEL ---------- */
 function isAdmin() {
-  var role = localStorage.getItem('user_role');
-  var email = localStorage.getItem('user_email');
-  return role === 'admin' && email === 'admin@nordiccrypto.com';
+  return localStorage.getItem('user_role') === 'admin'
+    && localStorage.getItem('user_email') === 'admin@nordiccrypto.com';
 }
 
 function showAdminPanel() {
@@ -3151,6 +3051,7 @@ function showAdminPanel() {
 
   setTimeout(function(){ showAdminTab('stats'); }, 100);
 }
+
 function hideAdminPanel() {
   var panel = document.getElementById('adminPanel');
   if (panel) panel.classList.remove('on');
@@ -3166,7 +3067,7 @@ async function loadAdminUsers() {
       body: JSON.stringify({ token: getSessionToken() })
     });
     var data = await res.json();
-    if (!data.ok) { listEl.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>'; return; }
+    if (!data.ok) { listEl.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(data.error || 'Failed') + '</div>'; return; }
     if (!data.users || data.users.length === 0) {
       listEl.innerHTML = '<div class="admin-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:12px">📭</div><div>No clients yet</div></div>';
       return;
@@ -3185,25 +3086,25 @@ async function loadAdminUsers() {
         '<div class="admin-client-top">' +
           '<div class="admin-client-avatar">' + initials + '</div>' +
           '<div class="admin-client-info">' +
-            '<div class="admin-client-name">' + accType + ' ' + u.name + '</div>' +
-            '<div class="admin-client-email">' + u.email + '</div>' +
+            '<div class="admin-client-name">' + accType + ' ' + escapeHtml(u.name) + '</div>' +
+            '<div class="admin-client-email">' + escapeHtml(u.email) + '</div>' +
           '</div>' +
-          '<div class="admin-client-badge"' + statusClass + '>' + statusBadge + '</div>' +
+          '<div class="admin-client-badge"' + statusClass + '>' + escapeHtml(statusBadge) + '</div>' +
         '</div>' +
         '<div class="admin-client-grid">' +
           '<div class="admin-client-field"><div class="admin-client-field-label">Balance</div><div class="admin-client-field-value">' + fmtCurrency(u.balance) + '</div></div>' +
-          '<div class="admin-client-field"><div class="admin-client-field-label">Card</div><div class="admin-client-field-value">' + cardInfo + '</div></div>' +
+          '<div class="admin-client-field"><div class="admin-client-field-label">Card</div><div class="admin-client-field-value">' + escapeHtml(cardInfo) + '</div></div>' +
           '<div class="admin-client-field"><div class="admin-client-field-label">Transactions</div><div class="admin-client-field-value">' + u.txCount + '</div></div>' +
           '<div class="admin-client-field"><div class="admin-client-field-label">Last Tx</div><div class="admin-client-field-value">' + (u.lastTx || '—') + '</div></div>' +
         '</div>' +
         '<div class="admin-client-actions">' +
-          '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + u.name + '\')">💰 Add balance</button>' +
+          '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">💰 Add balance</button>' +
           '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
-          '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + u.name + '\')">🔑 Deposit address</button>' +
+          '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🔑 Deposit address</button>' +
           '<button class="btn b2" onclick="adminSetIban(\'' + u.email + '\')">🏦 Issue IBAN</button>' +
-         '<button class="btn b2" onclick="adminResetPassword(\'' + u.email + '\', \'' + u.name + '\')">🔑 Reset password</button>' +
+          '<button class="btn b2" onclick="adminResetPassword(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🔑 Reset password</button>' +
           '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
-          '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete</button>' +
+          '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🗑 Delete</button>' +
         '</div>' +
       '</div>';
     }
@@ -3216,7 +3117,6 @@ async function loadAdminUsers() {
   }
 }
 
-/* ========== ADMIN: VERIFICATIONS ========== */
 window.loadAdminVerifications = async function() {
   var box = document.getElementById('adminVerifsList');
   if (!box) return;
@@ -3227,10 +3127,10 @@ window.loadAdminVerifications = async function() {
     if (!token) { box.innerHTML = '<div class="admin-empty">No token</div>'; return; }
     var r = await fetch(WORKER_URL + '?action=listVerifications', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token })
     });
     var data = await r.json();
-    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>'; return; }
+    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(data.error || 'Failed') + '</div>'; return; }
 
     var list = data.verifications || [];
     var pendingCount = list.filter(function(v){ return v.status === 'pending'; }).length;
@@ -3252,17 +3152,17 @@ window.loadAdminVerifications = async function() {
         '<div class="admin-client-top">' +
           '<div class="admin-client-avatar">🪪</div>' +
           '<div class="admin-client-info">' +
-            '<div class="admin-client-name">' + (v.name || v.email) + '</div>' +
-            '<div class="admin-client-email">' + v.email + '</div>' +
-            '<div style="font-size:11px;color:#8b95a5;margin-top:4px">Doc: ' + (v.docType || '—') + ' • Submitted: ' + (v.submittedAt ? new Date(v.submittedAt).toLocaleString('en-GB') : '—') + '</div>' +
+            '<div class="admin-client-name">' + escapeHtml(v.name || v.email) + '</div>' +
+            '<div class="admin-client-email">' + escapeHtml(v.email) + '</div>' +
+            '<div style="font-size:11px;color:#8b95a5;margin-top:4px">Doc: ' + escapeHtml(v.docType || '—') + ' • Submitted: ' + (v.submittedAt ? new Date(v.submittedAt).toLocaleString('en-GB') : '—') + '</div>' +
           '</div>' +
           '<div class="admin-client-badge" style="background:rgba(255,255,255,0.05);color:' + statusColor + '">' + statusLabel + '</div>' +
         '</div>' +
         (v.personalInfo && (v.personalInfo.street || v.personalInfo.city) ?
           '<div style="font-size:12px;color:#8b95a5;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;">📍 ' +
-            [v.personalInfo.street, v.personalInfo.city, v.personalInfo.zip, v.personalInfo.country].filter(Boolean).join(', ') + '</div>' : '') +
+            [v.personalInfo.street, v.personalInfo.city, v.personalInfo.zip, v.personalInfo.country].filter(Boolean).map(escapeHtml).join(', ') + '</div>' : '') +
         (v.status === 'rejected' && v.reason ?
-          '<div style="font-size:12px;color:#ff8a8a;margin:8px 0;">Reason: ' + v.reason + '</div>' : '') +
+          '<div style="font-size:12px;color:#ff8a8a;margin:8px 0;">Reason: ' + escapeHtml(v.reason) + '</div>' : '') +
         '<div class="admin-client-actions" style="margin-top:12px;flex-wrap:wrap;">' +
           '<button class="btn b2" onclick="viewKycDocs(\'' + safeEmail + '\')">👁 View docs</button>' +
           (v.status !== 'approved' ? '<button class="btn b1" onclick="approveKyc(\'' + safeEmail + '\')">✅ Approve</button>' : '') +
@@ -3272,7 +3172,7 @@ window.loadAdminVerifications = async function() {
     });
     box.innerHTML = html;
   } catch(e) {
-    box.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+    box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(e.message) + '</div>';
   }
 };
 
@@ -3287,7 +3187,7 @@ window.viewKycDocs = async function(email) {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto;';
   modal.innerHTML = '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:700px;width:100%;padding:24px;color:#e7edf5;max-height:90vh;overflow-y:auto;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<div style="font-weight:700;font-size:16px;">🪪 Documents — ' + email + '</div>' +
+      '<div style="font-weight:700;font-size:16px;">🪪 Documents — ' + escapeHtml(email) + '</div>' +
       '<button onclick="document.getElementById(\'kycDocsModal\').remove()" style="background:none;border:none;color:#8b95a5;font-size:24px;cursor:pointer;">×</button>' +
     '</div>' +
     '<div id="kycDocsContent" style="text-align:center;color:#8b95a5;">Loading...</div>' +
@@ -3297,7 +3197,7 @@ window.viewKycDocs = async function(email) {
   try {
     var r = await fetch(WORKER_URL + '?action=listVerifications', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token })
     });
     var data = await r.json();
     var v = (data.verifications || []).find(function(x){ return x.email === email; });
@@ -3310,7 +3210,7 @@ window.viewKycDocs = async function(email) {
     for (var i = 0; i < v.docKeys.length; i++) {
       var kr = await fetch(WORKER_URL + '?action=getKycDoc', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, key: v.docKeys[i] })
+        body: JSON.stringify({ token, key: v.docKeys[i] })
       });
       var kd = await kr.json();
       if (kd.ok && kd.dataUrl) {
@@ -3323,7 +3223,7 @@ window.viewKycDocs = async function(email) {
     }
     document.getElementById('kycDocsContent').innerHTML = imgsHtml || '<div style="padding:40px;">No images</div>';
   } catch(e) {
-    document.getElementById('kycDocsContent').innerHTML = '<div style="padding:40px;color:#ff8a8a;">Error: ' + e.message + '</div>';
+    document.getElementById('kycDocsContent').innerHTML = '<div style="padding:40px;color:#ff8a8a;">Error: ' + escapeHtml(e.message) + '</div>';
   }
 };
 
@@ -3335,7 +3235,7 @@ window.approveKyc = function(email) {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10001;padding:20px;';
   modal.innerHTML = '<div style="background:#0f1720;border:1px solid rgba(255,255,255,0.08);border-radius:16px;max-width:420px;width:100%;padding:24px;color:#e7edf5;">' +
     '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">Approve verification</div>' +
-    '<div style="font-size:12px;color:#8b95a5;margin-bottom:16px;">' + email + '</div>' +
+    '<div style="font-size:12px;color:#8b95a5;margin-bottom:16px;">' + escapeHtml(email) + '</div>' +
     '<div style="font-size:12px;color:#8b95a5;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Choose account type</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">' +
       '<button id="kycTypeBanking" onclick="_kycPickType(\'banking\')" style="padding:18px 12px;border-radius:12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#e7edf5;cursor:pointer;text-align:center;font-family:inherit;">' +
@@ -3348,7 +3248,7 @@ window.approveKyc = function(email) {
       '</button>' +
     '</div>' +
     '<div style="display:flex;gap:8px;">' +
-      '<button id="kycApproveOk" onclick="_kycDoApprove(\'' + email + '\')" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:not-allowed;opacity:0.4;font-family:inherit;">Approve</button>' +
+      '<button id="kycApproveOk" onclick="_kycDoApprove(\'' + email.replace(/'/g, "\\'") + '\')" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:not-allowed;opacity:0.4;font-family:inherit;">Approve</button>' +
       '<button onclick="document.getElementById(\'kycApproveModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
     '</div>' +
   '</div>';
@@ -3378,7 +3278,7 @@ window._kycDoApprove = async function(email) {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=approveVerification', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, accountType: window._kycPickedType })
+      body: JSON.stringify({ token, email, accountType: window._kycPickedType })
     });
     var data = await r.json();
     if (data.ok) {
@@ -3416,7 +3316,7 @@ window.rejectKyc = function(email) {
       var token = getSessionToken();
       var r = await fetch(WORKER_URL + '?action=rejectVerification', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: email, reason: finalReason })
+        body: JSON.stringify({ token, email, reason: finalReason })
       });
       var data = await r.json();
       if (data.ok) {
@@ -3427,7 +3327,7 @@ window.rejectKyc = function(email) {
   })();
 };
 
-/* ========== ADMIN: IBAN ========== */
+/* ---------- ADMIN: IBAN ---------- */
 window.adminSetIban = function(email) {
   if (!email) return;
   var old = document.getElementById('adminIbanModal'); if (old) old.remove();
@@ -3438,7 +3338,7 @@ window.adminSetIban = function(email) {
   modal.innerHTML =
     '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:460px;padding:24px;color:#e7edf5;">' +
       '<div style="font-weight:700;font-size:18px;margin-bottom:4px;">🏦 Issue IBAN</div>' +
-      '<div style="font-size:13px;color:#8b95a5;margin-bottom:20px;">' + email + '</div>' +
+      '<div style="font-size:13px;color:#8b95a5;margin-bottom:20px;">' + escapeHtml(email) + '</div>' +
       '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;margin-bottom:6px;">IBAN</label>' +
       '<input id="adminIbanInput" type="text" placeholder="SE1234567890123456789012" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;">' +
       '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;margin:14px 0 6px;">SWIFT / BIC</label>' +
@@ -3449,7 +3349,7 @@ window.adminSetIban = function(email) {
       '<input id="adminCountryInput" type="text" value="SE" maxlength="2" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;text-transform:uppercase;">' +
       '<div id="adminIbanErr" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;"></div>' +
       '<div style="display:flex;gap:8px;margin-top:20px;">' +
-        '<button id="adminIbanSave" onclick="adminSaveIban(\'' + email + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Save</button>' +
+        '<button id="adminIbanSave" onclick="adminSaveIban(\'' + email.replace(/'/g, "\\'") + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Save</button>' +
         '<button onclick="document.getElementById(\'adminIbanModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
       '</div>' +
     '</div>';
@@ -3478,7 +3378,7 @@ window.adminSaveIban = async function(email) {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=setIban', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, iban: iban, swift: swift, bank: bank, country: country })
+      body: JSON.stringify({ token, email, iban, swift, bank, country })
     });
     var data = await r.json();
     if (data.ok) {
@@ -3513,7 +3413,7 @@ window.adminResetPassword = function(email, name) {
       '<div id="adminResetPassErr" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;"></div>' +
       '<div id="adminResetPassOk" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#34d399;font-size:12px;"></div>' +
       '<div style="display:flex;gap:8px;margin-top:20px;">' +
-        '<button id="adminResetPassSave" onclick="adminSaveNewPassword(\'' + email + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Save new password</button>' +
+        '<button id="adminResetPassSave" onclick="adminSaveNewPassword(\'' + email.replace(/'/g, "\\'") + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Save new password</button>' +
         '<button onclick="document.getElementById(\'adminResetPassModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
       '</div>' +
     '</div>';
@@ -3547,9 +3447,8 @@ window.adminSaveNewPassword = async function(email) {
   try {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=adminSetPassword', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, newPassword: newPass })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, email, newPassword: newPass })
     });
     var data = await r.json();
     if (data.ok) {
@@ -3568,7 +3467,7 @@ window.adminSaveNewPassword = async function(email) {
   if (btn) { btn.disabled = false; btn.textContent = 'Save new password'; }
 };
 
-
+/* ---------- ADMIN: CRYPTO ADDRESS ---------- */
 function adminSetCryptoAddress(email, name) {
   if (!email) return;
   var old = document.getElementById('adminCryptoAddrModal'); if (old) old.remove();
@@ -3586,7 +3485,7 @@ function adminSetCryptoAddress(email, name) {
       '<input id="adminEthAddr" type="text" placeholder="0xFB7A..." style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:13px;outline:none;box-sizing:border-box;font-family:monospace;">' +
       '<div id="adminAddrErr" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;"></div>' +
       '<div style="display:flex;gap:8px;margin-top:20px;">' +
-        '<button onclick="adminSaveCryptoAddress(\'' + email + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Save</button>' +
+        '<button onclick="adminSaveCryptoAddress(\'' + email.replace(/'/g, "\\'") + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Save</button>' +
         '<button onclick="document.getElementById(\'adminCryptoAddrModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Cancel</button>' +
       '</div>' +
     '</div>';
@@ -3596,7 +3495,7 @@ function adminSetCryptoAddress(email, name) {
   if (token) {
     fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email })
+      body: JSON.stringify({ token, email })
     })
     .then(function(r){ return r.json(); })
     .then(function(state){
@@ -3637,7 +3536,7 @@ async function adminSaveCryptoAddress(email) {
     if (!token) { alert('No session'); return; }
     var r = await fetch(WORKER_URL + '?action=setCryptoAddress', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, btc: btc || null, eth: eth || null })
+      body: JSON.stringify({ token, email, btc: btc || null, eth: eth || null })
     });
     var data = await r.json();
     if (data.ok) {
@@ -3653,7 +3552,7 @@ async function adminSaveCryptoAddress(email) {
   }
 }
 
-/* ========== ADMIN: WITHDRAWALS ========== */
+/* ---------- ADMIN: WITHDRAWALS ---------- */
 async function loadAdminWithdrawals() {
   var listEl  = document.getElementById('adminWithdrawalsList');
   var countEl = document.getElementById('adminWithdrawalsCount');
@@ -3666,32 +3565,27 @@ async function loadAdminWithdrawals() {
     if (!token) { listEl.innerHTML = '<div class="admin-empty">No token</div>'; return; }
     var res = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token })
     });
     var data = await res.json();
     if (!data.ok || !data.users) { listEl.innerHTML = '<div class="admin-empty">Failed</div>'; return; }
 
-    var promises = data.users.map(function(u) {
-      return fetch(WORKER_URL + '?action=getUserState', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: u.email })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(d2){
-        if (!d2 || !Array.isArray(d2.withdrawals)) return [];
-        return d2.withdrawals.map(function(w){
-          if (!w) return null;
-          w.userEmail = u.email;
-          w.userName = u.name || u.email;
-          return w;
-        }).filter(Boolean);
-      })
-      .catch(function(){ return []; });
-    });
-
-    var results = await Promise.all(promises);
     var allWd = [];
-    results.forEach(function(arr){ allWd = allWd.concat(arr); });
+    for (var i = 0; i < data.users.length; i++) {
+      var u = data.users[i];
+      try {
+        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, email: u.email })
+        });
+        var d2 = await r2.json();
+        if (d2 && Array.isArray(d2.withdrawals)) {
+          d2.withdrawals.forEach(function(w){
+            if (w) { w.userEmail = u.email; w.userName = u.name || u.email; allWd.push(w); }
+          });
+        }
+      } catch(e) {}
+    }
     allWd.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
 
     var pending = allWd.filter(function(w) { return w.status === 'pending'; }).length;
@@ -3702,7 +3596,7 @@ async function loadAdminWithdrawals() {
     var html = '';
     for (var k = 0; k < allWd.length; k++) html += renderAdminWithdrawalCard(allWd[k]);
     listEl.innerHTML = html;
-  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>'; }
+  } catch (e) { listEl.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(e.message) + '</div>'; }
 }
 
 function renderAdminWithdrawalCard(w) {
@@ -3711,15 +3605,15 @@ function renderAdminWithdrawalCard(w) {
   var d = w.details || {};
   var details = '';
   if (w.method === 'iban') {
-    details = '<div class="awd-row"><span>Name</span><b>' + (d.name || '—') + '</b></div>' +
-      '<div class="awd-row"><span>IBAN</span><b>' + (d.iban || '—') + '</b></div>' +
-      '<div class="awd-row"><span>SWIFT</span><b>' + (d.swift || '—') + '</b></div>';
+    details = '<div class="awd-row"><span>Name</span><b>' + escapeHtml(d.name || '—') + '</b></div>' +
+      '<div class="awd-row"><span>IBAN</span><b>' + escapeHtml(d.iban || '—') + '</b></div>' +
+      '<div class="awd-row"><span>SWIFT</span><b>' + escapeHtml(d.swift || '—') + '</b></div>';
   } else if (w.method === 'card') {
-    details = '<div class="awd-row"><span>Holder</span><b>' + (d.cardName || '—') + '</b></div>' +
-      '<div class="awd-row"><span>Card</span><b>' + (d.cardNumber || '—') + '</b></div>';
+    details = '<div class="awd-row"><span>Holder</span><b>' + escapeHtml(d.cardName || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Card</span><b>' + escapeHtml(d.cardNumber || '—') + '</b></div>';
   } else if (w.method === 'crypto') {
-    details = '<div class="awd-row"><span>Network</span><b>' + (d.network || '—') + '</b></div>' +
-      '<div class="awd-row"><span>Address</span><b>' + (d.address || '—') + '</b></div>';
+    details = '<div class="awd-row"><span>Network</span><b>' + escapeHtml(d.network || '—') + '</b></div>' +
+      '<div class="awd-row"><span>Address</span><b>' + escapeHtml(d.address || '—') + '</b></div>';
   }
   var actions = '';
   if (w.status === 'pending') {
@@ -3729,7 +3623,7 @@ function renderAdminWithdrawalCard(w) {
     '</div>';
   }
   return '<div class="awd-card">' +
-    '<div class="awd-head"><div><b>' + (w.userName || w.userEmail) + '</b><br><span style="color:#7c9cbb;font-size:11px">' + w.userEmail + '</span></div>' +
+    '<div class="awd-head"><div><b>' + escapeHtml(w.userName || w.userEmail) + '</b><br><span style="color:#7c9cbb;font-size:11px">' + escapeHtml(w.userEmail) + '</span></div>' +
     '<div class="awd-badge ' + s.cls + '">' + s.txt + '</div></div>' +
     '<div class="awd-amount">' + fmtCurrency(w.amount) + ' <span style="font-size:12px;color:#7c9cbb">via ' + (w.method || 'iban').toUpperCase() + '</span></div>' +
     '<div class="awd-details">' + details + '</div>' +
@@ -3744,7 +3638,7 @@ async function adminApproveWithdrawal(email, wdId) {
     if (!token) return;
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email })
+      body: JSON.stringify({ token, email })
     });
     var state = await r.json();
     if (!state || state.error) throw new Error('State not found');
@@ -3762,7 +3656,7 @@ async function adminApproveWithdrawal(email, wdId) {
     state.notifications.unshift({ id: 'n_' + Date.now(), ts: Date.now(), text: '✅ Withdrawal approved — $' + wd.amount, read: false });
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+      body: JSON.stringify({ token, email, state, force: true })
     });
     alert('✅ Withdrawal approved');
     loadAdminWithdrawals();
@@ -3781,7 +3675,7 @@ async function adminRejectWithdrawal(email, wdId) {
     if (!token) return;
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email })
+      body: JSON.stringify({ token, email })
     });
     var state = await r.json();
     if (!state || state.error) throw new Error('State not found');
@@ -3796,7 +3690,7 @@ async function adminRejectWithdrawal(email, wdId) {
     state.notifications.unshift({ id: 'n_' + Date.now(), ts: Date.now(), text: '❌ Withdrawal rejected — $' + wd.amount + '. Reason: ' + reason, read: false });
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+      body: JSON.stringify({ token, email, state, force: true })
     });
     alert('✅ Rejected. Client notified.');
     loadAdminWithdrawals();
@@ -3823,6 +3717,7 @@ async function loadAdminStats() {
   } catch (e) {}
 }
 
+/* ---------- ADMIN: BALANCE / MESSAGE / DELETE ---------- */
 var adminTargetEmail = null;
 var adminTargetName = null;
 
@@ -3844,7 +3739,7 @@ function adminDeleteUser(email, name) {
   if (!confirm('Delete user: ' + name + '?')) return;
   fetch(WORKER_LOGIN_URL + '?action=deleteUser', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: getSessionToken(), email: email, permanent: false })
+    body: JSON.stringify({ token: getSessionToken(), email, permanent: false })
   })
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -3858,7 +3753,7 @@ function adminRestoreUser(email) {
   if (!confirm('Restore user ' + email + '?')) return;
   fetch(WORKER_LOGIN_URL + '?action=restoreUser', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: getSessionToken(), email: email })
+    body: JSON.stringify({ token: getSessionToken(), email })
   })
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -3873,7 +3768,7 @@ function adminPermanentDelete(email, name) {
   if (!confirm('Are you ABSOLUTELY sure?')) return;
   fetch(WORKER_LOGIN_URL + '?action=deleteUser', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: getSessionToken(), email: email, permanent: true })
+    body: JSON.stringify({ token: getSessionToken(), email, permanent: true })
   })
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -3903,14 +3798,14 @@ async function loadDeletedUsers() {
       html += '<div class="admin-client-card" style="opacity:.75">' +
         '<div class="admin-client-top">' +
           '<div class="admin-client-avatar" style="background:linear-gradient(135deg,#ff5470,#7c3aed)">🗑</div>' +
-          '<div class="admin-client-info"><div class="admin-client-name">' + u.name + '</div>' +
-            '<div class="admin-client-email">' + u.email + '</div>' +
+          '<div class="admin-client-info"><div class="admin-client-name">' + escapeHtml(u.name) + '</div>' +
+            '<div class="admin-client-email">' + escapeHtml(u.email) + '</div>' +
             '<div style="font-size:.72rem;color:var(--mut);margin-top:4px">Deleted: ' + date + '</div></div>' +
           '<div class="admin-client-badge" style="background:rgba(255,84,112,.14);color:#ff5470">DELETED</div>' +
         '</div>' +
         '<div class="admin-client-actions">' +
           '<button class="btn b1" onclick="adminRestoreUser(\'' + u.email + '\')">♻ Restore</button>' +
-          '<button class="btn b3" onclick="adminPermanentDelete(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete forever</button>' +
+          '<button class="btn b3" onclick="adminPermanentDelete(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🗑 Delete forever</button>' +
         '</div>' +
       '</div>';
     }
@@ -3947,7 +3842,7 @@ function adminViewClient(email) {
     backBar = document.createElement('div');
     backBar.id = 'adminBackBar';
     backBar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:8000;background:linear-gradient(90deg,#7c3aed,#a855f7);padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.85rem;color:#fff';
-    backBar.innerHTML = '<span>👁 Viewing as Admin — ' + (email || '') + '</span>' +
+    backBar.innerHTML = '<span>👁 Viewing as Admin — ' + escapeHtml(email || '') + '</span>' +
       '<button onclick="backToAdmin()" style="background:#fff;color:#7c3aed;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit">← Back to Admin</button>';
     document.body.appendChild(backBar);
   } else {
@@ -3993,7 +3888,11 @@ function backToAdmin() {
   showAdminPanel();
 }
 
+var _adminPanelInited = false;
 function initAdminPanel() {
+  if (_adminPanelInited) return;
+  _adminPanelInited = true;
+
   var refreshBtn    = document.getElementById('adminRefreshBtn');
   var logoutBtn     = document.getElementById('adminLogoutBtn');
   var sendNotifBtn  = document.getElementById('adminSendNotif');
@@ -4024,14 +3923,14 @@ function initAdminPanel() {
       var token = getSessionToken();
       var r = await fetch(WORKER_LOGIN_URL + '?action=updateUserBalance', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, email: adminTargetEmail, amount: amount, note: note || m.label })
+        body: JSON.stringify({ token, email: adminTargetEmail, amount, note: note || m.label })
       });
       var data = await r.json();
       if (!data.ok) { toast('Error', true); return; }
       try {
         await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, email: adminTargetEmail, text: m.icon + ' ' + m.label + ': +' + amount + ' USD', icon: m.icon })
+          body: JSON.stringify({ token, email: adminTargetEmail, text: m.icon + ' ' + m.label + ': +' + amount + ' USD', icon: m.icon })
         });
       } catch(e) {}
       toast('✓ Balance updated');
@@ -4047,7 +3946,7 @@ function initAdminPanel() {
     try {
       var res = await fetch(WORKER_LOGIN_URL + '?action=sendMessage', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: getSessionToken(), email: adminTargetEmail, text: text, icon: icon })
+        body: JSON.stringify({ token: getSessionToken(), email: adminTargetEmail, text, icon })
       });
       var data = await res.json();
       if (data.ok) { toast('✓ Message sent'); document.getElementById('adminMsgMask').classList.remove('on'); }
@@ -4066,12 +3965,11 @@ async function loadAdminPendingDeposits() {
     if (!token) { box.innerHTML = '<div class="admin-empty">No token</div>'; return; }
 
     var r = await fetch(WORKER_URL + '?action=listPendingDeposits', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
     });
     var data = await r.json();
-    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>'; return; }
+    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(data.error || 'Failed') + '</div>'; return; }
 
     var list = data.deposits || [];
     var badge = document.getElementById('navDepositsCount');
@@ -4096,10 +3994,10 @@ async function loadAdminPendingDeposits() {
           '<span style="color:#7c9cbb;font-size:11px">' + escapeHtml(d.userEmail) + '</span></div>' +
           '<div class="awd-badge pend">⏳ Pending</div>' +
         '</div>' +
-        '<div class="awd-amount" style="color:#f6c344">+' + Number(d.cryptoAmt).toFixed(8) + ' ' + d.symbol +
+        '<div class="awd-amount" style="color:#f6c344">+' + Number(d.cryptoAmt).toFixed(8) + ' ' + escapeHtml(d.symbol) +
           ' <span style="font-size:14px;color:#7c9cbb">≈ $' + Number(d.usdValue).toFixed(2) + '</span></div>' +
         '<div class="awd-details">' +
-          '<div class="awd-row"><span>TX hash</span><b style="font-size:11px">' + (d.txHash || '').slice(0, 20) + '...</b></div>' +
+          '<div class="awd-row"><span>TX hash</span><b style="font-size:11px">' + escapeHtml((d.txHash || '').slice(0, 20)) + '...</b></div>' +
           '<div class="awd-row"><span>Time</span><b>' + dateStr + '</b></div>' +
         '</div>' +
         '<div class="awd-actions">' +
@@ -4110,7 +4008,7 @@ async function loadAdminPendingDeposits() {
     });
     box.innerHTML = html;
   } catch (e) {
-    box.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+    box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -4119,9 +4017,8 @@ async function adminApprovePendingDeposit(email, depositId) {
   try {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=approvePendingDeposit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, userEmail: email, depositId: depositId })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, userEmail: email, depositId })
     });
     var data = await r.json();
     if (data.ok) {
@@ -4143,9 +4040,8 @@ async function adminRejectPendingDeposit(email, depositId) {
   try {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=rejectPendingDeposit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, userEmail: email, depositId: depositId, reason: reason })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, userEmail: email, depositId, reason })
     });
     var data = await r.json();
     if (data.ok) {
@@ -4168,12 +4064,13 @@ function showAdminTab(tab) {
   });
   if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
   if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
-if (tab === 'deposits' && typeof loadAdminPendingDeposits === 'function') loadAdminPendingDeposits();
+  if (tab === 'deposits' && typeof loadAdminPendingDeposits === 'function') loadAdminPendingDeposits();
   if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
   if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
   if (tab === 'verifications' && typeof loadAdminVerifications === 'function') loadAdminVerifications();
   localStorage.setItem('adminTab', tab);
 }
+window.showAdminTab = showAdminTab;
 
 function filterClients(query) {
   var q = (query || '').toLowerCase().trim();
@@ -4183,7 +4080,9 @@ function filterClients(query) {
     card.style.display = (!q || text.indexOf(q) > -1) ? '' : 'none';
   });
 }
+window.filterClients = filterClients;
 
+/* ---------- ADMIN CHATS ---------- */
 async function loadAdminChats() {
   var box = document.getElementById('adminChatsList');
   if (!box) return;
@@ -4192,7 +4091,7 @@ async function loadAdminChats() {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token })
     });
     var d = await r.json();
     if (!d.ok || !d.users) { box.innerHTML = '<div class="admin-empty">Failed</div>'; return; }
@@ -4202,14 +4101,14 @@ async function loadAdminChats() {
       try {
         var r2 = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token: token, email: u.email })
+          body: JSON.stringify({ token, email: u.email })
         });
         var s = await r2.json();
         var msgs = s.chat || [];
         if (msgs.length) {
           var last = msgs[msgs.length - 1];
           var unread = msgs.filter(function(m){ return m.from === 'client' && !m.read; }).length;
-          chats.push({ email: u.email, name: u.name || u.email, lastTs: last.ts, lastText: last.text, lastFrom: last.from, unread: unread });
+          chats.push({ email: u.email, name: u.name || u.email, lastTs: last.ts, lastText: last.text, lastFrom: last.from, unread });
         }
       } catch(e) {}
     }
@@ -4231,20 +4130,21 @@ async function loadAdminChats() {
     box.innerHTML = html;
   } catch(e) { box.innerHTML = '<div class="admin-empty">Error</div>'; }
 }
+window.loadAdminChats = loadAdminChats;
 
 async function openAdminChat(email) {
   var old = document.getElementById('adminChatModal'); if (old) old.remove();
   var token = getSessionToken();
   var r = await fetch(WORKER_URL + '?action=getUserState', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: token, email: email })
+    body: JSON.stringify({ token, email })
   });
   var state = await r.json();
   var msgs = state.chat || [];
   msgs.forEach(function(m){ if (m.from === 'client') m.read = true; });
   await fetch(WORKER_URL + '?action=setUserState', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: token, email: email, state: state, force: true })
+    body: JSON.stringify({ token, email, state, force: true })
   });
   var messagesHtml = msgs.map(function(m){
     var isAdmin = m.from === 'admin';
@@ -4259,18 +4159,19 @@ async function openAdminChat(email) {
   modal.innerHTML =
     '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.2);border-radius:20px;width:100%;max-width:520px;height:600px;display:flex;flex-direction:column;overflow:hidden;">' +
       '<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">' +
-        '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + email + '</div>' +
-        '<button onclick="endAdminChat(\'' + email + '\')" style="background:rgba(255,80,80,0.15);border:none;color:#ff6b6b;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;">End chat</button>' +
+        '<div style="color:#e7edf5;font-weight:700;font-size:14px;">' + escapeHtml(email) + '</div>' +
+        '<button onclick="endAdminChat(\'' + email.replace(/'/g, "\\'") + '\')" style="background:rgba(255,80,80,0.15);border:none;color:#ff6b6b;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;">End chat</button>' +
       '</div>' +
       '<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:16px;">' + messagesHtml + '</div>' +
       '<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;">' +
-        '<input id="adminChatInput" placeholder="Reply..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;" onkeydown="if(event.key===\'Enter\')sendAdminChatMsg(\'' + email + '\')">' +
-        '<button onclick="sendAdminChatMsg(\'' + email + '\')" style="width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;">→</button>' +
+        '<input id="adminChatInput" placeholder="Reply..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e7edf5;font-size:13px;outline:none;" onkeydown="if(event.key===\'Enter\')sendAdminChatMsg(\'' + email.replace(/'/g, "\\'") + '\')">' +
+        '<button onclick="sendAdminChatMsg(\'' + email.replace(/'/g, "\\'") + '\')" style="width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;cursor:pointer;">→</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(modal);
   var mb = document.getElementById('adminChatMsgs'); if (mb) mb.scrollTop = mb.scrollHeight;
 }
+window.openAdminChat = openAdminChat;
 
 async function sendAdminChatMsg(email) {
   var input = document.getElementById('adminChatInput');
@@ -4283,20 +4184,21 @@ async function sendAdminChatMsg(email) {
   try {
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email })
+      body: JSON.stringify({ token, email })
     });
     var state = await r.json();
     if (!state.chat) state.chat = [];
-    state.chat.push({ id: 'msg_' + Date.now(), from: 'admin', text: text, ts: Date.now(), read: false });
+    state.chat.push({ id: 'msg_' + Date.now(), from: 'admin', text, ts: Date.now(), read: false });
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, email: email, state: state, force: true })
+      body: JSON.stringify({ token, email, state, force: true })
     });
     var modal = document.getElementById('adminChatModal');
     if (modal) modal.remove();
     openAdminChat(email);
   } catch(e) {}
 }
+window.sendAdminChatMsg = sendAdminChatMsg;
 
 async function endAdminChat(email) {
   if (!email) return;
@@ -4306,7 +4208,7 @@ async function endAdminChat(email) {
     if (!token) return;
     var r = await fetch(WORKER_URL + '?action=getUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, email: email })
+      body: JSON.stringify({ token, email })
     });
     var state = await r.json();
     if (!state || state.error) return;
@@ -4315,7 +4217,7 @@ async function endAdminChat(email) {
     state.typing = {};
     await fetch(WORKER_URL + '?action=setUserState', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, email: email, state: state, force: true, wipeChat: true })
+      body: JSON.stringify({ token, email, state, force: true, wipeChat: true })
     });
     alert('✅ Chat closed');
     var modal = document.getElementById('adminChatModal');
@@ -4323,6 +4225,7 @@ async function endAdminChat(email) {
     if (typeof loadAdminChats === 'function') loadAdminChats();
   } catch(e) {}
 }
+window.endAdminChat = endAdminChat;
 
 async function clearAllChats() {
   if (!confirm('Clear ALL chats?')) return;
@@ -4331,7 +4234,7 @@ async function clearAllChats() {
     var token = getSessionToken();
     var r = await fetch(WORKER_URL + '?action=listUsers', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token })
     });
     var d = await r.json();
     if (!d.ok || !d.users) return;
@@ -4341,13 +4244,13 @@ async function clearAllChats() {
       try {
         var r2 = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token: token, email: u.email })
+          body: JSON.stringify({ token, email: u.email })
         });
         var s = await r2.json();
         s.chat = []; s.ticket = null;
         await fetch(WORKER_URL + '?action=setUserState', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token: token, email: u.email, state: s, force: true, wipeChat: true })
+          body: JSON.stringify({ token, email: u.email, state: s, force: true, wipeChat: true })
         });
         cleared++;
       } catch(e) {}
@@ -4356,14 +4259,13 @@ async function clearAllChats() {
     loadAdminChats();
   } catch(e) { alert('Error'); }
 }
+window.clearAllChats = clearAllChats;
 
-/* ========== EXCHANGE DASHBOARD ========== */
+/* ---------- EXCHANGE DASHBOARD ---------- */
 function applyAccountType() {
   if (window.adminViewingEmail) return;
   if (localStorage.getItem('user_role') === 'admin') return;
 
-  var accountType = (st.user && st.user.accountType) || null;
-  if (localStorage.getItem('user_role') === 'admin') return;
   var accountType = (st.user && st.user.accountType) || null;
   var isExchange = accountType === 'exchange';
 
@@ -4402,32 +4304,23 @@ async function loadExchangePrices() {
   try {
     var r = await fetch(WORKER_URL + '?action=multiPrices');
     var d = await r.json();
-    if (d && d.ok && d.coins) {
-      _exPricesCache = d.coins;
-    } else {
-      _exPricesCache = fallback;
-    }
-    renderExchangeCoins();
+    _exPricesCache = (d && d.ok && d.coins) ? d.coins : fallback;
   } catch(e) {
     _exPricesCache = fallback;
-    renderExchangeCoins();
   }
+  renderExchangeCoins();
 }
 
 function renderExchangeCoins() {
   var box = document.getElementById('exCoinsList');
   if (!box || !_exPricesCache) return;
 
-    var ICONS = {
-    'BTC': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(247,147,26,.5))"><defs><radialGradient id="btcg" cx="30%" cy="30%"><stop offset="0%" stop-color="#ffb84d"/><stop offset="100%" stop-color="#e8850c"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#btcg)"/><circle cx="16" cy="16" r="15" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/></svg>',
-
-    'ETH': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(98,126,234,.5))"><defs><radialGradient id="ethg" cx="30%" cy="30%"><stop offset="0%" stop-color="#8ea1ff"/><stop offset="100%" stop-color="#4c5fd6"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#ethg)"/><circle cx="16" cy="16" r="15" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/><path fill="#fff" d="M16 4L8 16.4L16 20.6L24 16.4L16 4Z" opacity="0.95"/><path fill="#fff" d="M8 17.8L16 28L24 17.8L16 22L8 17.8Z" opacity="0.65"/></svg>',
-
-    'USDT': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(38,161,123,.5))"><defs><radialGradient id="usdtg" cx="30%" cy="30%"><stop offset="0%" stop-color="#3ec99c"/><stop offset="100%" stop-color="#1a8d68"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#usdtg)"/><circle cx="16" cy="16" r="15" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/><path fill="#fff" d="M17.8 14.1v-2.3h4.4V8.3H9.8v3.5h4.4v2.3c-3.6.2-6.3.9-6.3 1.8s2.7 1.6 6.3 1.8v5.8h3.6v-5.8c3.6-.2 6.3-.9 6.3-1.8s-2.7-1.6-6.3-1.8zm0 3v0c-.1 0-.4 0-.6 0-.4 0-.8 0-1.2 0-.2 0-.4 0-.6 0v0c-3.1-.1-5.4-.6-5.4-1.3s2.3-1.2 5.4-1.3v2c.2 0 .4 0 .6 0 .4 0 .8 0 1.2 0 .2 0 .5 0 .6 0v-2c3 .1 5.3.6 5.3 1.3s-2.3 1.2-5.3 1.3z"/></svg>',
-
-    'SOL': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(153,69,255,.5))"><defs><linearGradient id="solg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9945FF"/><stop offset="50%" stop-color="#14F195"/><stop offset="100%" stop-color="#00D1FF"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="#0a0a14"/><circle cx="16" cy="16" r="16" fill="url(#solg)" opacity="0.9"/><circle cx="16" cy="16" r="15" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/><path fill="#fff" d="M10 21.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2zm11.4-5H10c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2zM10 11.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2z"/></svg>',
-
-    'BNB': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(243,186,47,.5))"><defs><radialGradient id="bnbg" cx="30%" cy="30%"><stop offset="0%" stop-color="#ffd85c"/><stop offset="100%" stop-color="#e8a800"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#bnbg)"/><circle cx="16" cy="16" r="15" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/><path fill="#fff" d="M12.6 12.6L16 9.2l3.4 3.4L16 16l-3.4-3.4zm-5.4 5.4L10.6 14.6 14 18l-3.4 3.4L7.2 18zm10.8 0L21.4 14.6 24.8 18l-3.4 3.4L18 18zm-5.4 5.4L16 20l3.4 3.4L16 26.8l-3.4-3.4zM16 14l2 2-2 2-2-2 2-2z"/></svg>'
+  var ICONS = {
+    'BTC': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(247,147,26,.5))"><defs><radialGradient id="btcg" cx="30%" cy="30%"><stop offset="0%" stop-color="#ffb84d"/><stop offset="100%" stop-color="#e8850c"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#btcg)"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4z"/></svg>',
+    'ETH': '<svg viewBox="0 0 32 32" width="28" height="28"><defs><radialGradient id="ethg" cx="30%" cy="30%"><stop offset="0%" stop-color="#8ea1ff"/><stop offset="100%" stop-color="#4c5fd6"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#ethg)"/><path fill="#fff" d="M16 4L8 16.4L16 20.6L24 16.4L16 4Z" opacity="0.95"/><path fill="#fff" d="M8 17.8L16 28L24 17.8L16 22L8 17.8Z" opacity="0.65"/></svg>',
+    'USDT': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#26a17b"/><path fill="#fff" d="M17.8 14.1v-2.3h4.4V8.3H9.8v3.5h4.4v2.3c-3.6.2-6.3.9-6.3 1.8s2.7 1.6 6.3 1.8v5.8h3.6v-5.8c3.6-.2 6.3-.9 6.3-1.8s-2.7-1.6-6.3-1.8z"/></svg>',
+    'SOL': '<svg viewBox="0 0 32 32" width="28" height="28"><defs><linearGradient id="solg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9945FF"/><stop offset="50%" stop-color="#14F195"/><stop offset="100%" stop-color="#00D1FF"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="url(#solg)"/><path fill="#fff" d="M10 21.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2zm11.4-5H10c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2zM10 11.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2z"/></svg>',
+    'BNB': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#f3ba2f"/><path fill="#fff" d="M12.6 12.6L16 9.2l3.4 3.4L16 16l-3.4-3.4zm-5.4 5.4L10.6 14.6 14 18l-3.4 3.4L7.2 18zm10.8 0L21.4 14.6 24.8 18l-3.4 3.4L18 18zm-5.4 5.4L16 20l3.4 3.4L16 26.8l-3.4-3.4zM16 14l2 2-2 2-2-2 2-2z"/></svg>'
   };
 
   var html = '';
@@ -4436,16 +4329,16 @@ function renderExchangeCoins() {
     var arrow = up ? '▲' : '▼';
     var change = c.change24h ? Math.abs(c.change24h).toFixed(2) + '%' : '0.00%';
     var iconSvg = ICONS[c.symbol] || '<div style="width:24px;height:24px;background:' + c.icon + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:11px;">' + c.symbol.charAt(0) + '</div>';
-    // КОНВЕРТИРУЕМ ЦЕНУ В ВЫБРАННУЮ ВАЛЮТУ
     var priceInCur = fmtCurrency(c.usd);
     html += '<div class="ex-coin-row">' +
       '<div class="ex-coin-icon">' + iconSvg + '</div>' +
-      '<div><div class="ex-coin-name">' + c.name + '</div><div class="ex-coin-symbol">' + c.symbol + ' / ' + (st.currency || 'USD') + '</div></div>' +
+      '<div><div class="ex-coin-name">' + escapeHtml(c.name) + '</div><div class="ex-coin-symbol">' + c.symbol + ' / ' + (st.currency || 'USD') + '</div></div>' +
       '<div class="ex-coin-price"><strong>' + priceInCur + '</strong>' +
       '<span class="ex-coin-change ' + (up ? 'up' : 'down') + '">' + arrow + ' ' + change + '</span></div></div>';
   });
   box.innerHTML = html;
 }
+
 function renderExchangeDash() {
   var greet = document.getElementById('exGreeting');
   if (greet) {
@@ -4502,13 +4395,7 @@ function renderExchangeDash() {
   if (btcVal) btcVal.textContent = fmtCurrency((st.btc || 0) * (st.btcP || 0));
   if (ethVal) ethVal.textContent = fmtCurrency((st.eth || 0) * (st.ethP || 0));
 
-  // Курс валюты в топ-5 монетах — тоже пересчитываем
-  if (_exPricesCache) {
-    _exPricesCache.forEach(function(c){
-      c.usd = c.usd; // базовый USD не меняется
-    });
-    renderExchangeCoins();
-  }
+  if (_exPricesCache) renderExchangeCoins();
 
   renderExchangeIban();
   renderExchangeTx();
@@ -4551,8 +4438,8 @@ function renderExchangeTx() {
     else if (t.status === 'Under Review') badge = '<div class="recent-tx-badge pend">⏳ Under review</div>';
     html += '<div class="recent-tx-item">' +
       '<div class="recent-tx-icon ' + (amt >= 0 ? 'deposit' : 'withdrawal') + '">' + (amt >= 0 ? '💰' : '💸') + '</div>' +
-      '<div class="recent-tx-info"><div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
-        '<div class="recent-tx-time">' + (typeof timeAgo === 'function' ? timeAgo(t.ts || Date.now()) : '') + '</div>' + badge + '</div>' +
+      '<div class="recent-tx-info"><div class="recent-tx-desc">' + escapeHtml(t.desc || 'Transaction') + '</div>' +
+        '<div class="recent-tx-time">' + timeAgo(t.ts || Date.now()) + '</div>' + badge + '</div>' +
       '<div class="recent-tx-amount ' + cls + '">' + sym + '$' + Math.abs(amt).toFixed(2) + '</div></div>';
   });
   box.innerHTML = html;
@@ -4597,7 +4484,7 @@ function renderExchangeChart() {
   if (labelsEnd) labelsEnd.textContent = new Date(maxT).toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
 }
 
-/* ========== SCAN ALL DEPOSITS ========== */
+/* ---------- SCAN ALL DEPOSITS ---------- */
 async function scanAllDeposits() {
   var email = (window.adminViewingEmail || localStorage.getItem('user_email') || '').toLowerCase();
   if (!email) { toast('Not logged in', true); return; }
@@ -4614,11 +4501,12 @@ async function scanAllDeposits() {
     btcList.forEach(function(tx) { if (tx.to && myBtc && tx.to.toLowerCase() !== myBtc.toLowerCase()) return; tx._type = 'BTC'; allTxs.push(tx); });
     ethList.forEach(function(tx) { if (tx.to && myEth && tx.to.toLowerCase() !== myEth.toLowerCase()) return; tx._type = 'ETH'; allTxs.push(tx); });
     if (allTxs.length === 0) { toast('No new deposits', false); return; }
-        var knownHashes = {};
+
+    var knownHashes = {};
     (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
     (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
-    
-    // ✅ ФИКС: фильтр по времени
+    (st.pendingDeposits || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
+
     var DAY_MS = 24 * 60 * 60 * 1000;
     var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
     var newTxs = allTxs.filter(function(tx) {
@@ -4629,10 +4517,12 @@ async function scanAllDeposits() {
       return true;
     });
     if (newTxs.length === 0) { toast('All credited ✓', false); return; }
+
     var msg = 'Found ' + newTxs.length + ' new deposit(s):\n\n';
     newTxs.forEach(function(tx, i) { var usd = tx.amount * (tx._type === 'BTC' ? st.btcP : st.ethP); msg += (i + 1) + '. ' + tx.amount.toFixed(8) + ' ' + tx._type + ' ≈ ' + fmtCurrency(usd) + '\n'; });
     msg += '\nCredit?';
     if (!confirm(msg)) return;
+
     var totalUsd = 0;
     newTxs.forEach(function(tx) {
       var price = tx._type === 'BTC' ? st.btcP : st.ethP;
@@ -4653,7 +4543,7 @@ async function scanAllDeposits() {
   } catch (e) { toast('Scan error', true); }
 }
 
-/* ========== AUTO DEPOSIT CHECK — отправляет в PENDING, не зачисляет ========== */
+/* ---------- AUTO DEPOSIT CHECK ---------- */
 (function(){
   var CHECK_INTERVAL = 15000;
   var _busy = false;
@@ -4674,11 +4564,10 @@ async function scanAllDeposits() {
       var token = getSessionToken();
       if (!token) { _busy = false; return; }
 
-      // Синхронизируем state
       try {
         var freshR = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, email: email })
+          body: JSON.stringify({ token, email })
         });
         var fresh = await freshR.json();
         if (fresh && !fresh.error) {
@@ -4720,22 +4609,21 @@ async function scanAllDeposits() {
 
       var DAY_MS = 24 * 60 * 60 * 1000;
       var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
-      var now = Date.now();
+      var nowMs = Date.now();
 
       var newTxs = allTxs.filter(function(tx) {
         if (!tx.hash) return false;
         if (knownHashes[tx.hash]) return false;
         var txTime = tx.time ? tx.time * 1000 : 0;
         if (!txTime) return false;
-        if ((now - txTime) > DAY_MS) return false;
+        if ((nowMs - txTime) > DAY_MS) return false;
         if (cardCreatedAt && txTime < cardCreatedAt) return false;
-        if (txTime > now + 60 * 1000) return false;
+        if (txTime > nowMs + 60 * 1000) return false;
         return true;
       });
 
       if (newTxs.length === 0) { _busy = false; return; }
 
-      // ✅ Отправляем в PENDING (не зачисляем!)
       for (var i = 0; i < newTxs.length; i++) {
         var tx = newTxs[i];
         var price = tx._type === 'BTC' ? (st.btcP || 68000) : (st.ethP || 3200);
@@ -4744,27 +4632,20 @@ async function scanAllDeposits() {
 
         try {
           await fetch(WORKER_URL + '?action=addPendingDeposit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              token: token,
-              txHash: tx.hash,
-              cryptoAmt: tx.amount,
-              symbol: tx._type,
-              usdValue: credit,
-              to: tx.to,
-              time: tx.time
+              token, txHash: tx.hash, cryptoAmt: tx.amount,
+              symbol: tx._type, usdValue: credit, to: tx.to, time: tx.time
             })
           });
           knownHashes[tx.hash] = true;
         } catch(e) {}
       }
 
-      // Обновляем стейт с сервера (там уже лежат pendingDeposits)
       try {
         var r2 = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, email: email })
+          body: JSON.stringify({ token, email })
         });
         var fresh2 = await r2.json();
         if (fresh2 && !fresh2.error) {
@@ -4774,11 +4655,9 @@ async function scanAllDeposits() {
         }
       } catch(e) {}
 
-      if (typeof render === 'function') render();
-      if (typeof addNotification === 'function') {
-        addNotification('💰 Deposit pending review', '⏳');
-      }
-      if (typeof toast === 'function') toast('💰 Deposit pending review');
+      render();
+      addNotification('💰 Deposit pending review', '⏳');
+      toast('💰 Deposit pending review');
     } catch(e) {
       console.warn('[checkDeposits]', e);
     } finally {
@@ -4790,7 +4669,7 @@ async function scanAllDeposits() {
   setInterval(checkDeposits, CHECK_INTERVAL);
 })();
 
-/* ========== CHAT POLLING ========== */
+/* ---------- CHAT POLLING ---------- */
 setInterval(async function(){
   var token = getSessionToken();
   if (!token) return;
@@ -4798,7 +4677,7 @@ setInterval(async function(){
   if (!email) return;
   if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
   try {
-    var r = await fetch(WORKER_URL + '?action=getUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token, email: email }) });
+    var r = await fetch(WORKER_URL + '?action=getUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email }) });
     var fresh = await r.json();
     if (!fresh || !fresh.chat) return;
     var prevLen = (st.chat || []).length;
@@ -4808,20 +4687,20 @@ setInterval(async function(){
       var age = Date.now() - (fresh.typing.adminTs || 0);
       window._adminTyping = age < 3000;
     } else { window._adminTyping = false; }
-    if (typeof updateChatBadge === 'function') updateChatBadge();
+    updateChatBadge();
     if (newLen > prevLen) {
       var newMsgs = fresh.chat.slice(prevLen);
       if (newMsgs.some(function(m){ return m.from === 'admin'; })) {
-        if (typeof playChatSound === 'function') playChatSound();
-        if (typeof addNotification === 'function') addNotification('New message from Elena', '💬');
+        playChatSound();
+        addNotification('New message from Elena', '💬');
       }
     }
     var panel = document.getElementById('chatPanel');
-    if (panel && panel.style.display === 'flex' && typeof renderChatMessages === 'function') renderChatMessages();
+    if (panel && panel.style.display === 'flex') renderChatMessages();
   } catch(e) {}
 }, 2000);
 
-/* ========== INIT ========== */
+/* ---------- INIT ---------- */
 initLoginLogout();
 initSignup();
 initPasswordConfirm();
@@ -4854,17 +4733,17 @@ document.addEventListener('DOMContentLoaded', function(){
   if (btnCopyExIban) {
     btnCopyExIban.onclick = function(){
       if (st.user && st.user.iban) {
-        navigator.clipboard.writeText(st.user.iban).then(function(){ if (typeof toast === 'function') toast('IBAN copied'); });
-      } else { if (typeof toast === 'function') toast('IBAN not ready yet', true); }
+        navigator.clipboard.writeText(st.user.iban).then(function(){ toast('IBAN copied'); });
+      } else { toast('IBAN not ready yet', true); }
     };
   }
 
   var btnExDep = document.getElementById('exBtnDeposit');
-  if (btnExDep) btnExDep.onclick = function(){ var b = document.getElementById('btnAdd'); if (b) b.click(); else if (typeof openModal === 'function') openModal('add'); };
+  if (btnExDep) btnExDep.onclick = function(){ var b = document.getElementById('btnAdd'); if (b) b.click(); else openModal('add'); };
   var btnExWd = document.getElementById('exBtnWithdraw');
-  if (btnExWd) btnExWd.onclick = function(){ if (typeof openWithdraw === 'function') openWithdraw(); };
+  if (btnExWd) btnExWd.onclick = function(){ openWithdraw(); };
   var btnExTrade = document.getElementById('exBtnTrade');
-  if (btnExTrade) btnExTrade.onclick = function(){ if (typeof toast === 'function') toast('Trading terminal: coming soon'); };
+  if (btnExTrade) btnExTrade.onclick = function(){ toast('Trading terminal: coming soon'); };
 
   var saved = localStorage.getItem('adminTab') || 'stats';
   if (document.querySelector('.admin-nav-item')) { setTimeout(function(){ showAdminTab(saved); }, 300); }
@@ -4890,96 +4769,4 @@ window.startVerification = function() { if (typeof window.submitRealVerification
 window.startIbanGeneration = function() { renderIbanByAdmin(); };
 window.renderIban = renderIbanByAdmin;
 
-(function(){
-  var _origShowApp = window.showApp;
-  window.showApp = function() {
-    if (typeof _origShowApp === 'function') _origShowApp.apply(this, arguments);
-    // ✅ ФИКС: НЕ запускаем gateByVerification автоматом — 
-    // showApp уже сам проверил KYC
-  };
-})();
-
-console.log('%c[NordicCrypto] ✅ App v3.0 loaded','color:#00d4ff;font-weight:bold;font-size:14px');
-/* BUG FIX: стабилизация рендера — не чаще 1 раза в 150мс */
-(function(){
-  var _lastRender = 0;
-  var _origRender = window.render;
-  window.render = function(){
-    var now = Date.now();
-    if (now - _lastRender < 150) return;
-    _lastRender = now;
-    if (typeof _origRender === 'function') _origRender.apply(this, arguments);
-  };
-})();
-/* BUG FIX: жёсткая привязка кнопки Submit верификации */
-(function(){
-  function bindSubmit(){
-    var btn = document.getElementById('verifyNext3');
-    if (!btn || btn._hardBound) return;
-    btn._hardBound = true;
-    var clone = btn.cloneNode(true);
-    btn.parentNode.replaceChild(clone, btn);
-    clone.onclick = function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      if (typeof window.submitRealVerification === 'function') {
-        window.submitRealVerification();
-      } else {
-        alert('Ошибка: обновите страницу Ctrl+Shift+R');
-      }
-    };
-  }
-  var _orig = window.showVerifyScreen;
-  window.showVerifyScreen = function(){
-    if (typeof _orig === 'function') _orig.apply(this, arguments);
-    setTimeout(bindSubmit, 100);
-  };
-  document.addEventListener('DOMContentLoaded', bindSubmit);
-  setTimeout(bindSubmit, 1000);
-  setTimeout(bindSubmit, 3000);
-})();
-/* FIX: жёсткая привязка кнопки Submit верификации */
-(function(){
-  function bindSubmit(){
-    var btn = document.getElementById('verifyNext3');
-    if (!btn || btn._hardBound) return;
-    btn._hardBound = true;
-    var clone = btn.cloneNode(true);
-    btn.parentNode.replaceChild(clone, btn);
-    clone.onclick = function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      if (typeof window.submitRealVerification === 'function') {
-        window.submitRealVerification();
-      } else {
-        alert('Ошибка: обновите страницу Ctrl+Shift+R');
-      }
-    };
-  }
-  var _orig = window.showVerifyScreen;
-  window.showVerifyScreen = function(){
-    if (typeof _orig === 'function') _orig.apply(this, arguments);
-    setTimeout(bindSubmit, 100);
-  };
-  document.addEventListener('DOMContentLoaded', bindSubmit);
-  setTimeout(bindSubmit, 1000);
-  setTimeout(bindSubmit, 3000);
-})();
-/* FIX: throttle рендера — не чаще 1 раза в 150мс */
-(function(){
-  var _last = 0;
-  var _orig = window.render;
-  window.render = function(){
-    var now = Date.now();
-    if (now - _last < 150) return;
-    _last = now;
-    if (typeof _orig === 'function') _orig.apply(this, arguments);
-  };
-})();
-/* Exchange: автообновление курсов каждые 30 секунд */
-setInterval(function(){
-  var exDash = document.getElementById('exchangeDash');
-  if (exDash && exDash.style.display !== 'none' && exDash.classList.contains('on')) {
-    if (typeof loadExchangePrices === 'function') loadExchangePrices();
-  }
-}, 30000);
+console.log('%c[NordicCrypto] ✅ App v3.1 loaded','color:#00d4ff;font-weight:bold;font-size:14px');
