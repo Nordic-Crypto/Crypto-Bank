@@ -4625,12 +4625,91 @@ function renderExchangeCoins() {
   if (!box || !_exPricesCache) return;
 
   var ICONS = {
-    'BTC': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4z"/></svg>',
-    'ETH': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#627eea"/><path fill="#fff" d="M16 4L8 16.4L16 20.6L24 16.4L16 4Z"/><path fill="#fff" d="M8 17.8L16 28L24 17.8L16 22L8 17.8Z" opacity="0.65"/></svg>',
-    'USDT': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#26a17b"/><path fill="#fff" d="M17.8 14.1v-2.3h4.4V8.3H9.8v3.5h4.4v2.3c-3.6.2-6.3.9-6.3 1.8s2.7 1.6 6.3 1.8v5.8h3.6v-5.8c3.6-.2 6.3-.9 6.3-1.8s-2.7-1.6-6.3-1.8z"/></svg>',
-    'SOL': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#9945FF"/><path fill="#fff" d="M10 21.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2z"/></svg>',
-    'BNB': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#f3ba2f"/><path fill="#fff" d="M12.6 12.6L16 9.2l3.4 3.4L16 16l-3.4-3.4zM16 14l2 2-2 2-2-2 2-2z"/></svg>'
-  };
+  'BTC': '<svg viewBox="0 0 32 32" width="28" height="28" style="display:block">' +
+    '<defs>' +
+      '<radialGradient id="btcBg" cx="30%" cy="25%">' +
+        '<stop offset="0%" stop-color="#ffcc66"/>' +
+        '<stop offset="55%" stop-color="#f7931a"/>' +
+        '<stop offset="100%" stop-color="#c96a00"/>' +
+      '</radialGradient>' +
+      '<filter id="btcShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#f7931a" flood-opacity="0.5"/>' +
+      '</filter>' +
+    '</defs>' +
+    '<circle cx="16" cy="16" r="16" fill="url(#btcBg)" filter="url(#btcShadow)"/>' +
+    '<circle cx="16" cy="16" r="15.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>' +
+    '<circle cx="16" cy="16" r="15.2" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="0.5" stroke-dasharray="2 3"/>' +
+    '<path fill="#fff" d="M22.3 14.15c.3-2-1.2-3.05-3.25-3.75l.65-2.65-1.6-.4-.65 2.6c-.4-.1-.85-.2-1.3-.3l.65-2.6-1.6-.4-.65 2.65c-.35-.1-.65-.15-1-.2v0l-2.2-.55-.4 1.7s1.2.3 1.2.3c.6.15.75.55.7.9l-.7 2.85c0 .05.05.05.1.1l-.1-.05-.9 4.05c-.1.25-.3.5-.75.4 0 0-1.2-.3-1.2-.3l-.8 1.85 2.1.5c.4.1.75.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.85.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.55-2.1.7-2 0-3.1-1.5-3.85 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.85.65l.85-3.5c1.1.3 4.5.8 4 2.85zm.5-3.2c-.45 1.85-3.2.9-4.1.7l.75-3.15c.85.2 3.75.6 3.35 2.45z"/>' +
+  '</svg>',
+
+  'ETH': '<svg viewBox="0 0 32 32" width="28" height="28" style="display:block">' +
+    '<defs>' +
+      '<radialGradient id="ethBg" cx="30%" cy="25%">' +
+        '<stop offset="0%" stop-color="#a5b4ff"/>' +
+        '<stop offset="55%" stop-color="#627eea"/>' +
+        '<stop offset="100%" stop-color="#3d4fa8"/>' +
+      '</radialGradient>' +
+      '<filter id="ethShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#627eea" flood-opacity="0.5"/>' +
+      '</filter>' +
+    '</defs>' +
+    '<circle cx="16" cy="16" r="16" fill="url(#ethBg)" filter="url(#ethShadow)"/>' +
+    '<circle cx="16" cy="16" r="15.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>' +
+    '<path fill="#fff" d="M16 3.8L8.2 16.1L16 20.4L23.8 16.1L16 3.8Z" opacity=".95"/>' +
+    '<path fill="#fff" d="M16 3.8L8.2 16.1L16 13.4V3.8Z" opacity=".7"/>' +
+    '<path fill="#fff" d="M8.2 17.7L16 28.2L23.8 17.7L16 22L8.2 17.7Z" opacity=".85"/>' +
+    '<path fill="#fff" d="M16 22L23.8 17.7L16 15.1V22Z" opacity=".6"/>' +
+  '</svg>',
+
+  'USDT': '<svg viewBox="0 0 32 32" width="28" height="28" style="display:block">' +
+    '<defs>' +
+      '<radialGradient id="usdtBg" cx="30%" cy="25%">' +
+        '<stop offset="0%" stop-color="#4de0b0"/>' +
+        '<stop offset="55%" stop-color="#26a17b"/>' +
+        '<stop offset="100%" stop-color="#0d7355"/>' +
+      '</radialGradient>' +
+      '<filter id="usdtShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#26a17b" flood-opacity="0.5"/>' +
+      '</filter>' +
+    '</defs>' +
+    '<circle cx="16" cy="16" r="16" fill="url(#usdtBg)" filter="url(#usdtShadow)"/>' +
+    '<circle cx="16" cy="16" r="15.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>' +
+    '<path fill="#fff" d="M8.2 8.4h15.6v3.5h-5.7v2.3c3.8.2 6.6.95 6.6 1.85s-2.8 1.65-6.6 1.85v5.7h-3.8v-5.7c-3.8-.2-6.6-.95-6.6-1.85s2.8-1.65 6.6-1.85v-2.3H8.2V8.4zm8.05 8.7c-.3 0-.65 0-1 0h-.3c-2.9-.1-5.1-.65-5.1-1.3s2.2-1.2 5.1-1.3v1.9c.3 0 .65 0 1 0 .35 0 .7 0 1 0v-1.9c2.9.1 5.1.65 5.1 1.3s-2.2 1.2-5.1 1.3h-.3c-.35 0-.7 0-1 0v0z"/>' +
+  '</svg>',
+
+  'SOL': '<svg viewBox="0 0 32 32" width="28" height="28" style="display:block">' +
+    '<defs>' +
+      '<linearGradient id="solBg" x1="0%" y1="0%" x2="100%" y2="100%">' +
+        '<stop offset="0%" stop-color="#9945FF"/>' +
+        '<stop offset="50%" stop-color="#14F195"/>' +
+        '<stop offset="100%" stop-color="#00D1FF"/>' +
+      '</linearGradient>' +
+      '<filter id="solShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#9945FF" flood-opacity="0.6"/>' +
+      '</filter>' +
+    '</defs>' +
+    '<circle cx="16" cy="16" r="16" fill="#0a0a14"/>' +
+    '<circle cx="16" cy="16" r="16" fill="url(#solBg)" opacity=".92" filter="url(#solShadow)"/>' +
+    '<circle cx="16" cy="16" r="15.2" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1"/>' +
+    '<path fill="#fff" d="M10.1 21.6h11.2c.2 0 .3.1.2.3l-1.9 1.9c-.1.1-.3.2-.5.2H7.9c-.2 0-.3-.1-.2-.3l1.9-1.9c.15-.1.35-.2.5-.2zm11.2-5H10.1c-.2 0-.3-.1-.2-.3l1.9-1.9c.1-.1.3-.2.5-.2h11.2c.2 0 .3.1.2.3l-1.9 1.9c-.1.1-.3.2-.5.2zm-11.2-5h11.2c.2 0 .3.1.2.3l-1.9 1.9c-.1.1-.3.2-.5.2H7.9c-.2 0-.3-.1-.2-.3l1.9-1.9c.15-.1.35-.2.5-.2z"/>' +
+  '</svg>',
+
+  'BNB': '<svg viewBox="0 0 32 32" width="28" height="28" style="display:block">' +
+    '<defs>' +
+      '<radialGradient id="bnbBg" cx="30%" cy="25%">' +
+        '<stop offset="0%" stop-color="#ffe57a"/>' +
+        '<stop offset="55%" stop-color="#f3ba2f"/>' +
+        '<stop offset="100%" stop-color="#b8860b"/>' +
+      '</radialGradient>' +
+      '<filter id="bnbShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#f3ba2f" flood-opacity="0.6"/>' +
+      '</filter>' +
+    '</defs>' +
+    '<circle cx="16" cy="16" r="16" fill="url(#bnbBg)" filter="url(#bnbShadow)"/>' +
+    '<circle cx="16" cy="16" r="15.2" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1"/>' +
+    '<path fill="#fff" d="M12.4 12.4L16 8.8l3.6 3.6L16 16l-3.6-3.6zM7 17.8l3.6-3.6L14.2 17.8 10.6 21.4 7 17.8zm11.2 0L21.8 14.2l3.6 3.6-3.6 3.6-3.6-3.6zm-5.6 5.6L16 19.8l3.6 3.6L16 27 12.6 23.4zM16 13.4l2.6 2.6-2.6 2.6-2.6-2.6 2.6-2.6z"/>' +
+  '</svg>'
+};
 
   var html = '';
   _exPricesCache.forEach(function(c){
