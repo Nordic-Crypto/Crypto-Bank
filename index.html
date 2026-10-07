@@ -705,6 +705,293 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
   transform: scale(1.12);
   box-shadow: 0 6px 20px -4px rgba(71,220,255,.5);
 }
+  /* ============================================================
+   🎁 LOGIN v2.0 — PREMIUM DUAL-COLUMN
+   ============================================================ */
+
+/* Общий контейнер — двухколоночный */
+.login-screen {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+/* ЛЕВАЯ колонка — маркетинг */
+.login-hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 50px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(800px 600px at 20% 20%, rgba(0,229,255,.15), transparent 60%),
+    radial-gradient(700px 600px at 80% 80%, rgba(139,92,246,.18), transparent 60%),
+    linear-gradient(135deg, #0a0f1a 0%, #0d1220 100%);
+}
+
+.login-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 15% 25%, rgba(0,229,255,.4), transparent),
+    radial-gradient(2px 2px at 85% 70%, rgba(139,92,246,.4), transparent),
+    radial-gradient(1.5px 1.5px at 40% 80%, rgba(236,72,153,.35), transparent),
+    radial-gradient(1px 1px at 70% 15%, rgba(0,229,255,.3), transparent);
+  background-size: 100% 100%;
+  animation: particleFloat 25s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes particleFloat {
+  0%   { transform: translate(0, 0) scale(1); opacity: .8; }
+  50%  { transform: translate(-20px, -30px) scale(1.1); opacity: 1; }
+  100% { transform: translate(15px, -15px) scale(1.05); opacity: .9; }
+}
+
+.login-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+}
+
+.login-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(0,229,255,.08);
+  border: 1px solid rgba(0,229,255,.25);
+  border-radius: 999px;
+  font-size: .8rem;
+  color: #7dd3fc;
+  font-weight: 600;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.login-hero-title {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.03em;
+  margin: 0 0 20px;
+  color: #fff;
+}
+
+.login-hero-title span {
+  background: linear-gradient(100deg, #00e5ff, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% auto;
+  animation: titleShimmer 4s linear infinite;
+}
+
+@keyframes titleShimmer {
+  to { background-position: 200% center; }
+}
+
+.login-hero-sub {
+  font-size: 1.05rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0 0 40px;
+}
+
+.login-hero-features {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.login-hero-feature {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+}
+
+.login-hero-feature:hover {
+  background: rgba(0,229,255,.05);
+  border-color: rgba(0,229,255,.25);
+  transform: translateX(6px);
+}
+
+.login-hero-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0,229,255,.15), rgba(139,92,246,.15));
+  border: 1px solid rgba(0,229,255,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.login-hero-feature-title {
+  font-weight: 700;
+  font-size: .95rem;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+.login-hero-feature-sub {
+  font-size: .8rem;
+  color: #718098;
+}
+
+.login-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.login-hero-stat {
+  text-align: center;
+}
+
+.login-hero-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(100deg, #fff, #7dd3fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 4px;
+  letter-spacing: -.02em;
+}
+
+.login-hero-stat-label {
+  font-size: .7rem;
+  color: #718098;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 600;
+}
+
+/* ПРАВАЯ колонка — форма */
+.login-form-side {
+  flex: 0 0 480px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  background: linear-gradient(180deg, #0a0f1a 0%, #070b14 100%);
+  border-left: 1px solid rgba(255,255,255,.06);
+  position: relative;
+}
+
+.login-form-side .login-box {
+  width: 100%;
+  max-width: 380px;
+  padding: 0;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: loginFormIn .7s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes loginFormIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.login-form-side .login-logo {
+  margin-bottom: 32px;
+}
+
+.login-form-side .login-title {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+
+.login-form-side .login-sub {
+  margin-bottom: 32px;
+}
+
+.login-form-side .login-btn {
+  margin-top: 12px;
+  padding: 16px;
+  font-size: 1rem;
+}
+
+.login-form-side .login-footer {
+  position: absolute;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  margin: 0;
+}
+
+/* Мобильная версия — одна колонка */
+@media (max-width: 960px) {
+  .login-screen {
+    flex-direction: column !important;
+  }
+
+  .login-hero {
+    padding: 40px 24px;
+    min-height: 50vh;
+  }
+
+  .login-hero-title {
+    font-size: 2rem;
+  }
+
+  .login-hero-features {
+    display: none;
+  }
+
+  .login-hero-stats {
+    margin-top: 20px;
+  }
+
+  .login-form-side {
+    flex: 1;
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding: 40px 24px 60px;
+  }
+
+  .login-form-side .login-footer {
+    position: static;
+    margin-top: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-hero-title {
+    font-size: 1.6rem;
+  }
+
+  .login-hero-sub {
+    font-size: .9rem;
+  }
+
+  .login-hero-stat-value {
+    font-size: 1.2rem;
+  }
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
