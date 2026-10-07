@@ -4056,6 +4056,109 @@ function initAdminPanel() {
   };
 }
 
+async function loadAdminPendingDeposits() {
+  var box = document.getElementById('adminPendingDepositsList');
+  if (!box) return;
+  box.innerHTML = '<div class="admin-empty">Loading...</div>';
+
+  try {
+    var token = getSessionToken();
+    if (!token) { box.innerHTML = '<div class="admin-empty">No token</div>'; return; }
+
+    var r = await fetch(WORKER_URL + '?action=listPendingDeposits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    });
+    var data = await r.json();
+    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + (data.error || 'Failed') + '</div>'; return; }
+
+    var list = data.deposits || [];
+    var badge = document.getElementById('navDepositsCount');
+    if (badge) {
+      if (list.length > 0) { badge.textContent = list.length; badge.style.display = 'inline-block'; }
+      else { badge.style.display = 'none'; }
+    }
+
+    if (!list.length) {
+      box.innerHTML = '<div class="admin-empty"><div style="font-size:2.5rem;opacity:.4;margin-bottom:12px">📭</div><div>No pending deposits</div></div>';
+      return;
+    }
+
+    var html = '';
+    list.forEach(function(d) {
+      var safeEmail = String(d.userEmail).replace(/'/g, "\\'");
+      var safeId = String(d.id).replace(/'/g, "\\'");
+      var dateStr = new Date(d.createdAt).toLocaleString('en-GB');
+      html += '<div class="awd-card" style="border-color:rgba(246,195,68,0.4);background:rgba(246,195,68,0.04);">' +
+        '<div class="awd-head">' +
+          '<div><b>' + escapeHtml(d.userName || d.userEmail) + '</b><br>' +
+          '<span style="color:#7c9cbb;font-size:11px">' + escapeHtml(d.userEmail) + '</span></div>' +
+          '<div class="awd-badge pend">⏳ Pending</div>' +
+        '</div>' +
+        '<div class="awd-amount" style="color:#f6c344">+' + Number(d.cryptoAmt).toFixed(8) + ' ' + d.symbol +
+          ' <span style="font-size:14px;color:#7c9cbb">≈ $' + Number(d.usdValue).toFixed(2) + '</span></div>' +
+        '<div class="awd-details">' +
+          '<div class="awd-row"><span>TX hash</span><b style="font-size:11px">' + (d.txHash || '').slice(0, 20) + '...</b></div>' +
+          '<div class="awd-row"><span>Time</span><b>' + dateStr + '</b></div>' +
+        '</div>' +
+        '<div class="awd-actions">' +
+          '<button class="awd-btn awd-approve" onclick="adminApprovePendingDeposit(\'' + safeEmail + '\',\'' + safeId + '\')">✅ Approve</button>' +
+          '<button class="awd-btn awd-reject" onclick="adminRejectPendingDeposit(\'' + safeEmail + '\',\'' + safeId + '\')">❌ Reject</button>' +
+        '</div>' +
+      '</div>';
+    });
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="admin-empty">Error: ' + e.message + '</div>';
+  }
+}
+
+async function adminApprovePendingDeposit(email, depositId) {
+  if (!confirm('Approve this deposit? Balance will be credited.')) return;
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=approvePendingDeposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, userEmail: email, depositId: depositId })
+    });
+    var data = await r.json();
+    if (data.ok) {
+      if (typeof toast === 'function') toast('✅ Deposit approved');
+      loadAdminPendingDeposits();
+      loadAdminUsers();
+      loadAdminStats();
+    } else {
+      alert('Error: ' + (data.error || 'Failed'));
+    }
+  } catch (e) {
+    alert('Connection error: ' + e.message);
+  }
+}
+
+async function adminRejectPendingDeposit(email, depositId) {
+  var reason = prompt('Reason for rejection:', 'Transaction not found on blockchain');
+  if (reason === null) return;
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=rejectPendingDeposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, userEmail: email, depositId: depositId, reason: reason })
+    });
+    var data = await r.json();
+    if (data.ok) {
+      if (typeof toast === 'function') toast('❌ Deposit rejected');
+      loadAdminPendingDeposits();
+    } else {
+      alert('Error: ' + (data.error || 'Failed'));
+    }
+  } catch (e) {
+    alert('Connection error: ' + e.message);
+  }
+}
+
 function showAdminTab(tab) {
   document.querySelectorAll('.admin-nav-item').forEach(function(el){
     el.classList.toggle('active', el.getAttribute('data-tab') === tab);
@@ -4065,6 +4168,7 @@ function showAdminTab(tab) {
   });
   if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
   if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
+if (tab === 'deposits' && typeof loadAdminPendingDeposits === 'function') loadAdminPendingDeposits();
   if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
   if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
   if (tab === 'verifications' && typeof loadAdminVerifications === 'function') loadAdminVerifications();
