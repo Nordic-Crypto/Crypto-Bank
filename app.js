@@ -230,22 +230,29 @@ function showApp() {
   var main = document.getElementById('mainApp');
 
   loadFromServer(function(){
-    loadPrices();
-    loadExchangeRates();
-    initCurrencySwitcher();
-    initNotifications();
-    renderNotifications();
-    initVerification();
-    initDesignPicker();
-    initRecentTx();
-    initTrackingActions();
-    initDepositVerification();
-    initLoginLogout();
-    initSignup();
-    initSettings();
-    initAdminPanel();
-    loadCharts();
-    render();
+  if (typeof loadPrices === 'function') loadPrices();
+  if (typeof loadExchangeRates === 'function') loadExchangeRates();
+  if (typeof initCurrencySwitcher === 'function') initCurrencySwitcher();
+  if (typeof initNotifications === 'function') initNotifications();
+  if (typeof renderNotifications === 'function') renderNotifications();
+  if (typeof initVerification === 'function') initVerification();
+  if (typeof initDesignPicker === 'function') initDesignPicker();
+  if (typeof initRecentTx === 'function') initRecentTx();
+  if (typeof initTrackingActions === 'function') initTrackingActions();
+  if (typeof initDepositVerification === 'function') initDepositVerification();
+  if (typeof initLoginLogout === 'function') initLoginLogout();
+  if (typeof initSignup === 'function') initSignup();
+  if (typeof initSettings === 'function') initSettings();
+  if (typeof initAdminPanel === 'function') initAdminPanel();
+  if (typeof initNav === 'function') initNav();
+  if (typeof initEvents === 'function') initEvents();
+  if (typeof initCardActions === 'function') initCardActions();
+  if (typeof initOnboarding === 'function') initOnboarding();
+  if (typeof initCountryCurrencyLink === 'function') initCountryCurrencyLink();
+  if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
+  if (typeof loadCharts === 'function') loadCharts();
+  if (typeof render === 'function') render();
+  ...
 
     if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
 
