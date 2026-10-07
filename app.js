@@ -1,9 +1,10 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.0 — LOADER
+   NORDIC CRYPTO — APP.JS v4.1 — LOADER
    ============================================================
-   Тонкий загрузчик. Загружает app.legacy.js с реальным кодом,
-   но с префиксом version для кэш-контроля.
-   
+   Загружает модули по порядку:
+     1. js/core.js      (утилиты)
+     2. app.legacy.js   (основной код v3.2)
+
    Backward compat: все глобальные функции (doLogin, render,
    showAdminPanel, и т.д.) остаются доступны в window,
    потому что app.legacy.js их регистрирует.
@@ -12,51 +13,56 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.0.0';
-  var LEGACY_FILE = 'app.legacy.js?v=' + APP_VERSION;
+  var APP_VERSION = '4.1.0';
+  var MODULES = [
+    'js/core.js',
+    'app.legacy.js?v=' + APP_VERSION
+  ];
 
   console.log('%c[NordicCrypto] 🚀 Loader v' + APP_VERSION + ' starting...',
     'color:#00d4ff;font-weight:bold;font-size:14px');
 
-  // Метка: если что-то пойдёт не так — можно быстро откатить на старый app.js
   window.__NC_LOADER_VERSION = APP_VERSION;
 
-  // Загружаем legacy-код асинхронно, но с гарантией порядка
-  function loadLegacy() {
-    var script = document.createElement('script');
-    script.src = LEGACY_FILE;
-    script.async = false;
-    script.onload = function () {
-      console.log('%c[NordicCrypto] ✅ Legacy code loaded',
-        'color:#10b981;font-weight:bold');
-      // Legacy сам вызывает init при загрузке.
-      // Ничего не делаем — просто фиксируем, что всё загрузилось.
+  function loadModules(index) {
+    if (index >= MODULES.length) {
+      console.log('%c[NordicCrypto] ✅ All modules loaded', 'color:#10b981;font-weight:bold');
       window.__NC_LEGACY_LOADED = true;
+      return;
+    }
+
+    var src = MODULES[index];
+    var script = document.createElement('script');
+    script.src = src;
+    script.async = false;
+
+    script.onload = function () {
+      console.log('%c[NordicCrypto] ✅ Loaded: ' + src, 'color:#10b981');
+      loadModules(index + 1);
     };
+
     script.onerror = function () {
-      console.error('[NordicCrypto] ❌ Failed to load app.legacy.js');
-      // Аварийный алерт — если legacy не загрузился, фронт не работает
+      console.error('[NordicCrypto] ❌ Failed to load: ' + src);
       if (typeof window.alert === 'function') {
-        alert('Не удалось загрузить приложение. Обновите страницу.');
+        alert('Не удалось загрузить модуль: ' + src + '\nОбновите страницу.');
       }
     };
+
     document.head.appendChild(script);
   }
 
-  // Функция для ручного обновления при деплое новой версии
   window.__NC_RELOAD = function () {
-    var newVersion = prompt('Введите версию (например, 4.0.1):');
+    var newVersion = prompt('Введите версию (например, 4.2.0):');
     if (newVersion) {
       localStorage.setItem('nc_force_version', newVersion);
       location.reload();
     }
   };
 
-  // Запускаем загрузку
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadLegacy);
+    document.addEventListener('DOMContentLoaded', function () { loadModules(0); });
   } else {
-    loadLegacy();
+    loadModules(0);
   }
 
 })();
