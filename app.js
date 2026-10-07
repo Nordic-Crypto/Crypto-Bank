@@ -4358,15 +4358,12 @@ async function clearAllChats() {
 window.clearAllChats = clearAllChats;
 
 /* ---------- EXCHANGE DASHBOARD ---------- */
-function applyAccountType() {
-  if (window.adminViewingEmail) return;
-  if (localStorage.getItem('user_role') === 'admin') return;
-   var currentType = (st.user && st.user.accountType) || null;
-  if (window._lastAppliedAccountType === currentType && document.body.dataset.acctApplied === '1') return;
-  window._lastAppliedAccountType = currentType;
+  var accountType = (st.user && st.user.accountType) || null;
+  // 🚀 Кэш — не дёргаем DOM если тип аккаунта не менялся
+  if (window._lastAppliedAccountType === accountType && document.body.dataset.acctApplied === '1') return;
+  window._lastAppliedAccountType = accountType;
   document.body.dataset.acctApplied = '1';
 
-  var accountType = (st.user && st.user.accountType) || null;
   var isExchange = accountType === 'exchange';
 
   var dash   = document.getElementById('dash');
@@ -4769,21 +4766,23 @@ async function scanAllDeposits() {
   setInterval(checkDeposits, CHECK_INTERVAL);
 })();
 
-/* ---------- CHAT POLLING ---------- */
+/* ---------- CHAT POLLING (optimized) ---------- */
 setInterval(async function(){
   var token = getSessionToken();
   if (!token) return;
   var email = window.adminViewingEmail || localStorage.getItem('user_email');
   if (!email) return;
   if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
-  // 🚀 Только если чат открыт — иначе не грузим сервер
+
+  // 🚀 Грузим только если чат открыт, или раз в 15 сек в фоне
   var panel = document.getElementById('chatPanel');
   var chatOpen = panel && panel.style.display === 'flex';
-  // Или если есть непрочитанные — обновляем реже
-  var lastChatPoll = window._lastChatPoll || 0;
-  var interval = chatOpen ? 2000 : 15000;  // 2 сек открыт, 15 сек закрыт
-  if (Date.now() - lastChatPoll < interval) return;
-  window._lastChatPoll = Date.now();
+  var now = Date.now();
+  var lastPoll = window._lastChatPoll || 0;
+  var interval = chatOpen ? 2000 : 15000;
+  if (now - lastPoll < interval) return;
+  window._lastChatPoll = now;
+
   try {
     var r = await fetch(WORKER_URL + '?action=getUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email }) });
     var fresh = await r.json();
