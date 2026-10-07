@@ -247,6 +247,7 @@ function hideLoginScreen() {
 
 function showApp() {
   if (isAdmin()) { showAdminPanel(); return; }
+  
   var side = document.getElementById('sideBar');
   var main = document.getElementById('mainApp');
   if (side) side.style.display = 'flex';
@@ -271,12 +272,53 @@ function showApp() {
     render();
 
     if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
-    // Показываем онбординг только если НЕТ карты И аккаунт Banking (или ещё не выбран тип)
-var accountType = (st.user && st.user.accountType) || null;
-if (!st.card && accountType !== 'exchange') {
-  $('onboard').classList.add('on');
-  return;
-}
+
+    // ✅ ФИКС: жёсткая проверка KYC СРАЗУ
+    var accountType = (st.user && st.user.accountType) || null;
+    var isVerified = st.verification && st.verification.status === 'approved';
+    var isPending = st.verification && st.verification.status === 'pending';
+    var isRejected = st.verification && st.verification.status === 'rejected';
+    var hasVerification = !!st.verification;
+
+    // Если клиент НЕ админ и НЕ verified — НЕ показываем приложение
+    if (localStorage.getItem('user_role') !== 'admin' && !window.adminViewingEmail) {
+      if (isPending) {
+        // Показываем pending screen
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        showPendingScreen();
+        return;
+      }
+      if (isRejected) {
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        showRejectedScreen(st.verification.reason);
+        return;
+      }
+      if (!hasVerification || (st.verification.status !== 'approved')) {
+        // Нет верификации вообще — на KYC
+        // НО сначала — онбординг, если карты нет
+        if (!st.card && accountType !== 'exchange') {
+          if (side) side.style.display = 'none';
+          if (main) main.style.display = 'none';
+          $('onboard').classList.add('on');
+          return;
+        }
+        // Карта есть, но KYC не пройден — на KYC
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        var vScreen = document.getElementById('verifyScreen');
+        if (vScreen) { vScreen.classList.add('on'); vScreen.style.display = 'flex'; }
+        showVerifyStep(1);
+        return;
+      }
+    }
+
+    // Если сюда дошли — верификация approved, показываем приложение
+    if (!st.card && accountType !== 'exchange') {
+      $('onboard').classList.add('on');
+      return;
+    }
 
     setInterval(loadPrices, 5 * 60 * 1000);
     setInterval(loadExchangeRates, 10 * 60 * 1000);
@@ -2419,7 +2461,15 @@ function initOnboarding(){
       var dashMi = document.querySelector('.mi[data-p="dash"]');
       if (dashMi) dashMi.classList.add('on');
       renderCard();
-      setTimeout(function(){ if (typeof showVerifyScreen === 'function') showVerifyScreen(); }, 500);
+      setTimeout(function(){
+  // ✅ ФИКС: жёстко скрываем дашборд и показываем KYC
+  var sideEl = document.getElementById('sideBar'); if (sideEl) sideEl.style.display = 'none';
+  var mainEl = document.getElementById('mainApp'); if (mainEl) mainEl.style.display = 'none';
+  var dashEl = document.getElementById('dash'); if (dashEl) dashEl.classList.remove('on');
+  var vScreen = document.getElementById('verifyScreen');
+  if (vScreen) { vScreen.classList.add('on'); vScreen.style.display = 'flex'; }
+  if (typeof showVerifyStep === 'function') showVerifyStep(1);
+}, 500);
     });
   };
 }
