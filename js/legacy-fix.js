@@ -10,19 +10,20 @@
   'use strict';
 
     // ---------- FIX 1: initNav — навигация по сайдбару + account type awareness ----------
-  window.initNav = function () {
+    window.initNav = function () {
     var mis = document.querySelectorAll('.mi');
     for (var i = 0; i < mis.length; i++) {
       mis[i].onclick = function () {
         var p = this.getAttribute('data-p');
 
-        // 🎯 ГЛАВНЫЙ ФИКС: определяем тип аккаунта
+        // 🎯 Определяем тип аккаунта
         var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
         var isExchange = (accountType === 'exchange');
 
-        // Если клиент — exchange и клик на "Dashboard" → показываем exchangeDash
+        // Если exchange клиент и кликает на "Dashboard" → показываем exchangeDash
+        var targetPage = p;
         if (isExchange && p === 'dash') {
-          p = 'exchangeDash';
+          targetPage = 'exchangeDash';
         }
 
         // Скрываем все .pg
@@ -33,7 +34,7 @@
         }
 
         // Показываем нужную страницу
-        var page = document.getElementById(p);
+        var page = document.getElementById(targetPage);
         if (page) {
           page.classList.add('on');
           page.style.display = 'block';
@@ -44,16 +45,15 @@
         for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
         this.classList.add('on');
 
-        // Если вернулись на dashboard — вызываем render + applyAccountType
-        if (p === 'dash' || p === 'exchangeDash') {
+        // Если вернулись на dashboard — обновляем данные
+        if (targetPage === 'dash' || targetPage === 'exchangeDash') {
           setTimeout(function () {
-            if (typeof window.applyAccountType === 'function') window.applyAccountType();
             if (typeof window.render === 'function') window.render();
           }, 50);
         }
       };
     }
-
+  };
 
   // FIX 2: initRecentTx — кнопка "View all"
   window.initRecentTx = function () {
