@@ -252,7 +252,7 @@ function showApp() {
   if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
   if (typeof loadCharts === 'function') loadCharts();
   if (typeof render === 'function') render();
-   }
+  });
 
     if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
 
