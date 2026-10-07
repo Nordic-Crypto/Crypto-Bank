@@ -299,7 +299,6 @@ function showApp() {
     setInterval(loadPrices, 5 * 60 * 1000);
     setInterval(loadExchangeRates, 10 * 60 * 1000);
     setInterval(loadCharts, 30 * 60 * 1000);
-  });
 }
 
 async function doLogout() {
