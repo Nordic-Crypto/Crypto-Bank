@@ -1781,7 +1781,25 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
   </div>
 </div>
-
+<!-- 🎁 TX DETAILS MODAL -->
+<div class="mask" id="txDetailsMask">
+  <div class="box" style="width:520px;max-width:calc(100vw - 24px)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <div style="font-size:.72rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;font-weight:700" id="txdKicker">Transaction</div>
+        <h2 style="margin:6px 0 4px;font-size:1.35rem" id="txdAmount">$0.00</h2>
+        <div id="txdStatusBadge" style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700">—</div>
+      </div>
+      <button class="notif-close" id="txdClose" style="width:34px;height:34px">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="txdBody" style="display:flex;flex-direction:column;gap:8px;font-size:.88rem"></div>
+    <div class="mact" style="margin-top:24px">
+      <button class="btn b2" style="flex:1;justify-content:center" id="txdCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
 <div id="imgLightbox" onclick="this.classList.remove('on')"><img id="imgLightboxSrc" src=""></div>
 
 <!-- LIVE CHAT -->
