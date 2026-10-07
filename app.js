@@ -1327,7 +1327,7 @@ function renderRecentTx(){
 
     var timeStr = t.ts ? timeAgo(t.ts) : (t.date || '');
 
-    html += '<div class="recent-tx-item">' +
+    html += '<div class="recent-tx-item" data-tx-i="' + i + '" style="cursor:pointer" title="Click for details">' +
       '<div class="recent-tx-icon ' + iconClass + '">' + icon + '</div>' +
       '<div class="recent-tx-info">' +
         '<div class="recent-tx-desc">' + (t.desc || 'Transaction') + '</div>' +
@@ -1339,6 +1339,18 @@ function renderRecentTx(){
   }
   listEl.innerHTML = html;
 }
+  // 🎁 Клик по карточкам
+  var items = listEl.querySelectorAll('.recent-tx-item[data-tx-i]');
+  for (var k = 0; k < items.length; k++) {
+    (function(idx){
+      items[k].onclick = function(){
+        var t = txs[idx];
+        if (!t) return;
+        if (typeof openTxDetails === 'function') openTxDetails(t);
+        else toast(t.desc + ' — ' + fmtCurrency(t.amt) + ' (' + t.status + ')');
+      };
+    })(k);
+  }
 
 function initRecentTx(){
   var viewAll = document.getElementById('viewAllTx');
