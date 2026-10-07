@@ -4550,6 +4550,9 @@ window.clearAllChats = clearAllChats;
 
 /* ---------- EXCHANGE DASHBOARD ---------- */
   function applyAccountType() {
+  if (window.adminViewingEmail) return;
+  if (localStorage.getItem('user_role') === 'admin') return;
+     
   var accountType = (st.user && st.user.accountType) || null;
   // 🚀 Кэш — не дёргаем DOM если тип аккаунта не менялся
   if (window._lastAppliedAccountType === accountType && document.body.dataset.acctApplied === '1') return;
