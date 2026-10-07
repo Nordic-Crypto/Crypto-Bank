@@ -1798,7 +1798,7 @@ setInterval(async function(){
 
   if (vStatus !== 'pending' && !pVisible) return;
 
-  var v = await checkVerificationStatus();
+  var v = await checkVerificationStatus();с
   if (!v) return;
 
   if (v.status === 'approved') {
@@ -1889,10 +1889,22 @@ function renderTx(){
     var t = st.txs[i];
     var c = t.amt >= 0 ? 'var(--ok)' : 'var(--bad)';
     var s = t.amt >= 0 ? '+' : '';
-    h += '<tr><td>' + t.date + '</td><td>' + escapeHtml(t.desc) + '</td><td style="color:' + c + ';font-weight:600">' + s + fmt(t.amt) + '</td><td><span class="' + badgeClass(t.status) + '">' + t.status + '</span></td></tr>';
+   h += '<tr style="cursor:pointer" data-tx-idx="' + i + '" onclick="openTxDetailsFromTable(' + i + ')"><td>' + t.date + '</td><td>' + escapeHtml(t.desc) + '</td><td style="color:' + c + ';font-weight:600">' + s + fmt(t.amt) + '</td><td><span class="' + badgeClass(t.status) + '">' + t.status + '</span></td></tr>';
   }
   b.innerHTML = h;
 }
+(function(){
+  var required = [
+    'openTxDetailsFromTable','openTxDetails','closeTxDetails',
+    'txStatusLabel','txdRow','applyAccountType','renderTx','renderRecentTx'
+  ];
+  var missing = required.filter(function(fn){ return typeof window[fn] !== 'function'; });
+  if (missing.length) console.warn('⚠️ Отсутствуют:', missing.join(', '));
+  else console.log('✅ Все функции на месте');
+  // Проверка DOM
+  var mask = document.getElementById('txDetailsMask');
+  console.log(mask ? '✅ Модалка txDetailsMask есть' : '❌ Модалка txDetailsMask НЕТ — надо добавить в index.html');
+})();
 
 function addTx(desc, amt, status){
   st.txs.unshift({ date: now(), ts: Date.now(), desc, amt, status: status || 'Completed' });
