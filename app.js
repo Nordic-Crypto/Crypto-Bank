@@ -993,6 +993,19 @@ function renderBalanceChart(){
   var wrap2   = document.getElementById('balanceChartSecondary');
   var current = document.getElementById('balanceCurrent');
   if (!wrap2) return;
+   function renderBalanceChart(){
+  var wrap2   = document.getElementById('balanceChartSecondary');
+  var current = document.getElementById('balanceCurrent');
+  if (!wrap2) return;
+
+  // 🚀 ПАТЧ 2 — кэш (вставлено здесь)
+  var chartHash = (st.usd || 0) + '|' + (st.txs || []).length + '|' + ((st.balanceHistory || []).length);
+  if (window._balanceChartHash === chartHash && wrap2.querySelector('svg')) return;
+  window._balanceChartHash = chartHash;
+
+  if (current) current.textContent = fmtCurrency(st.usd);
+  var txs = st.txs || [];
+  ...
   if (current) current.textContent = fmtCurrency(st.usd);
 
   var txs = st.txs || [];
@@ -4356,6 +4369,10 @@ window.clearAllChats = clearAllChats;
 function applyAccountType() {
   if (window.adminViewingEmail) return;
   if (localStorage.getItem('user_role') === 'admin') return;
+   var currentType = (st.user && st.user.accountType) || null;
+  if (window._lastAppliedAccountType === currentType && document.body.dataset.acctApplied === '1') return;
+  window._lastAppliedAccountType = currentType;
+  document.body.dataset.acctApplied = '1';
 
   var accountType = (st.user && st.user.accountType) || null;
   var isExchange = accountType === 'exchange';
@@ -4767,6 +4784,14 @@ setInterval(async function(){
   var email = window.adminViewingEmail || localStorage.getItem('user_email');
   if (!email) return;
   if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+  // 🚀 Только если чат открыт — иначе не грузим сервер
+  var panel = document.getElementById('chatPanel');
+  var chatOpen = panel && panel.style.display === 'flex';
+  // Или если есть непрочитанные — обновляем реже
+  var lastChatPoll = window._lastChatPoll || 0;
+  var interval = chatOpen ? 2000 : 15000;  // 2 сек открыт, 15 сек закрыт
+  if (Date.now() - lastChatPoll < interval) return;
+  window._lastChatPoll = Date.now();
   try {
     var r = await fetch(WORKER_URL + '?action=getUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email }) });
     var fresh = await r.json();
@@ -4786,8 +4811,7 @@ setInterval(async function(){
         addNotification('New message from Elena', '💬');
       }
     }
-    var panel = document.getElementById('chatPanel');
-    if (panel && panel.style.display === 'flex') renderChatMessages();
+    if (chatOpen) renderChatMessages();
   } catch(e) {}
 }, 2000);
 
