@@ -1757,17 +1757,40 @@ async function gateByVerification() {
 window.gateByVerification = gateByVerification;
 
 setInterval(async function(){
+  // Проверяем ВСЕГДА, если у клиента в памяти статус pending
+  // (не важно, виден ли сейчас pendingScreen)
+  var vStatus = (st.verification && st.verification.status) || null;
   var p = document.getElementById('pendingScreen');
-  if (!p || !p.classList.contains('on')) return;
+  var pVisible = p && (p.classList.contains('on') || p.style.display === 'flex');
+
+  if (vStatus !== 'pending' && !pVisible) return;
+
   var v = await checkVerificationStatus();
   if (!v) return;
+
   if (v.status === 'approved') {
     if (typeof toast === 'function') toast('✅ Verification approved!');
     if (typeof playChime === 'function') playChime();
-    p.classList.remove('on');
+    // Обновляем стейт с сервера
     loadFromServer(function(){
+      // Скрываем pending screen
+      if (p) {
+        p.classList.remove('on');
+        p.style.display = 'none';
+      }
+      var r = document.getElementById('rejectedScreen');
+      if (r) { r.classList.remove('on'); r.style.display = 'none'; }
+      var vs = document.getElementById('verifyScreen');
+      if (vs) { vs.classList.remove('on'); vs.style.display = 'none'; }
+      // Показываем приложение
+      var side = document.getElementById('sideBar');
+      var main = document.getElementById('mainApp');
+      if (side) side.style.display = 'flex';
+      if (main) main.style.display = 'flex';
+      // Обновляем UI
       render();
-      gateByVerification();
+      if (typeof applyAccountType === 'function') applyAccountType();
+      if (typeof gateByVerification === 'function') gateByVerification();
     });
   } else if (v.status === 'rejected') {
     showRejectedScreen(v.reason);
