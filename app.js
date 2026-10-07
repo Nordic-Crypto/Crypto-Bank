@@ -4754,33 +4754,33 @@ async function initApp() {
   } catch(e) {
     console.warn('[NordicCrypto] loadFromServer failed, using defaults', e);
   }
-     /* === ПРАВКА 2: если токена нет — показываем логин и выходим === */
-  var _token = (typeof getSessionToken === 'function') ? getSessionToken() : null;
-  if (!_token) {
-    console.log('[NordicCrypto] no token — showing login screen');
-    if (typeof showLoginScreen === 'function') showLoginScreen();
-    if (typeof initLoginLogout === 'function') initLoginLogout();
-    if (typeof initSignup === 'function') initSignup();
-    if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
-    return; // не запускаем остальное
-  }
-  /* ============================================================== */
 
-  /* === ФИКС: логин должен работать ДО всего остального === */
+  /* ========== 1) ВСЕГДА привязываем логин/регистрацию/пароль ========== */
   if (typeof initLoginLogout === 'function') initLoginLogout();
   if (typeof initSignup === 'function') initSignup();
   if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
-  /* ==================================================== */
+  /* =================================================================== */
 
+  /* ========== 2) Если токена нет — показываем ЛОГИН и выходим ======== */
+  var _token = (typeof getSessionToken === 'function') ? getSessionToken() : null;
+  var _email = localStorage.getItem('user_email');
+  if (!_token || !_email) {
+    console.log('[NordicCrypto] no session — showing login screen');
+    if (typeof showLoginScreen === 'function') showLoginScreen();
+    return;
+  }
+  /* =================================================================== */
+
+  /* ========== 3) Токен есть — инициализируем приложение ============== */
   if (typeof initNav === 'function') initNav();
   if (typeof initEvents === 'function') initEvents();
+  if (typeof initCardActions === 'function') initCardActions();
   if (typeof initNotifications === 'function') initNotifications();
   if (typeof initVerification === 'function') initVerification();
   if (typeof initDepositVerification === 'function') initDepositVerification();
   if (typeof initDesignPicker === 'function') initDesignPicker();
   if (typeof initRecentTx === 'function') initRecentTx();
   if (typeof initTrackingActions === 'function') initTrackingActions();
-  if (typeof initCardActions === 'function') initCardActions();
   if (typeof initOnboarding === 'function') initOnboarding();
   if (typeof initCountryCurrencyLink === 'function') initCountryCurrencyLink();
   if (typeof initSettings === 'function') initSettings();
@@ -4794,12 +4794,7 @@ async function initApp() {
   if (typeof renderOrder === 'function') renderOrder();
   if (typeof render === 'function') render();
 
-  /* === ФИКС: если токен есть — тихо проверяем сессию === */
-  if (typeof checkSession === 'function') {
-    try { await checkSession(); } catch(e) {}
-  }
-  /* ===================================================== */
-
+  /* ========== 4) Админ или обычный пользователь ====================== */
   var isAdminUser = localStorage.getItem('user_role') === 'admin';
   if (isAdminUser) {
     if (typeof showAdminPanel === 'function') showAdminPanel();
