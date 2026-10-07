@@ -203,13 +203,10 @@
     modal.innerHTML =
       '<div style="background:linear-gradient(145deg,#0f1720,#0a0e15);border:1px solid rgba(139,92,246,.3);border-radius:24px;width:100%;max-width:560px;padding:36px;color:#e7edf5;box-shadow:0 40px 100px -20px rgba(139,92,246,.4);position:relative;overflow:hidden;">' +
 
-        // Свечение сверху
         '<div style="position:absolute;top:-100px;right:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.2),transparent 70%);pointer-events:none;animation:pulse 3s ease-in-out infinite;"></div>' +
 
-        // Закрыть
         '<button onclick="document.getElementById(\'tradeTerminalModal\').remove()" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8b95a5;font-size:20px;cursor:pointer;line-height:1;">×</button>' +
 
-        // Иконка + заголовок
         '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;z-index:1;">' +
           '<div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 12px 30px -8px rgba(139,92,246,.7);">⚡</div>' +
           '<div>' +
@@ -219,10 +216,9 @@
         '</div>' +
 
         '<p style="color:#94a3b8;font-size:.95rem;line-height:1.6;margin:0 0 24px;position:relative;z-index:1;">' +
-          'Полноценный спот-терминал для покупки и продажи крипты: limit-ордера, market-ордера, стоп-лоссы и live-графики TradingView.' +
+          'Full-featured spot terminal for crypto trading: limit orders, market orders, stop-losses, and live TradingView charts.' +
         '</p>' +
 
-        // Что будет в терминале
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;position:relative;z-index:1;">' +
           '<div style="padding:14px 16px;background:rgba(71,220,255,.05);border:1px solid rgba(71,220,255,.2);border-radius:12px;">' +
             '<div style="font-size:22px;margin-bottom:6px;">📈</div>' +
@@ -246,7 +242,6 @@
           '</div>' +
         '</div>' +
 
-        // Кнопки
         '<div style="display:flex;gap:10px;position:relative;z-index:1;">' +
           '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); if(typeof toast===\'function\') toast(\'We will notify you when Trade launches 🚀\');" style="flex:1;padding:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;">Notify me when live</button>' +
           '<button onclick="document.getElementById(\'tradeTerminalModal\').remove()" style="flex:1;padding:14px;background:rgba(255,255,255,.05);color:#8b95a5;border:1px solid rgba(255,255,255,.1);border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;">Close</button>' +
@@ -257,11 +252,9 @@
 
     document.body.appendChild(modal);
 
-    // Закрытие по клику вне
     modal.onclick = function (e) {
       if (e.target === modal) modal.remove();
     };
-    // Закрытие по Esc
     document.addEventListener('keydown', function escClose(e) {
       if (e.key === 'Escape') {
         modal.remove();
