@@ -730,33 +730,89 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="blogo"><img src="logo.png" alt="NordicCrypto" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block"></div>
-      <div class="login-logo-text">Nordic<span>Crypto</span></div>
-    </div>
-    <h1 class="login-title">Welcome back</h1>
-    <p class="login-sub">Sign in to your account</p>
-    <div class="login-form" id="loginForm">
-      <div class="fg"><label>Email</label><input type="email" class="fc" id="loginEmail" placeholder="your@email.com" autocomplete="email"></div>
-      <div class="fg"><label>Password</label>
-        <div class="pass-wrap">
-          <input type="password" class="fc" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
-          <button type="button" class="pass-toggle" id="passToggle">👁</button>
+  <!-- ЛЕВАЯ КОЛОНКА: маркетинг -->
+  <div class="login-hero">
+    <div class="login-hero-content">
+      <div class="login-hero-badge">🇸🇪 Built in Scandinavia</div>
+      <h1 class="login-hero-title">
+        Crypto banking <br>
+        <span>reimagined.</span>
+      </h1>
+      <p class="login-hero-sub">
+        Cards, IBAN, exchange — все в одном приложении. Создано для Nordic клиентов с bank-grade безопасностью.
+      </p>
+
+      <div class="login-hero-features">
+        <div class="login-hero-feature">
+          <div class="login-hero-icon">💎</div>
+          <div>
+            <div class="login-hero-feature-title">Virtual Metal Cards</div>
+            <div class="login-hero-feature-sub">Visa / Mastercard за 30 секунд</div>
+          </div>
+        </div>
+        <div class="login-hero-feature">
+          <div class="login-hero-icon">🔒</div>
+          <div>
+            <div class="login-hero-feature-title">Bank-grade Security</div>
+            <div class="login-hero-feature-sub">Rate limit, CSRF, session fingerprint</div>
+          </div>
+        </div>
+        <div class="login-hero-feature">
+          <div class="login-hero-icon">⚡</div>
+          <div>
+            <div class="login-hero-feature-title">Instant Settlement</div>
+            <div class="login-hero-feature-sub">SEPA и крипта — в реальном времени</div>
+          </div>
         </div>
       </div>
-      <div class="login-error" id="loginError" style="display:none"></div>
-      <button class="btn b1 login-btn" id="btnLogin">Sign in →</button>
-      <div class="login-divider"><span>or</span></div>
-      <button class="btn b2 login-btn-outline" id="btnGoToSignup" type="button">Create new account</button>
-      <div class="login-hint"><span>Forgot password?</span> <a href="#" id="forgotPass">Contact support</a></div>
-    </div>
-    <div class="login-loading" id="loginLoading" style="display:none">
-      <div class="login-spinner"></div>
-      <div>Signing in...</div>
+
+      <div class="login-hero-stats">
+        <div class="login-hero-stat">
+          <div class="login-hero-stat-value">47+</div>
+          <div class="login-hero-stat-label">Active clients</div>
+        </div>
+        <div class="login-hero-stat">
+          <div class="login-hero-stat-value">$50k+</div>
+          <div class="login-hero-stat-label">Monthly volume</div>
+        </div>
+        <div class="login-hero-stat">
+          <div class="login-hero-stat-value">99.9%</div>
+          <div class="login-hero-stat-label">Uptime</div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="login-footer">🔒 Your data is secured with bank-level encryption</div>
+
+  <!-- ПРАВАЯ КОЛОНКА: форма -->
+  <div class="login-form-side">
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="blogo"><img src="logo.png" alt="NordicCrypto" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block"></div>
+        <div class="login-logo-text">Nordic<span>Crypto</span></div>
+      </div>
+      <h1 class="login-title">Welcome back</h1>
+      <p class="login-sub">Sign in to your account</p>
+      <div class="login-form" id="loginForm">
+        <div class="fg"><label>Email</label><input type="email" class="fc" id="loginEmail" placeholder="your@email.com" autocomplete="email"></div>
+        <div class="fg"><label>Password</label>
+          <div class="pass-wrap">
+            <input type="password" class="fc" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
+            <button type="button" class="pass-toggle" id="passToggle">👁</button>
+          </div>
+        </div>
+        <div class="login-error" id="loginError" style="display:none"></div>
+        <button class="btn b1 login-btn" id="btnLogin">Sign in →</button>
+        <div class="login-divider"><span>or</span></div>
+        <button class="btn b2 login-btn-outline" id="btnGoToSignup" type="button">Create new account</button>
+        <div class="login-hint"><span>Forgot password?</span> <a href="#" id="forgotPass">Contact support</a></div>
+      </div>
+      <div class="login-loading" id="loginLoading" style="display:none">
+        <div class="login-spinner"></div>
+        <div>Signing in...</div>
+      </div>
+    </div>
+    <div class="login-footer">🔒 Your data is secured with bank-level encryption</div>
+  </div>
 </div>
 
 <!-- SIDEBAR -->
