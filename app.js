@@ -4897,3 +4897,21 @@ setInterval(function(){
 console.log('%c[NordicCrypto] ✅ App v3.2 loaded — full rebuild', 'color:#00d4ff;font-weight:bold;font-size:14px');
 
 /* === END OF PART D — FILE COMPLETE === */
+/* 🎁 Loading indicator — тонкая полоска сверху */
+(function(){
+  var bar = document.createElement('div');
+  bar.id = 'ncLoadingBar';
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#00e5ff,#8b5cf6,#ec4899);transform:scaleX(0);transform-origin:left;transition:transform .3s ease;z-index:999999;pointer-events:none;';
+  document.body.appendChild(bar);
+
+  var _origFetch = window.fetch;
+  var _active = 0;
+
+  function show(){ _active++; bar.style.transform = 'scaleX(0.7)'; }
+  function hide(){ _active--; if (_active <= 0) { _active = 0; bar.style.transform = 'scaleX(1)'; setTimeout(function(){ bar.style.transform = 'scaleX(0)'; }, 250); } }
+
+  window.fetch = function(){
+    show();
+    return _origFetch.apply(this, arguments).finally ? _origFetch.apply(this, arguments).finally(hide) : _origFetch.apply(this, arguments).then(function(r){ hide(); return r; }, function(e){ hide(); throw e; });
+  };
+})();
