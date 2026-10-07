@@ -709,7 +709,125 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
 .tx-status-icon.processing{background:linear-gradient(135deg,#00d4ff,#a855f7)}
 .tx-status-icon.verifying{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .tx-status-icon.review{background:linear-gradient(135deg,#10b981,#34d399)}
+
+/* === HOVER: иконки крутятся === */
+.btn svg, .nc3-action svg, .nc3-card-action svg, .mi svg, .top-icon svg, 
+.settings-btn svg, .notif-bell svg, .nc3-ghost svg, .nc3-primary svg, 
+.nc3-copy-iban svg, .ex-btn svg, .chat-send svg, .chat-attach svg, 
+.ex-coin-icon svg, .nc3-asset-icon svg, .nc3-icon-circle svg, 
+.nc3-card-action-icon svg, .nc3-action-icon svg, .admin-client-actions svg {
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  transform-origin: center;
+  will-change: transform;
+  display: inline-block;
+}
+.btn:hover svg, .nc3-action:hover svg, .nc3-card-action:hover svg, 
+.mi:hover svg, .top-icon:hover svg, .settings-btn:hover svg, 
+.notif-bell:hover svg, .nc3-ghost:hover svg, .nc3-primary:hover svg, 
+.nc3-copy-iban:hover svg, .ex-btn:hover svg, .chat-send:hover svg, 
+.chat-attach:hover svg, .admin-client-actions .btn:hover svg {
+  animation: iconSpin360 .7s cubic-bezier(.4,0,.2,1);
+}
+@keyframes iconSpin360 {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === HOVER: свечение кнопок === */
+.btn, .nc3-ghost, .nc3-primary, .nc3-action, .nc3-card-action, 
+.ex-btn, .top-icon, .settings-btn, .notif-bell {
+  transition: box-shadow .3s ease, background .25s ease, transform .2s ease;
+}
+.btn:hover, .nc3-ghost:hover, .nc3-primary:hover {
+  box-shadow: 0 10px 24px rgba(0,212,255,.22), inset 0 0 0 1px rgba(0,212,255,.20);
+}
+.nc3-action:hover, .nc3-card-action:hover, .ex-btn:hover {
+  box-shadow: 0 10px 24px rgba(0,212,255,.18);
+  transform: translateY(-2px);
+}
+.top-icon:hover, .settings-btn:hover, .notif-bell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,212,255,.18);
+}
+
+/* === Иконки NC3: крутятся при hover на родителя === */
+.nc3-action-icon, .nc3-card-action-icon {
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.nc3-action:hover .nc3-action-icon {
+  transform: scale(1.08) rotate(-6deg);
+  box-shadow: 0 8px 22px -6px rgba(71,220,255,.6);
+}
+.nc3-card-action:hover .nc3-card-action-icon {
+  transform: scale(1.1) rotate(6deg);
+  box-shadow: 0 8px 22px -6px rgba(71,220,255,.5);
+}
+.nc3-asset:hover .nc3-asset-icon {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px -6px rgba(71,220,255,.5);
+}
+.nc3-stat:hover .nc3-stat-icon {
+  transform: scale(1.08) rotate(-4deg);
+}
+.ex-coin-row:hover .ex-coin-icon {
+  transform: scale(1.12);
+  box-shadow: 0 6px 20px -4px rgba(71,220,255,.5);
+}
+
+/* === Move money: восстановим grid, чтобы кнопки были как раньше === */
+.nc3-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+#btnWithdrawV2 {
+  grid-column: span 2;
+}
+.nc3-action {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--nc3-line);
+  background: rgba(13,19,30,.72);
+  color: #e7edf6;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: box-shadow .3s ease, background .25s ease, transform .2s ease;
+}
+.nc3-action b { display: block; font-size: .82rem; font-weight: 700; }
+.nc3-action small { display: block; color: #68768b; margin-top: 4px; font-size: .68rem; }
+.nc3-action-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  box-shadow: 0 6px 18px -6px rgba(0,0,0,.5);
+}
+.nc3-action-icon.orange { background: linear-gradient(135deg,#f59e0b,#ef4444); }
+.nc3-action-icon.pink   { background: linear-gradient(135deg,#ec4899,#f472b6); }
+.nc3-action-icon.green  { background: linear-gradient(135deg,#10b981,#34d399); }
+.nc3-action-icon.cyan   { background: linear-gradient(135deg,#06b6d4,#22d3ee); }
+
+@media (max-width: 1100px) {
+  .nc3-action-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .nc3-action-grid { grid-template-columns: 1fr; }
+  #btnWithdrawV2 { grid-column: span 1; }
+}
+
 </style>
+  
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   var greet = document.getElementById('nc3Greeting');
