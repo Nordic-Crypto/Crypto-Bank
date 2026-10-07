@@ -1101,6 +1101,772 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
 .login-divider::after {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent) !important;
 }
+  /* ============================================================
+   🎁 DASHBOARD v2.0 — PREMIUM HERO
+   ============================================================ */
+
+/* ----- Balance card — большой premium блок ----- */
+.nc3-balance-card {
+  background:
+    radial-gradient(700px 400px at 0% 0%, rgba(71,220,255,.08), transparent 60%),
+    radial-gradient(600px 400px at 100% 100%, rgba(139,92,246,.08), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(71,220,255,.15) !important;
+  border-radius: 24px !important;
+  padding: 32px !important;
+  box-shadow:
+    0 40px 80px -30px rgba(0,0,0,.8),
+    inset 0 1px 0 rgba(255,255,255,.05) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.nc3-balance-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(71,220,255,.15), transparent 70%);
+  pointer-events: none;
+  animation: balanceGlow 6s ease-in-out infinite;
+}
+
+@keyframes balanceGlow {
+  0%, 100% { opacity: .5; transform: scale(1) rotate(0deg); }
+  50%      { opacity: 1;  transform: scale(1.15) rotate(15deg); }
+}
+
+/* Kicker — премиум-стиль */
+.nc3-kicker {
+  font-size: .68rem !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: #47dcff !important;
+  opacity: .9 !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.nc3-kicker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #47dcff;
+  box-shadow: 0 0 10px #47dcff;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(1.3); }
+}
+
+/* Баланс — крупная цифра */
+.nc3-balance {
+  font-size: 3.5rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -.06em !important;
+  line-height: 1 !important;
+  margin-top: 12px !important;
+  background: linear-gradient(110deg, #fff 20%, #cceeff 60%, #7bdfff 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  text-shadow: 0 4px 30px rgba(71,220,255,.3);
+  animation: balanceShimmer 6s ease-in-out infinite;
+  background-size: 200% auto;
+}
+
+@keyframes balanceShimmer {
+  0%, 100% { background-position: 0% center; }
+  50%      { background-position: 100% center; }
+}
+
+/* PNL — премиум badge */
+.nc3-performance {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  background: rgba(0,224,138,.08) !important;
+  border: 1px solid rgba(0,224,138,.25) !important;
+  border-radius: 999px !important;
+  font-size: .82rem !important;
+  margin-top: 16px !important;
+  backdrop-filter: blur(10px);
+  animation: pnlPulse 3s ease-in-out infinite;
+}
+
+.nc3-performance[style*="color: rgb(255, 84, 112)"] {
+  background: rgba(255,84,112,.08) !important;
+  border-color: rgba(255,84,112,.25) !important;
+}
+
+@keyframes pnlPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,224,138,.3); }
+  50%      { box-shadow: 0 0 0 8px rgba(0,224,138,0); }
+}
+
+/* Mini-stats — большие premium cards */
+.nc3-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 14px !important;
+  padding: 24px 0 0 0 !important;
+  border-top: 1px solid rgba(255,255,255,.06) !important;
+  margin-top: 24px !important;
+}
+
+.nc3-mini-stat {
+  background: rgba(71,220,255,.04) !important;
+  border: 1px solid rgba(71,220,255,.12) !important;
+  border-radius: 14px !important;
+  padding: 16px !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nc3-mini-stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #47dcff, #8b5cf6, #ec4899);
+  opacity: 0;
+  transition: opacity .3s;
+}
+
+.nc3-mini-stat:hover {
+  background: rgba(71,220,255,.08) !important;
+  border-color: rgba(71,220,255,.3) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -10px rgba(71,220,255,.4);
+}
+
+.nc3-mini-stat:hover::before {
+  opacity: 1;
+}
+
+.nc3-mini-label {
+  font-size: .65rem !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  color: #7c9cbb !important;
+  font-weight: 700 !important;
+}
+
+.nc3-mini-value {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: #47dcff !important;
+  margin-top: 6px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----- Card wrap — премиум карта ----- */
+.nc3-card-wrap {
+  background:
+    radial-gradient(500px 300px at 100% 0%, rgba(139,92,246,.08), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(139,92,246,.15) !important;
+  border-radius: 24px !important;
+  padding: 24px !important;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.8) !important;
+}
+
+/* Card actions — премиум кнопки */
+.nc3-card-actions {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+  margin-top: 18px !important;
+}
+
+.nc3-card-action {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 16px 12px !important;
+  background: rgba(13,19,30,.72) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 14px !important;
+  cursor: pointer !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1) !important;
+  font-family: inherit !important;
+  color: #e7edf6 !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.nc3-card-action::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.15) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-position: -100% 0;
+  transition: background-position .6s ease;
+  pointer-events: none;
+}
+
+.nc3-card-action:hover::before {
+  background-position: 200% 0;
+}
+
+.nc3-card-action:hover {
+  background: rgba(71,220,255,.06) !important;
+  border-color: rgba(71,220,255,.3) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -10px rgba(71,220,255,.4);
+}
+
+.nc3-card-action-icon {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 12px !important;
+  font-size: 18px !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1) !important;
+}
+
+.nc3-card-action:hover .nc3-card-action-icon {
+  transform: scale(1.15) rotate(-8deg);
+}
+
+.nc3-card-action-label {
+  font-size: .78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em;
+}
+
+/* ----- Asset cards — premium ----- */
+.nc3-asset-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 16px !important;
+}
+
+.nc3-asset {
+  background:
+    radial-gradient(400px 200px at 100% 0%, rgba(245,158,11,.06), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.96), rgba(9,14,23,.96)) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 20px !important;
+  padding: 20px !important;
+  display: grid !important;
+  grid-template-columns: 52px 1fr auto !important;
+  gap: 16px !important;
+  align-items: center !important;
+  transition: all .35s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nc3-asset::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(71,220,255,.08), transparent);
+  transition: left .8s ease;
+}
+
+.nc3-asset:hover::after {
+  left: 100%;
+}
+
+.nc3-asset:hover {
+  border-color: rgba(71,220,255,.3) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px -20px rgba(71,220,255,.4);
+}
+
+.nc3-asset-icon {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1) !important;
+}
+
+.nc3-asset:hover .nc3-asset-icon {
+  transform: scale(1.15) rotate(-8deg);
+}
+
+.nc3-asset-icon.btc {
+  background: linear-gradient(135deg, #f7931a, #ffbd4c) !important;
+  box-shadow: 0 8px 24px -8px rgba(247,147,26,.6);
+}
+
+.nc3-asset-icon.eth {
+  background: linear-gradient(135deg, #627eea, #8c6cff) !important;
+  box-shadow: 0 8px 24px -8px rgba(98,126,234,.6);
+}
+
+.nc3-asset-name {
+  font-weight: 800 !important;
+  font-size: .95rem !important;
+  color: #fff !important;
+}
+
+.nc3-asset-name span {
+  color: #7c9cbb !important;
+  font-weight: 600 !important;
+  font-size: .75rem !important;
+  margin-left: 4px;
+}
+
+.nc3-asset-amount {
+  color: #6e7c92 !important;
+  font-size: .75rem !important;
+  margin-top: 6px !important;
+  font-family: ui-monospace, monospace !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.nc3-asset-value {
+  text-align: right !important;
+}
+
+.nc3-asset-value strong {
+  display: block !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.nc3-asset-value span {
+  font-size: .72rem !important;
+  color: #57dfad !important;
+  font-weight: 700 !important;
+  margin-top: 4px !important;
+  display: inline-block !important;
+  padding: 2px 8px !important;
+  background: rgba(87,223,173,.1) !important;
+  border-radius: 999px !important;
+}
+
+/* ----- Action buttons — premium shortcut cards ----- */
+.nc3-action-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+}
+
+#btnWithdrawV2 {
+  grid-column: span 2 !important;
+}
+
+.nc3-action {
+  background: linear-gradient(145deg, rgba(16,23,36,.96), rgba(9,14,23,.96)) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 18px !important;
+  padding: 18px !important;
+  display: grid !important;
+  grid-template-columns: 48px 1fr auto !important;
+  align-items: center !important;
+  gap: 14px !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: all .35s cubic-bezier(.34,1.56,.64,1) !important;
+  color: #e7edf6 !important;
+  font-family: inherit !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.nc3-action::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.1) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-position: -100% 0;
+  transition: background-position .7s ease;
+  pointer-events: none;
+}
+
+.nc3-action:hover::before {
+  background-position: 200% 0;
+}
+
+.nc3-action:hover {
+  border-color: rgba(71,220,255,.3) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px -20px rgba(71,220,255,.4);
+}
+
+.nc3-action-icon {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  border-radius: 14px !important;
+  font-size: 20px !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1) !important;
+}
+
+.nc3-action:hover .nc3-action-icon {
+  transform: scale(1.15) rotate(8deg);
+}
+
+.nc3-action b {
+  font-size: .85rem !important;
+  font-weight: 800 !important;
+  display: block !important;
+  color: #fff !important;
+}
+
+.nc3-action small {
+  display: block !important;
+  color: #68768b !important;
+  margin-top: 4px !important;
+  font-size: .7rem !important;
+}
+
+/* ----- Lower section — chart + transactions ----- */
+.nc3-chart-panel,
+.nc3-transactions {
+  background:
+    radial-gradient(600px 300px at 100% 0%, rgba(71,220,255,.04), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 22px !important;
+  padding: 24px !important;
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,.6) !important;
+}
+
+.nc3-chart-panel h2,
+.nc3-transactions h2 {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+}
+
+#balanceCurrent {
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+  color: #62ddff !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----- IBAN block — premium ----- */
+.nc3-iban {
+  background:
+    radial-gradient(500px 300px at 100% 0%, rgba(71,220,255,.08), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(71,220,255,.18) !important;
+  border-radius: 22px !important;
+  padding: 26px !important;
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,.6) !important;
+}
+
+.nc3-icon-circle {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #06b6d4, #22d3ee) !important;
+  box-shadow: 0 12px 30px -10px rgba(6,182,212,.6);
+  font-size: 26px !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+.nc3-iban:hover .nc3-icon-circle {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+.nc3-iban-details > div {
+  background: rgba(71,220,255,.05) !important;
+  border: 1px solid rgba(71,220,255,.12) !important;
+  padding: 14px 18px !important;
+  border-radius: 12px !important;
+  transition: all .3s ease;
+}
+
+.nc3-iban-details > div:hover {
+  background: rgba(71,220,255,.08) !important;
+  border-color: rgba(71,220,255,.3) !important;
+  transform: translateX(4px);
+}
+
+.nc3-iban-details span {
+  font-size: .68rem !important;
+  letter-spacing: 1px !important;
+  font-weight: 800 !important;
+  color: #7c9cbb !important;
+}
+
+.nc3-iban-details b {
+  font-size: .88rem !important;
+  font-weight: 800 !important;
+  color: #e8f4ff !important;
+}
+
+.nc3-copy-iban {
+  background: linear-gradient(135deg, rgba(71,220,255,.12), rgba(139,92,246,.12)) !important;
+  border: 1px solid rgba(71,220,255,.3) !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+  color: #47dcff !important;
+  font-weight: 800 !important;
+  font-size: .88rem !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.nc3-copy-iban:hover {
+  background: linear-gradient(135deg, rgba(71,220,255,.2), rgba(139,92,246,.2)) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -10px rgba(71,220,255,.5);
+}
+
+/* ----- Stat strip — premium ----- */
+.nc3-stat-strip {
+  background: linear-gradient(145deg, rgba(16,23,36,.96), rgba(9,14,23,.96)) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,.6);
+}
+
+.nc3-stat {
+  background: rgba(13,19,30,.8) !important;
+  padding: 20px !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  border-right: 1px solid rgba(255,255,255,.04);
+}
+
+.nc3-stat:hover {
+  background: rgba(71,220,255,.06) !important;
+  transform: scale(1.02);
+}
+
+.nc3-stat-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+  font-size: 22px !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+.nc3-stat:hover .nc3-stat-icon {
+  transform: scale(1.15) rotate(-8deg);
+}
+
+.nc3-stat span {
+  font-size: .7rem !important;
+  letter-spacing: 1px !important;
+  font-weight: 700 !important;
+  color: #64738a !important;
+  text-transform: uppercase;
+}
+
+.nc3-stat strong {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+}
+
+.nc3-stat small {
+  font-size: .65rem !important;
+  color: #4edca9 !important;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+/* ----- Recent TX items — premium ----- */
+.recent-tx-item {
+  background: linear-gradient(145deg, rgba(13,19,30,.8), rgba(9,14,23,.8)) !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
+  border-radius: 14px !important;
+  padding: 14px 16px !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.recent-tx-item:hover {
+  background: linear-gradient(145deg, rgba(71,220,255,.08), rgba(139,92,246,.06)) !important;
+  border-color: rgba(71,220,255,.3) !important;
+  transform: translateX(6px);
+  box-shadow: 0 10px 30px -10px rgba(71,220,255,.4);
+}
+
+.recent-tx-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  font-size: 18px !important;
+  transition: transform .3s ease;
+}
+
+.recent-tx-item:hover .recent-tx-icon {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+.recent-tx-desc {
+  font-size: .9rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+
+.recent-tx-time {
+  font-size: .72rem !important;
+  color: #7c9cbb !important;
+  margin-top: 4px !important;
+}
+
+.recent-tx-amount {
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  font-family: ui-monospace, monospace !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent-tx-amount.plus {
+  color: #00e08a !important;
+  text-shadow: 0 0 20px rgba(0,224,138,.4);
+}
+
+.recent-tx-amount.minus {
+  color: #ff5470 !important;
+  text-shadow: 0 0 20px rgba(255,84,112,.4);
+}
+
+/* ----- Hero section ----- */
+.nc3-hero h1 {
+  font-size: 2.2rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -.05em !important;
+  color: #fff !important;
+}
+
+.nc3-hero h1 span {
+  background: linear-gradient(100deg, #fff, #aeeeff, #fff) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  background-size: 200% auto;
+  animation: titleShimmer 4s linear infinite;
+}
+
+@keyframes titleShimmer {
+  to { background-position: 200% center; }
+}
+
+.nc3-eyebrow {
+  font-size: .7rem !important;
+  letter-spacing: 1.5px !important;
+  font-weight: 800 !important;
+  color: #8e9bb0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.nc3-live-dot {
+  width: 8px !important;
+  height: 8px !important;
+  box-shadow: 0 0 12px rgba(54,226,163,.9), 0 0 24px rgba(54,226,163,.5);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(1.4); }
+}
+
+/* Hero action buttons */
+.nc3-ghost,
+.nc3-primary {
+  padding: 12px 20px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  font-size: .88rem !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.nc3-ghost:hover,
+.nc3-primary:hover {
+  transform: translateY(-3px);
+}
+
+.nc3-primary {
+  background: linear-gradient(135deg, #46dfff, #238cff) !important;
+  color: #03111b !important;
+  box-shadow: 0 15px 35px -10px rgba(36,154,255,.5) !important;
+}
+
+.nc3-primary:hover {
+  box-shadow: 0 20px 45px -10px rgba(36,154,255,.7) !important;
+}
+
+.nc3-ghost {
+  background: rgba(255,255,255,.04) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  color: #b6c1d1 !important;
+}
+
+.nc3-ghost:hover {
+  background: rgba(71,220,255,.06) !important;
+  border-color: rgba(71,220,255,.3) !important;
+  color: #47dcff !important;
+}
+
+/* ----- Mobile ----- */
+@media (max-width: 760px) {
+  .nc3-balance {
+    font-size: 2.5rem !important;
+  }
+  .nc3-balance-card {
+    padding: 22px !important;
+  }
+  .nc3-mini-stats {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .nc3-asset-grid,
+  .nc3-action-grid {
+    grid-template-columns: 1fr !important;
+  }
+  #btnWithdrawV2 {
+    grid-column: span 1 !important;
+  }
+  .nc3-asset {
+    padding: 16px !important;
+  }
+}
+
+/* ----- Reduced motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  .nc3-balance,
+  .nc3-live-dot,
+  .nc3-kicker::before,
+  .nc3-balance-card::before,
+  .nc3-performance {
+    animation: none !important;
+  }
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
