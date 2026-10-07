@@ -1,21 +1,22 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.1 — LOADER
+   NORDIC CRYPTO — APP.JS v4.2 — LOADER
    ============================================================
    Загружает модули по порядку:
      1. js/core.js      (утилиты)
-     2. app.legacy.js   (основной код v3.2)
+     2. js/auth.js      (логин, регистрация, сессия)
+     3. app.legacy.js   (основной код v3.2)
 
-   Backward compat: все глобальные функции (doLogin, render,
-   showAdminPanel, и т.д.) остаются доступны в window,
-   потому что app.legacy.js их регистрирует.
+   Backward compat: все глобальные функции остаются доступны
+   в window, потому что app.legacy.js их регистрирует.
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.1.0';
+  var APP_VERSION = '4.2.0';
   var MODULES = [
     'js/core.js',
+    'js/auth.js',
     'app.legacy.js?v=' + APP_VERSION
   ];
 
@@ -52,7 +53,7 @@
   }
 
   window.__NC_RELOAD = function () {
-    var newVersion = prompt('Введите версию (например, 4.2.0):');
+    var newVersion = prompt('Введите версию (например, 4.3.0):');
     if (newVersion) {
       localStorage.setItem('nc_force_version', newVersion);
       location.reload();
