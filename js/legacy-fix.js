@@ -9,27 +9,43 @@
 (function () {
   'use strict';
 
-  // FIX 1: initNav — навигация по сайдбару
+    // ---------- FIX 1: initNav — навигация по сайдбару + account type awareness ----------
   window.initNav = function () {
     var mis = document.querySelectorAll('.mi');
     for (var i = 0; i < mis.length; i++) {
       mis[i].onclick = function () {
         var p = this.getAttribute('data-p');
+
+        // 🎯 ГЛАВНЫЙ ФИКС: определяем тип аккаунта
+        var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
+        var isExchange = (accountType === 'exchange');
+
+        // Если клиент — exchange и клик на "Dashboard" → показываем exchangeDash
+        if (isExchange && p === 'dash') {
+          p = 'exchangeDash';
+        }
+
+        // Скрываем все .pg
         var pgs = document.querySelectorAll('.pg');
         for (var j = 0; j < pgs.length; j++) {
           pgs[j].classList.remove('on');
           pgs[j].style.display = 'none';
         }
+
+        // Показываем нужную страницу
         var page = document.getElementById(p);
         if (page) {
           page.classList.add('on');
           page.style.display = 'block';
         }
+
+        // Подсветка активного пункта меню
         var ms = document.querySelectorAll('.mi');
         for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
         this.classList.add('on');
 
-        if (p === 'dash') {
+        // Если вернулись на dashboard — вызываем render + applyAccountType
+        if (p === 'dash' || p === 'exchangeDash') {
           setTimeout(function () {
             if (typeof window.applyAccountType === 'function') window.applyAccountType();
             if (typeof window.render === 'function') window.render();
