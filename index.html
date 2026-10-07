@@ -1867,6 +1867,554 @@ select.wd-input{background-color:#0f1420;color:#e8f4ff}
     animation: none !important;
   }
 }
+  /* ============================================================
+   🎁 EXCHANGE DASHBOARD v2.0 — TRADING PREMIUM
+   ============================================================ */
+
+/* Hero — торговый вайб */
+.ex-hero h1 {
+  font-size: 2.2rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -.05em !important;
+  color: #fff !important;
+}
+
+.ex-hero h1 span:last-child {
+  background: linear-gradient(100deg, #fff, #c4b5fd, #fff) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  background-size: 200% auto;
+  animation: titleShimmer 4s linear infinite;
+}
+
+.ex-eyebrow {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: .7rem !important;
+  letter-spacing: 1.5px !important;
+  font-weight: 800 !important;
+  color: #a78bfa !important;
+}
+
+.ex-live-dot {
+  width: 8px !important;
+  height: 8px !important;
+  background: #36e2a3 !important;
+  box-shadow: 0 0 12px rgba(54,226,163,.9), 0 0 24px rgba(54,226,163,.5) !important;
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .4; transform: scale(1.4); }
+}
+
+/* Hero action buttons — крупные premium */
+.ex-hero-actions {
+  display: flex !important;
+  gap: 10px !important;
+}
+
+.ex-btn {
+  padding: 14px 22px !important;
+  border-radius: 14px !important;
+  font-weight: 800 !important;
+  font-size: .92rem !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border: none !important;
+  cursor: pointer;
+}
+
+.ex-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.3) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-position: -100% 0;
+  transition: background-position .6s ease;
+  pointer-events: none;
+}
+
+.ex-btn:hover::before {
+  background-position: 200% 0;
+}
+
+.ex-btn:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+}
+
+.ex-btn-deposit {
+  background: linear-gradient(135deg, #10b981, #34d399) !important;
+  box-shadow: 0 15px 35px -10px rgba(16,185,129,.7) !important;
+}
+.ex-btn-deposit:hover {
+  box-shadow: 0 20px 45px -10px rgba(16,185,129,.9) !important;
+}
+
+.ex-btn-withdraw {
+  background: linear-gradient(135deg, #f59e0b, #ef4444) !important;
+  box-shadow: 0 15px 35px -10px rgba(245,158,11,.7) !important;
+}
+.ex-btn-withdraw:hover {
+  box-shadow: 0 20px 45px -10px rgba(245,158,11,.9) !important;
+}
+
+.ex-btn-trade {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+  box-shadow: 0 15px 35px -10px rgba(139,92,246,.7) !important;
+}
+.ex-btn-trade:hover {
+  box-shadow: 0 20px 45px -10px rgba(139,92,246,.9) !important;
+}
+
+/* Balance card — портфель */
+.ex-balance-card {
+  background:
+    radial-gradient(700px 400px at 0% 0%, rgba(139,92,246,.12), transparent 60%),
+    radial-gradient(600px 400px at 100% 100%, rgba(16,185,129,.1), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(139,92,246,.2) !important;
+  border-radius: 24px !important;
+  padding: 30px !important;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.8) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.ex-balance-card::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(139,92,246,.15), transparent 70%);
+  pointer-events: none;
+  animation: balanceGlow 6s ease-in-out infinite;
+}
+
+@keyframes balanceGlow {
+  0%, 100% { opacity: .5; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+.ex-balance {
+  font-size: 3rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -.05em !important;
+  background: linear-gradient(110deg, #fff 20%, #e8d5ff 60%, #a78bfa 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  line-height: 1 !important;
+  margin-top: 12px !important;
+  text-shadow: 0 4px 30px rgba(139,92,246,.3);
+}
+
+.ex-bal-badge {
+  padding: 8px 16px !important;
+  border-radius: 999px !important;
+  font-size: .72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.5px !important;
+  background: linear-gradient(135deg, rgba(139,92,246,.2), rgba(236,72,153,.2)) !important;
+  color: #c4b5fd !important;
+  border: 1px solid rgba(139,92,246,.4) !important;
+  box-shadow: 0 0 20px rgba(139,92,246,.3);
+  animation: spotPulse 3s ease-in-out infinite;
+}
+
+@keyframes spotPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,.3); }
+  50%      { box-shadow: 0 0 30px rgba(139,92,246,.6); }
+}
+
+/* Chart tabs */
+.ex-chart-tabs {
+  display: flex !important;
+  gap: 6px !important;
+  margin-bottom: 14px !important;
+  background: rgba(255,255,255,.02);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.06);
+  width: fit-content;
+}
+
+.ex-tab {
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #7a8a9e !important;
+  font-size: .75rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1) !important;
+  letter-spacing: .05em;
+}
+
+.ex-tab:hover {
+  color: #c4b5fd !important;
+}
+
+.ex-tab.on {
+  background: linear-gradient(135deg, rgba(139,92,246,.3), rgba(236,72,153,.2)) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px -2px rgba(139,92,246,.5);
+}
+
+/* Portfolio chart area */
+.ex-portfolio-chart {
+  height: 220px !important;
+  position: relative !important;
+  border-radius: 14px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 100%, rgba(139,92,246,.05), transparent 70%);
+}
+
+/* Balance stats — нижние мини-плашки */
+.ex-bal-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+  margin-top: 24px !important;
+}
+
+.ex-stat-mini {
+  background: rgba(139,92,246,.06) !important;
+  border: 1px solid rgba(139,92,246,.18) !important;
+  border-radius: 14px !important;
+  padding: 14px 16px !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ex-stat-mini::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  opacity: 0;
+  transition: opacity .3s;
+}
+
+.ex-stat-mini:hover {
+  background: rgba(139,92,246,.12) !important;
+  border-color: rgba(139,92,246,.35) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -10px rgba(139,92,246,.5);
+}
+
+.ex-stat-mini:hover::before {
+  opacity: 1;
+}
+
+.ex-stat-mini span {
+  font-size: .65rem !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  color: #8b8fb0 !important;
+  font-weight: 800 !important;
+}
+
+.ex-stat-mini strong {
+  display: block !important;
+  font-size: 1.1rem !important;
+  color: #c4b5fd !important;
+  font-weight: 800 !important;
+  margin-top: 6px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Coins card — топ movers */
+.ex-coins-card {
+  background:
+    radial-gradient(500px 300px at 100% 0%, rgba(236,72,153,.06), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(236,72,153,.15) !important;
+  border-radius: 24px !important;
+  padding: 24px !important;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.8) !important;
+}
+
+.ex-coins-head h3 {
+  font-size: 1.3rem !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+}
+
+.ex-live-badge {
+  font-size: .68rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.5px !important;
+  color: #4edca9 !important;
+  background: rgba(78,220,169,.1) !important;
+  border: 1px solid rgba(78,220,169,.3) !important;
+  padding: 6px 12px !important;
+  border-radius: 999px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Coin rows — премиум */
+.ex-coin-row {
+  display: grid !important;
+  grid-template-columns: 48px 1fr auto !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 14px 16px !important;
+  background: rgba(255,255,255,.02) !important;
+  border: 1px solid rgba(255,255,255,.05) !important;
+  border-radius: 14px !important;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1) !important;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.ex-coin-row:hover {
+  background: rgba(139,92,246,.06) !important;
+  border-color: rgba(139,92,246,.3) !important;
+  transform: translateX(6px);
+  box-shadow: 0 10px 30px -10px rgba(139,92,246,.4);
+}
+
+.ex-coin-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255,255,255,.03) !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1) !important;
+}
+
+.ex-coin-row:hover .ex-coin-icon {
+  transform: scale(1.15) rotate(-8deg);
+  box-shadow: 0 8px 24px -4px rgba(139,92,246,.5);
+}
+
+.ex-coin-name {
+  font-weight: 800 !important;
+  font-size: .95rem !important;
+  color: #fff !important;
+}
+
+.ex-coin-symbol {
+  font-size: .72rem !important;
+  color: #718098 !important;
+  margin-top: 3px !important;
+  font-weight: 600 !important;
+}
+
+.ex-coin-price strong {
+  display: block !important;
+  font-size: 1rem !important;
+  color: #fff !important;
+  font-family: ui-monospace, monospace !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.ex-coin-change {
+  font-size: .74rem !important;
+  font-weight: 800 !important;
+  margin-top: 4px !important;
+  display: inline-block !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+}
+
+.ex-coin-change.up {
+  color: #10b981 !important;
+  background: rgba(16,185,129,.12) !important;
+}
+
+.ex-coin-change.down {
+  color: #ef4444 !important;
+  background: rgba(239,68,68,.12) !important;
+}
+
+/* Holdings — assets карточки */
+.ex-asset-card {
+  display: grid !important;
+  grid-template-columns: 72px 1fr !important;
+  gap: 18px !important;
+  align-items: center !important;
+  padding: 24px !important;
+  background: linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 20px !important;
+  transition: all .35s cubic-bezier(.34,1.56,.64,1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.ex-asset-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(139,92,246,.08), transparent);
+  transition: left .8s ease;
+}
+
+.ex-asset-card:hover::after {
+  left: 100%;
+}
+
+.ex-asset-card:hover {
+  border-color: rgba(139,92,246,.35) !important;
+  transform: translateY(-5px);
+  box-shadow: 0 20px 50px -20px rgba(139,92,246,.5);
+}
+
+.ex-asset-icon-big {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 20px !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+.ex-asset-card:hover .ex-asset-icon-big {
+  transform: scale(1.12) rotate(-8deg);
+}
+
+.ex-asset-label {
+  font-size: .72rem !important;
+  letter-spacing: 1.2px !important;
+  font-weight: 800 !important;
+  color: #8b8fb0 !important;
+}
+
+.ex-asset-amount {
+  font-size: 1.2rem !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  font-family: ui-monospace, monospace !important;
+  margin-top: 6px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.ex-asset-value {
+  font-size: .9rem !important;
+  color: #a78bfa !important;
+  margin-top: 6px !important;
+  font-weight: 800 !important;
+}
+
+/* IBAN section в exchange — премиум */
+.ex-iban-card {
+  background:
+    radial-gradient(500px 300px at 100% 0%, rgba(139,92,246,.1), transparent 60%),
+    linear-gradient(145deg, rgba(16,23,36,.98), rgba(9,14,23,.98)) !important;
+  border: 1px solid rgba(139,92,246,.25) !important;
+  border-radius: 24px !important;
+  padding: 28px !important;
+  box-shadow: 0 30px 60px -30px rgba(139,92,246,.4) !important;
+}
+
+.ex-iban-icon {
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+  box-shadow: 0 12px 30px -8px rgba(139,92,246,.7);
+  font-size: 26px !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+.ex-iban-card:hover .ex-iban-icon {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+.ex-iban-row {
+  background: rgba(139,92,246,.05) !important;
+  border: 1px solid rgba(139,92,246,.15) !important;
+  padding: 14px 18px !important;
+  border-radius: 12px !important;
+  transition: all .3s ease;
+}
+
+.ex-iban-row:hover {
+  background: rgba(139,92,246,.1) !important;
+  border-color: rgba(139,92,246,.35) !important;
+  transform: translateX(4px);
+}
+
+.ex-iban-row span {
+  font-size: .68rem !important;
+  letter-spacing: 1px !important;
+  font-weight: 800 !important;
+  color: #8b8fb0 !important;
+}
+
+.ex-iban-row b {
+  font-size: .88rem !important;
+  font-weight: 800 !important;
+  color: #c4b5fd !important;
+  font-family: ui-monospace, monospace !important;
+}
+
+.ex-copy-btn {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+  font-weight: 800 !important;
+  font-size: .9rem !important;
+  box-shadow: 0 12px 30px -10px rgba(139,92,246,.6);
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  color: #fff;
+  width: 100%;
+}
+
+.ex-copy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -10px rgba(139,92,246,.8);
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .ex-balance {
+    font-size: 2.2rem !important;
+  }
+  .ex-hero h1 {
+    font-size: 1.6rem !important;
+  }
+  .ex-bal-stats {
+    grid-template-columns: 1fr !important;
+  }
+  .ex-hero-actions {
+    flex-wrap: wrap !important;
+  }
+  .ex-btn {
+    flex: 1 !important;
+    min-width: 100px;
+    justify-content: center;
+    font-size: .85rem !important;
+    padding: 12px 16px !important;
+  }
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
