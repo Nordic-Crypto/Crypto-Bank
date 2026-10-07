@@ -53,31 +53,7 @@
         }
       };
     }
-  };
-     // ---------- FIX 1B: Подстраховка — переприменяем account type при навигации ----------
-  // Следит за тем, чтобы при клике на любой .mi мы заново применили тип аккаунта
-  // Это защищает от случая, когда applyAccountType кэширует неверное значение.
-  (function () {
-    function ensureAccountType() {
-      var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
-      // Сбрасываем кэш, чтобы applyAccountType переприменился
-      if (accountType) {
-        window._lastAppliedAccountType = undefined;
-        if (typeof window.applyAccountType === 'function') {
-          window.applyAccountType();
-        }
-      }
-    }
 
-    // Слушаем клики по сайдбару
-    document.addEventListener('click', function (e) {
-      var mi = e.target.closest && e.target.closest('.mi');
-      if (mi) {
-        setTimeout(ensureAccountType, 100);
-      }
-    }, true);
-  })();
-   
 
   // FIX 2: initRecentTx — кнопка "View all"
   window.initRecentTx = function () {
