@@ -3105,6 +3105,7 @@ async function loadAdminUsers() {
           '<button class="btn b2" onclick="adminSendMessage()">📩 Send message</button>' +
           '<button class="btn b2" onclick="adminSetCryptoAddress(\'' + u.email + '\', \'' + u.name + '\')">🔑 Deposit address</button>' +
           '<button class="btn b2" onclick="adminSetIban(\'' + u.email + '\')">🏦 Issue IBAN</button>' +
+         '<button class="btn b2" onclick="adminResetPassword(\'' + u.email + '\', \'' + u.name + '\')">🔑 Reset password</button>' +
           '<button class="btn b2" onclick="adminViewClient(\'' + u.email + '\')">👁 View</button>' +
           '<button class="btn b3" onclick="adminDeleteUser(\'' + u.email + '\', \'' + u.name + '\')">🗑 Delete</button>' +
         '</div>' +
@@ -3397,6 +3398,80 @@ window.adminSaveIban = async function(email) {
     if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
   }
 };
+
+window.adminResetPassword = function(email, name) {
+  if (!email) return;
+  var old = document.getElementById('adminResetPassModal');
+  if (old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'adminResetPassModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:#0f1720;border:1px solid rgba(139,92,246,0.3);border-radius:20px;width:100%;max-width:460px;padding:24px;color:#e7edf5;">' +
+      '<div style="font-weight:700;font-size:18px;margin-bottom:4px;">🔑 Reset password</div>' +
+      '<div style="font-size:13px;color:#8b95a5;margin-bottom:20px;">' + escapeHtml(name || email) + ' · ' + escapeHtml(email) + '</div>' +
+      '<label style="display:block;color:#8b95a5;font-size:11px;text-transform:uppercase;margin-bottom:6px;">New password</label>' +
+      '<input id="adminNewPassInput" type="text" placeholder="Min 6 chars" style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e7edf5;font-size:14px;outline:none;box-sizing:border-box;font-family:monospace;">' +
+      '<div style="font-size:11px;color:#8b95a5;margin-top:8px;">💡 Скопируй и отправь клиенту через chat или email</div>' +
+      '<div id="adminResetPassErr" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;"></div>' +
+      '<div id="adminResetPassOk" style="display:none;margin-top:12px;padding:8px 12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#34d399;font-size:12px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:20px;">' +
+        '<button id="adminResetPassSave" onclick="adminSaveNewPassword(\'' + email + '\')" style="flex:1;padding:12px;background:linear-gradient(135deg,#5f2ee5,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Save new password</button>' +
+        '<button onclick="document.getElementById(\'adminResetPassModal\').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#8b95a5;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghjkmnpqrstuvwxyz';
+  var generated = '';
+  for (var i = 0; i < 10; i++) generated += chars[Math.floor(Math.random() * chars.length)];
+  var input = document.getElementById('adminNewPassInput');
+  if (input) input.value = generated;
+
+  setTimeout(function(){ if (input) { input.focus(); input.select(); } }, 100);
+};
+
+window.adminSaveNewPassword = async function(email) {
+  var input = document.getElementById('adminNewPassInput');
+  var errEl = document.getElementById('adminResetPassErr');
+  var okEl  = document.getElementById('adminResetPassOk');
+  var btn   = document.getElementById('adminResetPassSave');
+  if (!input || !email) return;
+  var newPass = (input.value || '').trim();
+  if (errEl) errEl.style.display = 'none';
+  if (okEl)  okEl.style.display = 'none';
+  if (newPass.length < 6) {
+    if (errEl) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  try {
+    var token = getSessionToken();
+    var r = await fetch(WORKER_URL + '?action=adminSetPassword', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, email: email, newPassword: newPass })
+    });
+    var data = await r.json();
+    if (data.ok) {
+      if (okEl) {
+        okEl.innerHTML = '✅ Пароль изменён: <b style="font-family:monospace;background:rgba(0,0,0,.3);padding:2px 8px;border-radius:4px;">' + escapeHtml(newPass) + '</b><br>Скопируй и отправь клиенту.';
+        okEl.style.display = 'block';
+      }
+      if (typeof toast === 'function') toast('✅ Password reset for ' + email);
+    } else {
+      if (errEl) { errEl.textContent = data.error || 'Failed'; errEl.style.display = 'block'; }
+    }
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Connection error: ' + e.message; errEl.style.display = 'block'; }
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Save new password'; }
+};
+
 
 function adminSetCryptoAddress(email, name) {
   if (!email) return;
