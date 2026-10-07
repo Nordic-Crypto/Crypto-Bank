@@ -4754,6 +4754,23 @@ async function initApp() {
   } catch(e) {
     console.warn('[NordicCrypto] loadFromServer failed, using defaults', e);
   }
+     /* === ПРАВКА 2: если токена нет — показываем логин и выходим === */
+  var _token = (typeof getSessionToken === 'function') ? getSessionToken() : null;
+  if (!_token) {
+    console.log('[NordicCrypto] no token — showing login screen');
+    if (typeof showLoginScreen === 'function') showLoginScreen();
+    if (typeof initLoginLogout === 'function') initLoginLogout();
+    if (typeof initSignup === 'function') initSignup();
+    if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
+    return; // не запускаем остальное
+  }
+  /* ============================================================== */
+
+  /* === ФИКС: логин должен работать ДО всего остального === */
+  if (typeof initLoginLogout === 'function') initLoginLogout();
+  if (typeof initSignup === 'function') initSignup();
+  if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
+  /* ==================================================== */
 
   if (typeof initNav === 'function') initNav();
   if (typeof initEvents === 'function') initEvents();
@@ -4765,8 +4782,6 @@ async function initApp() {
   if (typeof initTrackingActions === 'function') initTrackingActions();
   if (typeof initCardActions === 'function') initCardActions();
   if (typeof initOnboarding === 'function') initOnboarding();
-  if (typeof initSignup === 'function') initSignup();
-  if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
   if (typeof initCountryCurrencyLink === 'function') initCountryCurrencyLink();
   if (typeof initSettings === 'function') initSettings();
 
@@ -4778,6 +4793,12 @@ async function initApp() {
   if (typeof renderCard === 'function') renderCard();
   if (typeof renderOrder === 'function') renderOrder();
   if (typeof render === 'function') render();
+
+  /* === ФИКС: если токен есть — тихо проверяем сессию === */
+  if (typeof checkSession === 'function') {
+    try { await checkSession(); } catch(e) {}
+  }
+  /* ===================================================== */
 
   var isAdminUser = localStorage.getItem('user_role') === 'admin';
   if (isAdminUser) {
@@ -4792,12 +4813,6 @@ async function initApp() {
   if (typeof startInactivityTimer === 'function') startInactivityTimer();
 
   console.log('[NordicCrypto] initApp done');
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
 }
 
 /* === END OF PART D — FILE COMPLETE === */
