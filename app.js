@@ -1609,7 +1609,7 @@ window.submitRealVerification = async function() {
 
   try {
     var token = getSessionToken();
-    ...
+     
     if (!token) throw new Error('Not authenticated');
 
     var docFile    = document.getElementById('docFile').files[0];
