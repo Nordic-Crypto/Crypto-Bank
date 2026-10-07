@@ -4568,9 +4568,10 @@ window.clearAllChats = clearAllChats;
 
    if (isExchange) {
     if (dash) dash.style.display = 'none';
-    if (exDash) {
-      exDash.style.display = '';
-      if (!exDash.classList.contains('on')) exDash.classList.add('on');
+   if (exDash) {
+      exDash.style.display = 'block';    // ← было '', стало 'block'
+      exDash.classList.add('on');         // ← без проверки, всегда
+    }
       // 🎁 Fallback: если renderExchangeDash упадёт — показываем ошибку, а не пустоту
       try {
         renderExchangeDash();
