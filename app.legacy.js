@@ -2023,9 +2023,15 @@ function initNav(){
     mis[i].onclick = function(){
       var p = this.getAttribute('data-p');
       var pgs = document.querySelectorAll('.pg');
-      for (var j = 0; j < pgs.length; j++) pgs[j].classList.remove('on');
-      var page = $(p);
-      if (page) page.classList.add('on');
+      for (var j = 0; j < pgs.length; j++) {
+        pgs[j].classList.remove('on');
+        pgs[j].style.display = 'none';
+      }
+      var page = document.getElementById(p);
+      if (page) {
+        page.classList.add('on');
+        page.style.display = 'block';
+      }
       var ms = document.querySelectorAll('.mi');
       for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
       this.classList.add('on');
