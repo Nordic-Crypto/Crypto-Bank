@@ -147,3 +147,143 @@
   console.log('%c[NordicCrypto] 💫 count-up animation ready', 'color:#22d3ee');
 
 })();     // ← это последняя строка, оставь её
+  // ============================================================
+  // FIX 4: EXCHANGE DASHBOARD BUTTONS
+  // ============================================================
+  // Кнопки в exchange dashboard биндятся в DOMContentLoaded,
+  // который к моменту загрузки legacy уже прошёл. Перебиваем их.
+
+  function bindExchangeButtons() {
+    // Deposit — открывает ту же модалку, что и "Add funds"
+    var btnExDep = document.getElementById('exBtnDeposit');
+    if (btnExDep) {
+      btnExDep.onclick = function (e) {
+        e.preventDefault();
+        if (typeof window.openModal === 'function') {
+          window.openModal('add');
+        } else {
+          var b = document.getElementById('btnAdd');
+          if (b) b.click();
+        }
+      };
+    }
+
+    // Withdraw — открывает withdraw modal
+    var btnExWd = document.getElementById('exBtnWithdraw');
+    if (btnExWd) {
+      btnExWd.onclick = function (e) {
+        e.preventDefault();
+        if (typeof window.openWithdraw === 'function') {
+          window.openWithdraw();
+        } else {
+          alert('Withdraw modal not available');
+        }
+      };
+    }
+
+    // Trade — заглушка + hint про терминал
+    var btnExTrade = document.getElementById('exBtnTrade');
+    if (btnExTrade) {
+      btnExTrade.onclick = function (e) {
+        e.preventDefault();
+        openTradeTerminal();
+      };
+    }
+  }
+
+  // ----- Trade Terminal — премиум-заглушка -----
+  function openTradeTerminal() {
+    var old = document.getElementById('tradeTerminalModal');
+    if (old) { old.remove(); return; }
+
+    var modal = document.createElement('div');
+    modal.id = 'tradeTerminalModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;animation:fadeIn .3s ease;';
+
+    modal.innerHTML =
+      '<div style="background:linear-gradient(145deg,#0f1720,#0a0e15);border:1px solid rgba(139,92,246,.3);border-radius:24px;width:100%;max-width:560px;padding:36px;color:#e7edf5;box-shadow:0 40px 100px -20px rgba(139,92,246,.4);position:relative;overflow:hidden;">' +
+
+        // Свечение сверху
+        '<div style="position:absolute;top:-100px;right:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.2),transparent 70%);pointer-events:none;animation:pulse 3s ease-in-out infinite;"></div>' +
+
+        // Закрыть
+        '<button onclick="document.getElementById(\'tradeTerminalModal\').remove()" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8b95a5;font-size:20px;cursor:pointer;line-height:1;">×</button>' +
+
+        // Иконка + заголовок
+        '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;z-index:1;">' +
+          '<div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 12px 30px -8px rgba(139,92,246,.7);">⚡</div>' +
+          '<div>' +
+            '<div style="font-size:1.5rem;font-weight:800;background:linear-gradient(100deg,#fff,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent;">Trading Terminal</div>' +
+            '<div style="font-size:.85rem;color:#8b95a5;margin-top:4px;">Coming in v5.0</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<p style="color:#94a3b8;font-size:.95rem;line-height:1.6;margin:0 0 24px;position:relative;z-index:1;">' +
+          'Полноценный спот-терминал для покупки и продажи крипты: limit-ордера, market-ордера, стоп-лоссы и live-графики TradingView.' +
+        '</p>' +
+
+        // Что будет в терминале
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;position:relative;z-index:1;">' +
+          '<div style="padding:14px 16px;background:rgba(71,220,255,.05);border:1px solid rgba(71,220,255,.2);border-radius:12px;">' +
+            '<div style="font-size:22px;margin-bottom:6px;">📈</div>' +
+            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Live charts</div>' +
+            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">TradingView integration</div>' +
+          '</div>' +
+          '<div style="padding:14px 16px;background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.2);border-radius:12px;">' +
+            '<div style="font-size:22px;margin-bottom:6px;">📊</div>' +
+            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Order book</div>' +
+            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">Depth + spread</div>' +
+          '</div>' +
+          '<div style="padding:14px 16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:12px;">' +
+            '<div style="font-size:22px;margin-bottom:6px;">💹</div>' +
+            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Limit / Market</div>' +
+            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">Stop-loss too</div>' +
+          '</div>' +
+          '<div style="padding:14px 16px;background:rgba(236,72,153,.05);border:1px solid rgba(236,72,153,.2);border-radius:12px;">' +
+            '<div style="font-size:22px;margin-bottom:6px;">⚡</div>' +
+            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Instant fills</div>' +
+            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">Sub-second settlement</div>' +
+          '</div>' +
+        '</div>' +
+
+        // Кнопки
+        '<div style="display:flex;gap:10px;position:relative;z-index:1;">' +
+          '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); if(typeof toast===\'function\') toast(\'We will notify you when Trade launches 🚀\');" style="flex:1;padding:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;">Notify me when live</button>' +
+          '<button onclick="document.getElementById(\'tradeTerminalModal\').remove()" style="flex:1;padding:14px;background:rgba(255,255,255,.05);color:#8b95a5;border:1px solid rgba(255,255,255,.1);border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;">Close</button>' +
+        '</div>' +
+
+        '<style>@keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}</style>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    // Закрытие по клику вне
+    modal.onclick = function (e) {
+      if (e.target === modal) modal.remove();
+    };
+    // Закрытие по Esc
+    document.addEventListener('keydown', function escClose(e) {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escClose);
+      }
+    });
+  }
+  window.openTradeTerminal = openTradeTerminal;
+
+  // Запускаем бинды при загрузке и после переключения на exchange
+  bindExchangeButtons();
+  setTimeout(bindExchangeButtons, 500);
+  setTimeout(bindExchangeButtons, 1500);
+  setTimeout(bindExchangeButtons, 3000);
+
+  // Плюс следим, чтобы кнопки были забанены после applyAccountType
+  var _origApplyAccountType = window.applyAccountType;
+  if (typeof _origApplyAccountType === 'function') {
+    window.applyAccountType = function () {
+      _origApplyAccountType.apply(this, arguments);
+      setTimeout(bindExchangeButtons, 100);
+    };
+  }
+
+  console.log('%c[NordicCrypto] 💱 exchange buttons bound', 'color:#22d3ee');
