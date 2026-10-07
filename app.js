@@ -989,11 +989,7 @@ function finalizeDeposit(){
 }
 
 /* ---------- BALANCE CHART ---------- */
-function renderBalanceChart(){
-  var wrap2   = document.getElementById('balanceChartSecondary');
-  var current = document.getElementById('balanceCurrent');
-  if (!wrap2) return;
-   function renderBalanceChart(){
+ function renderBalanceChart(){
   var wrap2   = document.getElementById('balanceChartSecondary');
   var current = document.getElementById('balanceCurrent');
   if (!wrap2) return;
@@ -1002,10 +998,6 @@ function renderBalanceChart(){
   var chartHash = (st.usd || 0) + '|' + (st.txs || []).length + '|' + ((st.balanceHistory || []).length);
   if (window._balanceChartHash === chartHash && wrap2.querySelector('svg')) return;
   window._balanceChartHash = chartHash;
-
-  if (current) current.textContent = fmtCurrency(st.usd);
-  var txs = st.txs || [];
-  ...
   if (current) current.textContent = fmtCurrency(st.usd);
 
   var txs = st.txs || [];
@@ -4914,4 +4906,22 @@ console.log('%c[NordicCrypto] ✅ App v3.2 loaded — full rebuild', 'color:#00d
     show();
     return _origFetch.apply(this, arguments).finally ? _origFetch.apply(this, arguments).finally(hide) : _origFetch.apply(this, arguments).then(function(r){ hide(); return r; }, function(e){ hide(); throw e; });
   };
+})();
+/* 🎁 Self-check — проверка что все критичные функции определены */
+(function selfCheck(){
+  var required = [
+    'doLogin','doLogout','showApp','loadFromServer','saveToServer',
+    'render','renderBalanceChart','renderCard','renderTx',
+    'initVerification','submitRealVerification','checkVerificationStatus',
+    'showAdminPanel','loadAdminUsers','loadAdminVerifications',
+    'applyAccountType','renderExchangeDash','renderExchangeCoins',
+    'toggleChat','renderChatMessages','sendChatMsg',
+    'startAutoCheck','doAutoCheck','scanAllDeposits'
+  ];
+  var missing = required.filter(function(name){ return typeof window[name] !== 'function'; });
+  if (missing.length) {
+    console.warn('%c[NordicCrypto] ⚠️ Отсутствуют функции: ' + missing.join(', '), 'color:#ffb020;font-weight:bold');
+  } else {
+    console.log('%c[NordicCrypto] ✅ Self-check: все ' + required.length + ' функций на месте', 'color:#10b981');
+  }
 })();
