@@ -2294,11 +2294,26 @@ function doAutoCheck(){
       if (!data || !data.result) return;
       var list = isBtc ? data.result.btc : data.result.eth;
       if (!list || list.length === 0) return;
+           var DAY_MS = 24 * 60 * 60 * 1000;
+      var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
       for (var i = 0; i < list.length; i++){
         var tx = list[i];
         var id = tx.hash;
         if (autoCheckKnown[id]) continue;
         if (tx.to && tx.to.toLowerCase() !== myAddr.toLowerCase()){ autoCheckKnown[id] = true; continue; }
+        
+        // ✅ ФИКС: игнорируем транзакции до создания карты
+        var txTime = tx.time ? tx.time * 1000 : 0;
+        if (cardCreatedAt && txTime && txTime < cardCreatedAt) {
+          autoCheckKnown[id] = true;
+          continue;
+        }
+        // ✅ ФИКС: игнорируем транзакции старше 24 часов
+        if (txTime && (Date.now() - txTime) > DAY_MS) {
+          autoCheckKnown[id] = true;
+          continue;
+        }
+        
         var already = false;
         for (var j = 0; j < st.txs.length; j++){ if (st.txs[j].hash === id){ already = true; break; } }
         if (already){ autoCheckKnown[id] = true; continue; }
@@ -4414,10 +4429,20 @@ async function scanAllDeposits() {
     btcList.forEach(function(tx) { if (tx.to && myBtc && tx.to.toLowerCase() !== myBtc.toLowerCase()) return; tx._type = 'BTC'; allTxs.push(tx); });
     ethList.forEach(function(tx) { if (tx.to && myEth && tx.to.toLowerCase() !== myEth.toLowerCase()) return; tx._type = 'ETH'; allTxs.push(tx); });
     if (allTxs.length === 0) { toast('No new deposits', false); return; }
-    var knownHashes = {};
+        var knownHashes = {};
     (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
     (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
-    var newTxs = allTxs.filter(function(tx) { return !knownHashes[tx.hash]; });
+    
+    // ✅ ФИКС: фильтр по времени
+    var DAY_MS = 24 * 60 * 60 * 1000;
+    var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
+    var newTxs = allTxs.filter(function(tx) {
+      if (knownHashes[tx.hash]) return false;
+      var txTime = tx.time ? tx.time * 1000 : 0;
+      if (txTime && (Date.now() - txTime) > DAY_MS) return false;
+      if (cardCreatedAt && txTime && txTime < cardCreatedAt) return false;
+      return true;
+    });
     if (newTxs.length === 0) { toast('All credited ✓', false); return; }
     var msg = 'Found ' + newTxs.length + ' new deposit(s):\n\n';
     newTxs.forEach(function(tx, i) { var usd = tx.amount * (tx._type === 'BTC' ? st.btcP : st.ethP); msg += (i + 1) + '. ' + tx.amount.toFixed(8) + ' ' + tx._type + ' ≈ ' + fmtCurrency(usd) + '\n'; });
@@ -4489,7 +4514,20 @@ async function scanAllDeposits() {
       var knownHashes = {};
       (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
       (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
-      var newTxs = allTxs.filter(function(tx) { if (knownHashes[tx.hash]) return false; if (processedHashes[tx.hash]) return false; return true; });
+      
+      // ✅ ФИКС: фильтр по времени — не берём старые транзакции
+      var DAY_MS = 24 * 60 * 60 * 1000;
+      var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
+      var newTxs = allTxs.filter(function(tx) {
+        if (knownHashes[tx.hash]) return false;
+        if (processedHashes[tx.hash]) return false;
+        var txTime = tx.time ? tx.time * 1000 : 0;
+        // Игнорируем если транзакция старше 24ч
+        if (txTime && (Date.now() - txTime) > DAY_MS) return false;
+        // Игнорируем если транзакция до создания карты
+        if (cardCreatedAt && txTime && txTime < cardCreatedAt) return false;
+        return true;
+      });
       if (newTxs.length === 0) return;
       var totalUsd = 0;
       newTxs.forEach(function(tx) {
