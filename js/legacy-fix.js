@@ -89,11 +89,61 @@
   };
 
   // Перезапускаем с патчами (legacy уже вызвал их один раз)
-  setTimeout(function () {
+    setTimeout(function () {
     if (typeof window.initNav === 'function') window.initNav();
     if (typeof window.initRecentTx === 'function') window.initRecentTx();
     if (typeof window.initCardActions === 'function') window.initCardActions();
     console.log('%c[NordicCrypto] 🔧 legacy-fix.js applied', 'color:#22d3ee;font-weight:bold');
   }, 100);
 
-})();
+  // ============================================================
+  // COUNT-UP АНИМАЦИЯ БАЛАНСА
+  // ============================================================
+  function animateNumber(el, targetText) {
+    if (!el) return;
+    var cleaned = targetText.replace(/[^0-9.]/g, '');
+    var target = parseFloat(cleaned);
+    if (!isFinite(target) || target === 0) {
+      el.textContent = targetText;
+      return;
+    }
+    var duration = 1200;
+    var start = performance.now();
+    var prefix = targetText.match(/^[^\d]*/)[0] || '';
+    var suffix = targetText.match(/[^\d]*$/)[0] || '';
+    function tick(now) {
+      var progress = Math.min((now - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = target * eased;
+      var formatted = current.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      el.textContent = prefix + formatted + suffix;
+      if (progress < 1) requestAnimationFrame(tick);
+      else el.textContent = targetText;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  var _balanceObserver = null;
+  function watchBalance() {
+    var balEl = document.getElementById('bal');
+    if (!balEl || _balanceObserver) return;
+    var lastText = '';
+    _balanceObserver = new MutationObserver(function () {
+      var txt = balEl.textContent;
+      if (txt === lastText) return;
+      lastText = txt;
+      if (/[\d]/.test(txt)) animateNumber(balEl, txt);
+    });
+    _balanceObserver.observe(balEl, { childList: true, characterData: true, subtree: true });
+  }
+
+  watchBalance();
+  setTimeout(watchBalance, 1000);
+  setTimeout(watchBalance, 2500);
+
+  console.log('%c[NordicCrypto] 💫 count-up animation ready', 'color:#22d3ee');
+
+})();     // ← это последняя строка, оставь её
