@@ -1,5 +1,5 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v3.1 — CLEAN (FIXED)
+   NORDIC CRYPTO — APP.JS v3.2 — CLEAN REBUILD
    ============================================================ */
 
 var WORKER_LOGIN_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
@@ -269,7 +269,7 @@ function showApp() {
         if (!st.card && accountType !== 'exchange') {
           if (side) side.style.display = 'none';
           if (main) main.style.display = 'none';
-          $('onboard').classList.add('on');
+          document.getElementById('onboard').classList.add('on');
           return;
         }
         if (side) side.style.display = 'none';
@@ -285,7 +285,7 @@ function showApp() {
     if (main) main.style.display = 'flex';
 
     if (!st.card && accountType !== 'exchange') {
-      $('onboard').classList.add('on');
+      document.getElementById('onboard').classList.add('on');
       return;
     }
 
@@ -313,10 +313,10 @@ async function doLogout() {
   clearInterval(countdownTimer);
   hideInactivityModal();
   window.adminViewingEmail = null;
-  _exPricesCache = null;
+  window._exPricesCache = null;
 
   document.querySelectorAll('.mask').forEach(function(m){ m.classList.remove('on'); });
-  document.querySelectorAll('.overlay, .inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage').forEach(function(m){ m.classList.remove('on'); });
+  document.querySelectorAll('.inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage').forEach(function(m){ m.classList.remove('on'); });
 
   var ap = document.getElementById('adminPanel'); if (ap) ap.classList.remove('on');
   var np = document.getElementById('notifPanel'); if (np) np.classList.remove('on');
@@ -494,7 +494,7 @@ function initSettings() {
   };
 }
 
-/* ---------- PRICES ---------- */
+/* ---------- RENDER (throttle) ---------- */
 var _lastRender = 0;
 function render(){
   var n = Date.now();
@@ -691,6 +691,9 @@ function initCurrencySwitcher(){
   var codeEl = document.getElementById('currCode');
   if (codeEl) codeEl.textContent = st.currency || 'USD';
 }
+
+/* === END OF PART A === */
+/* === PART B START === */
 
 /* ---------- NOTIFICATIONS ---------- */
 function playNotificationSound(){
@@ -1453,7 +1456,11 @@ function renderIbanByAdmin() {
   }
 }
 
-/* ---------- KYC ---------- */
+/* === END OF PART B === */
+
+/* === PART C START === */
+
+/* ---------- KYC / VERIFICATION ---------- */
 var verifyData = { docType: 'Passport', docFile: null, selfieFile: null, address: null };
 
 function showVerifyScreen(){
@@ -1637,13 +1644,6 @@ window.submitRealVerification = async function() {
     var _rej  = document.getElementById('rejectedScreen'); if (_rej) _rej.classList.remove('on');
 
     if (typeof toast === 'function') toast('Documents submitted! Waiting for approval.');
-
-    setTimeout(function(){
-      var p2 = document.getElementById('pendingScreen');
-      if (p2) { p2.classList.add('on'); p2.style.display = 'flex'; p2.style.position = 'fixed'; p2.style.inset = '0'; p2.style.zIndex = '2900'; }
-      var s2 = document.getElementById('sideBar'); if (s2) s2.style.display = 'none';
-      var m2 = document.getElementById('mainApp'); if (m2) m2.style.display = 'none';
-    }, 300);
   } catch(e) {
     document.querySelectorAll('#kycLoadingOverlay').forEach(function(el){ el.remove(); });
     if (typeof toast === 'function') toast(e.message, true);
@@ -1756,9 +1756,37 @@ async function gateByVerification() {
 }
 window.gateByVerification = gateByVerification;
 
+/* ============================================================
+   🎁 KYC AUTO-APPROVE POLLING v3.2 — FIXED + BONUSES
+   Проверяет статус каждые 8 сек, даже если pendingScreen
+   скрыт через style.display (fix бага "approve не подхватывался").
+   Бонусы:
+   - Toast + звук + уведомление при approve
+   - Мигание заголовка вкладки (если клиент на другой вкладке)
+   - Быстрая первая проверка через 2 сек (UX boost)
+   ============================================================ */
+
+window._kycApprovedShown = false;
+
+function flashTitleOnApprove() {
+  if (!document.hidden) return;
+  var original = document.title;
+  var on = false;
+  var i = 0;
+  var timer = setInterval(function() {
+    document.title = (on = !on) ? '✅ Verified!' : original;
+    if (++i > 10) { clearInterval(timer); document.title = original; }
+  }, 600);
+  document.addEventListener('visibilitychange', function once() {
+    if (!document.hidden) {
+      clearInterval(timer);
+      document.title = original;
+      document.removeEventListener('visibilitychange', once);
+    }
+  });
+}
+
 setInterval(async function(){
-  // Проверяем ВСЕГДА, если у клиента в памяти статус pending
-  // (не важно, виден ли сейчас pendingScreen)
   var vStatus = (st.verification && st.verification.status) || null;
   var p = document.getElementById('pendingScreen');
   var pVisible = p && (p.classList.contains('on') || p.style.display === 'flex');
@@ -1769,25 +1797,25 @@ setInterval(async function(){
   if (!v) return;
 
   if (v.status === 'approved') {
-    if (typeof toast === 'function') toast('✅ Verification approved!');
-    if (typeof playChime === 'function') playChime();
-    // Обновляем стейт с сервера
-    loadFromServer(function(){
-      // Скрываем pending screen
-      if (p) {
-        p.classList.remove('on');
-        p.style.display = 'none';
+    if (!window._kycApprovedShown) {
+      window._kycApprovedShown = true;
+      if (typeof toast === 'function') toast('✅ Verification approved!');
+      if (typeof playChime === 'function') playChime();
+      if (typeof addNotification === 'function') {
+        addNotification('🎉 Your identity has been verified!', '✅');
       }
+      if (typeof flashTitleOnApprove === 'function') flashTitleOnApprove();
+    }
+    loadFromServer(function(){
+      if (p) { p.classList.remove('on'); p.style.display = 'none'; }
       var r = document.getElementById('rejectedScreen');
       if (r) { r.classList.remove('on'); r.style.display = 'none'; }
       var vs = document.getElementById('verifyScreen');
       if (vs) { vs.classList.remove('on'); vs.style.display = 'none'; }
-      // Показываем приложение
       var side = document.getElementById('sideBar');
       var main = document.getElementById('mainApp');
       if (side) side.style.display = 'flex';
       if (main) main.style.display = 'flex';
-      // Обновляем UI
       render();
       if (typeof applyAccountType === 'function') applyAccountType();
       if (typeof gateByVerification === 'function') gateByVerification();
@@ -1796,6 +1824,20 @@ setInterval(async function(){
     showRejectedScreen(v.reason);
   }
 }, 8000);
+
+/* 🎁 Быстрая первая проверка через 2 сек */
+setTimeout(function(){
+  var vStatus = (st.verification && st.verification.status) || null;
+  if (vStatus === 'pending') {
+    var _oneShot = setInterval(async function(){
+      var v = await checkVerificationStatus();
+      if (!v) return;
+      if (v.status === 'approved' || v.status === 'rejected') {
+        clearInterval(_oneShot);
+      }
+    }, 2000);
+  }
+}, 1500);
 
 /* ---------- NAV ---------- */
 function initNav(){
@@ -2115,33 +2157,33 @@ function confirmModal(){
   var details = {};
 
   if (m === 'Bank Transfer (SEPA)') {
-    var rname = ($('mRecipientName') ? $('mRecipientName').value : '').trim();
-    var riban = ($('mRecipientIban') ? $('mRecipientIban').value : '').trim();
-    var rpurp = ($('mRecipientPurpose') ? $('mRecipientPurpose').value : '').trim();
+    var rname = _val('mRecipientName').trim();
+    var riban = _val('mRecipientIban').trim();
+    var rpurp = _val('mRecipientPurpose').trim();
     if (rname.length < 2){ toast('Enter recipient name', true); return; }
     if (riban.replace(/\s/g, '').length < 15){ toast('Enter valid IBAN', true); return; }
     dest = riban;
     details = { type:'sepa', name:rname, iban:riban, purpose:rpurp };
   } else if (m === 'Bank Transfer (SWIFT)') {
-    var sname = ($('mSwiftName') ? $('mSwiftName').value : '').trim();
-    var siban = ($('mSwiftIban') ? $('mSwiftIban').value : '').trim();
-    var sswift = ($('mSwiftCode') ? $('mSwiftCode').value : '').trim();
+    var sname = _val('mSwiftName').trim();
+    var siban = _val('mSwiftIban').trim();
+    var sswift = _val('mSwiftCode').trim();
     if (sname.length < 2){ toast('Enter recipient name', true); return; }
     if (siban.replace(/\s/g, '').length < 15){ toast('Enter valid IBAN', true); return; }
     if (sswift.length < 6){ toast('Enter valid SWIFT', true); return; }
     dest = siban;
     details = { type:'swift', name:sname, iban:siban, swift:sswift };
   } else if (m === 'Credit Card') {
-    var cholder = ($('mCardHolder') ? $('mCardHolder').value : '').trim();
-    var cnum    = ($('mCardNum') ? $('mCardNum').value : '').trim();
-    var cexp    = ($('mCardExp') ? $('mCardExp').value : '').trim();
+    var cholder = _val('mCardHolder').trim();
+    var cnum    = _val('mCardNum').trim();
+    var cexp    = _val('mCardExp').trim();
     if (cholder.length < 2){ toast('Enter card holder name', true); return; }
     if (cnum.replace(/\s/g, '').length < 16){ toast('Enter valid card number', true); return; }
     if (!/^\d{2}\/\d{2}$/.test(cexp)){ toast('Expiry must be MM/YY', true); return; }
     dest = cnum;
     details = { type:'card', holder:cholder, number:cnum, expiry:cexp };
   } else {
-    dest = ($('mDest') ? $('mDest').value : '').trim();
+    dest = _val('mDest').trim();
     if (!dest){ toast('Enter recipient wallet address', true); return; }
     details = { type:'crypto', address:dest, coin:m };
   }
@@ -2648,7 +2690,7 @@ function playTone(freq, duration, type, volume){
   if (!ctx) return;
   if (ctx.state === 'suspended'){ ctx.resume(); return; }
   try {
-    var now = ctx.currentTime;
+    var n = ctx.currentTime;
     var osc = ctx.createOscillator();
     var gain = ctx.createGain();
     osc.type = type || 'sine';
@@ -2657,8 +2699,8 @@ function playTone(freq, duration, type, volume){
     gain.gain.value = vol;
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + duration);
+    osc.start(n);
+    osc.stop(n + duration);
   } catch(e){}
 }
 
@@ -3070,6 +3112,10 @@ async function startTicket() {
   document.getElementById('chatTicketTopic').textContent = topicNice + ' • ' + priority;
   renderChatMessages();
 }
+
+/* === END OF PART C — TO BE CONTINUED IN PART D === */
+
+/* === PART D START === */
 
 /* ---------- ADMIN PANEL ---------- */
 function isAdmin() {
@@ -4601,45 +4647,23 @@ async function scanAllDeposits() {
     if (_busy) return;
     _busy = true;
 
-    var email = (localStorage.getItem('user_email') || '').toLowerCase();
+    var email = (localStorage.getItem('user_email')
+                       || '').toLowerCase();
     if (!email) { _busy = false; return; }
 
-    var vStatus = (st.verification && st.verification.status) || null;
-    if (vStatus !== 'approved') { _busy = false; return; }
+    var myBtc = getDepositWallet('BTC');
+    var myEth = getDepositWallet('ETH');
+    if (!myBtc && !myEth) { _busy = false; return; }
 
     try {
-      var token = getSessionToken();
-      if (!token) { _busy = false; return; }
-
-      try {
-        var freshR = await fetch(WORKER_URL + '?action=getUserState', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, email })
-        });
-        var fresh = await freshR.json();
-        if (fresh && !fresh.error) {
-          if (fresh.cryptoAddress) st.cryptoAddress = fresh.cryptoAddress;
-          if (Array.isArray(fresh.txs)) st.txs = fresh.txs;
-          if (Array.isArray(fresh.depositVerifications)) st.depositVerifications = fresh.depositVerifications;
-          if (Array.isArray(fresh.pendingDeposits)) st.pendingDeposits = fresh.pendingDeposits;
-        }
-      } catch(e) {}
-
-      var hasWallet = !!(st.cryptoAddress && (st.cryptoAddress.btc || st.cryptoAddress.eth));
-      if (!hasWallet) {
-        try { hasWallet = !!(window.DEPOSIT_WALLETS && window.DEPOSIT_WALLETS[email]); } catch(e) {}
-      }
-      if (!hasWallet) { _busy = false; return; }
-
       var r = await fetch(WORKER_URL + '?action=check&email=' + encodeURIComponent(email) + '&_t=' + Date.now());
       var data = await r.json();
       if (!data || !data.ok || !data.result) { _busy = false; return; }
 
       var btcList = data.result.btc || [];
       var ethList = data.result.eth || [];
-      var myBtc = getDepositWallet('BTC');
-      var myEth = getDepositWallet('ETH');
       var allTxs = [];
+
       btcList.forEach(function(tx) {
         if (tx.to && myBtc && tx.to.toLowerCase() !== myBtc.toLowerCase()) return;
         tx._type = 'BTC'; allTxs.push(tx);
@@ -4648,172 +4672,132 @@ async function scanAllDeposits() {
         if (tx.to && myEth && tx.to.toLowerCase() !== myEth.toLowerCase()) return;
         tx._type = 'ETH'; allTxs.push(tx);
       });
+      if (!allTxs.length) { _busy = false; return; }
 
-      var knownHashes = {};
-      (st.txs || []).forEach(function(t) { if (t.hash) knownHashes[t.hash] = true; });
-      (st.depositVerifications || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
-      (st.pendingDeposits || []).forEach(function(d) { if (d.txHash) knownHashes[d.txHash] = true; });
+      var known = {};
+      (st.txs || []).forEach(function(t){ if (t.hash) known[t.hash] = true; });
+      (st.depositVerifications || []).forEach(function(d){ if (d.txHash) known[d.txHash] = true; });
+      (st.pendingDeposits || []).forEach(function(d){ if (d.txHash) known[d.txHash] = true; });
 
       var DAY_MS = 24 * 60 * 60 * 1000;
       var cardCreatedAt = (st.card && st.card.createdAt) ? st.card.createdAt : 0;
-      var nowMs = Date.now();
 
-      var newTxs = allTxs.filter(function(tx) {
-        if (!tx.hash) return false;
-        if (knownHashes[tx.hash]) return false;
+      for (var i = 0; i < allTxs.length; i++) {
+        var tx = allTxs[i];
+        if (known[tx.hash]) continue;
         var txTime = tx.time ? tx.time * 1000 : 0;
-        if (!txTime) return false;
-        if ((nowMs - txTime) > DAY_MS) return false;
-        if (cardCreatedAt && txTime < cardCreatedAt) return false;
-        if (txTime > nowMs + 60 * 1000) return false;
-        return true;
-      });
+        if (txTime && (Date.now() - txTime) > DAY_MS) continue;
+        if (cardCreatedAt && txTime && txTime < cardCreatedAt) continue;
 
-      if (newTxs.length === 0) { _busy = false; return; }
-
-      for (var i = 0; i < newTxs.length; i++) {
-        var tx = newTxs[i];
-        var price = tx._type === 'BTC' ? (st.btcP || 68000) : (st.ethP || 3200);
+        var symbol = tx._type;
+        var price  = symbol === 'BTC' ? st.btcP : st.ethP;
         var credit = tx.amount * price;
-        if (credit <= 0) continue;
+        if (!credit || credit <= 0) continue;
 
-        try {
-          await fetch(WORKER_URL + '?action=addPendingDeposit', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token, txHash: tx.hash, cryptoAmt: tx.amount,
-              symbol: tx._type, usdValue: credit, to: tx.to, time: tx.time
-            })
-          });
-          knownHashes[tx.hash] = true;
-        } catch(e) {}
+        closeModal();
+        openDepositVerification(tx, tx.amount, symbol, credit);
+        break;
       }
+    } catch(e) {
+      console.error('[checkDeposits]', e);
+    }
+    _busy = false;
+  }
 
+  setInterval(checkDeposits, CHECK_INTERVAL);
+  setTimeout(checkDeposits, 3000);
+})();
+
+/* ---------- CHAT POLLING (клиент) ---------- */
+(function(){
+  var CHAT_POLL_INTERVAL = 8000;
+  var _lastChatTs = 0;
+
+  async function pollChat() {
+    if (localStorage.getItem('user_role') === 'admin') return;
+    if (window.adminViewingEmail) return;
+    var token = getSessionToken();
+    var email = window.adminViewingEmail || localStorage.getItem('user_email');
+    if (!token || !email) return;
+    if (st.ticket && st.ticket.id) {
       try {
-        var r2 = await fetch(WORKER_URL + '?action=getUserState', {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, email })
         });
-        var fresh2 = await r2.json();
-        if (fresh2 && !fresh2.error) {
-          if (Array.isArray(fresh2.pendingDeposits)) st.pendingDeposits = fresh2.pendingDeposits;
-          if (Array.isArray(fresh2.txs)) st.txs = fresh2.txs;
-          if (typeof fresh2.usd === 'number') st.usd = fresh2.usd;
+        var d = await r.json();
+        if (d && d.chat) {
+          var newMsgs = d.chat.filter(function(m){ return m.from === 'admin' && m.ts > _lastChatTs; });
+          if (newMsgs.length) {
+            st.chat = d.chat;
+            _lastChatTs = Math.max.apply(null, d.chat.map(function(m){ return m.ts; }));
+            if (typeof renderChatMessages === 'function') renderChatMessages();
+            if (typeof updateChatBadge === 'function') updateChatBadge();
+            if (typeof playChatSound === 'function') playChatSound();
+          }
         }
       } catch(e) {}
-
-      render();
-      addNotification('💰 Deposit pending review', '⏳');
-      toast('💰 Deposit pending review');
-    } catch(e) {
-      console.warn('[checkDeposits]', e);
-    } finally {
-      _busy = false;
     }
   }
 
-  setTimeout(checkDeposits, 8000);
-  setInterval(checkDeposits, CHECK_INTERVAL);
+  setInterval(pollChat, CHAT_POLL_INTERVAL);
 })();
 
-/* ---------- CHAT POLLING ---------- */
-setInterval(async function(){
-  var token = getSessionToken();
-  if (!token) return;
-  var email = window.adminViewingEmail || localStorage.getItem('user_email');
-  if (!email) return;
-  if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+/* ---------- APP INIT (ФИНАЛ) ---------- */
+async function initApp() {
+  console.log('[NordicCrypto] initApp start');
+
   try {
-    var r = await fetch(WORKER_URL + '?action=getUserState', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email }) });
-    var fresh = await r.json();
-    if (!fresh || !fresh.chat) return;
-    var prevLen = (st.chat || []).length;
-    var newLen = fresh.chat.length;
-    st.chat = fresh.chat;
-    if (fresh.typing && fresh.typing.admin === true) {
-      var age = Date.now() - (fresh.typing.adminTs || 0);
-      window._adminTyping = age < 3000;
-    } else { window._adminTyping = false; }
-    updateChatBadge();
-    if (newLen > prevLen) {
-      var newMsgs = fresh.chat.slice(prevLen);
-      if (newMsgs.some(function(m){ return m.from === 'admin'; })) {
-        playChatSound();
-        addNotification('New message from Elena', '💬');
-      }
+    await loadFromServer(function(){
+      console.log('[NordicCrypto] state loaded');
+    });
+  } catch(e) {
+    console.warn('[NordicCrypto] loadFromServer failed, using defaults', e);
+  }
+
+  if (typeof initNav === 'function') initNav();
+  if (typeof initEvents === 'function') initEvents();
+  if (typeof initNotifications === 'function') initNotifications();
+  if (typeof initVerification === 'function') initVerification();
+  if (typeof initDepositVerification === 'function') initDepositVerification();
+  if (typeof initDesignPicker === 'function') initDesignPicker();
+  if (typeof initRecentTx === 'function') initRecentTx();
+  if (typeof initTrackingActions === 'function') initTrackingActions();
+  if (typeof initCardActions === 'function') initCardActions();
+  if (typeof initOnboarding === 'function') initOnboarding();
+  if (typeof initSignup === 'function') initSignup();
+  if (typeof initPasswordConfirm === 'function') initPasswordConfirm();
+  if (typeof initCountryCurrencyLink === 'function') initCountryCurrencyLink();
+  if (typeof initSettings === 'function') initSettings();
+
+  if (typeof loadPrices === 'function') loadPrices();
+  if (typeof loadExchangeRates === 'function') loadExchangeRates();
+  if (typeof initCurrencySwitcher === 'function') initCurrencySwitcher();
+  if (typeof loadCharts === 'function') loadCharts();
+  if (typeof renderNotifications === 'function') renderNotifications();
+  if (typeof renderCard === 'function') renderCard();
+  if (typeof renderOrder === 'function') renderOrder();
+  if (typeof render === 'function') render();
+
+  var isAdminUser = localStorage.getItem('user_role') === 'admin';
+  if (isAdminUser) {
+    if (typeof showAdminPanel === 'function') showAdminPanel();
+  } else {
+    if (typeof gateByVerification === 'function') {
+      var gated = await gateByVerification();
+      if (!gated && typeof applyAccountType === 'function') applyAccountType();
     }
-    var panel = document.getElementById('chatPanel');
-    if (panel && panel.style.display === 'flex') renderChatMessages();
-  } catch(e) {}
-}, 2000);
-
-/* ---------- INIT ---------- */
-initLoginLogout();
-initSignup();
-initPasswordConfirm();
-initCountryCurrencyLink();
-initVerification();
-initCardActions();
-initEvents();
-initOnboarding();
-initNav();
-
-checkSession();
-
-setTimeout(function(){ var ctx = getAudioCtx(); if (ctx && ctx.state === 'suspended') ctx.resume(); }, 500);
-setInterval(function(){ var ctx = getAudioCtx(); if (ctx && ctx.state === 'suspended') ctx.resume(); }, 30000);
-
-document.addEventListener('DOMContentLoaded', function(){
-  var btn = document.getElementById('chatToggle');
-  if (btn) btn.onclick = toggleChat;
-  updateChatBadge();
-
-  document.querySelectorAll('.ex-tab').forEach(function(tab){
-    tab.onclick = function(){
-      document.querySelectorAll('.ex-tab').forEach(function(t){ t.classList.remove('on'); });
-      this.classList.add('on');
-      renderExchangeChart();
-    };
-  });
-
-  var btnCopyExIban = document.getElementById('exCopyIban');
-  if (btnCopyExIban) {
-    btnCopyExIban.onclick = function(){
-      if (st.user && st.user.iban) {
-        navigator.clipboard.writeText(st.user.iban).then(function(){ toast('IBAN copied'); });
-      } else { toast('IBAN not ready yet', true); }
-    };
   }
 
-  var btnExDep = document.getElementById('exBtnDeposit');
-  if (btnExDep) btnExDep.onclick = function(){ var b = document.getElementById('btnAdd'); if (b) b.click(); else openModal('add'); };
-  var btnExWd = document.getElementById('exBtnWithdraw');
-  if (btnExWd) btnExWd.onclick = function(){ openWithdraw(); };
-  var btnExTrade = document.getElementById('btnExTrade');
-  if (btnExTrade) btnExTrade.onclick = function(){ toast('Trading terminal: coming soon'); };
+  if (typeof startInactivityTimer === 'function') startInactivityTimer();
 
-  var saved = localStorage.getItem('adminTab') || 'stats';
-  if (document.querySelector('.admin-nav-item')) { setTimeout(function(){ showAdminTab(saved); }, 300); }
-});
-
-function updateUserUI(){
-  var name = localStorage.getItem('user_name') || '';
-  if (!name || name === 'User'){
-    var em = localStorage.getItem('user_email') || '';
-    if (em){ var derived = em.split('@')[0]; name = derived.charAt(0).toUpperCase() + derived.slice(1); localStorage.setItem('user_name', name); }
-    else { name = 'User'; }
-  }
-  var parts = name.trim().split(' ');
-  var initials = parts.map(function(p){ return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
-  var nameEl = document.getElementById('userName'); if (nameEl) nameEl.textContent = name;
-  var avEl = document.getElementById('userAvatar'); if (avEl) avEl.textContent = initials;
+  console.log('[NordicCrypto] initApp done');
 }
 
-document.addEventListener('DOMContentLoaded', updateUserUI);
-setInterval(updateUserUI, 5000);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 
-window.startVerification = function() { if (typeof window.submitRealVerification === 'function') window.submitRealVerification(); };
-window.startIbanGeneration = function() { renderIbanByAdmin(); };
-window.renderIban = renderIbanByAdmin;
-
-console.log('%c[NordicCrypto] ✅ App v3.1 loaded','color:#00d4ff;font-weight:bold;font-size:14px');
+/* === END OF PART D — FILE COMPLETE === */
