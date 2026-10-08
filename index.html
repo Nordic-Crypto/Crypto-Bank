@@ -4620,7 +4620,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   </div>
 
-  <div class="tt-bottom">
+    <div class="tt-bottom">
     <div class="tt-recent-trades">
       <div class="tt-rt-header">Recent Trades</div>
       <div class="tt-rt-list"></div>
@@ -4628,6 +4628,20 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="tt-open-orders">
       <div class="tt-oo-header">Open Orders</div>
       <div class="tt-oo-list"><div class="tt-empty">No open orders</div></div>
+    </div>
+    <div class="tt-order-history">
+      <div class="tt-oh-header">
+        <span>Order History</span>
+        <div class="tt-oh-filters">
+          <button data-filter="all" class="on">All</button>
+          <button data-filter="filled">Filled</button>
+          <button data-filter="open">Open</button>
+          <button data-filter="cancelled">Cancelled</button>
+        </div>
+      </div>
+      <div class="tt-oh-list">
+        <div class="tt-empty">No orders yet</div>
+      </div>
     </div>
   </div>
 
