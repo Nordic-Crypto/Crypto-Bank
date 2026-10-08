@@ -4951,15 +4951,30 @@ async function scanAllDeposits() {
       if (!st.depositVerifications) st.depositVerifications = [];
       st.depositVerifications.push({ txHash: tx.hash, cryptoAmt: tx.amount, symbol: tx._type, usdValue: credit, source: 'manual_scan', completedAt: Date.now() });
     });
-    st.usd += totalUsd;
-    saveToServer();
-    render();
-    addNotification('Credited: +' + fmtCurrency(totalUsd), '✅');
-    playChime();
-    spawnConfetti();
-    toast('✓ Credited: +' + fmtCurrency(totalUsd), false);
-  } catch (e) { toast('Scan error', true); }
+   // 🛡️ НЕ зачисляем сразу — отправляем админу на approve
+var token = getSessionToken();
+if (token) {
+  for (var i = 0; i < newTxs.length; i++) {
+    var tx = newTxs[i];
+    var price = tx._type === 'BTC' ? st.btcP : st.ethP;
+    var credit = tx.amount * price;
+    try {
+      await fetch(WORKER_URL + '?action=addPendingDeposit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: token, txHash: tx.hash, cryptoAmt: tx.amount,
+          symbol: tx._type, usdValue: credit, to: tx.to, time: tx.time
+        })
+      });
+    } catch(e) {}
+  }
 }
+saveToServer();
+render();
+addNotification('Deposit(s) submitted for review', '⏳');
+playChime();
+spawnConfetti();
+toast('✓ Submitted for admin review', false);
 
 /* ---------- AUTO DEPOSIT CHECK ---------- */
 (function(){
