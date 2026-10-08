@@ -580,15 +580,20 @@
     TT.recentTrades = trades;
   }
 
-  function renderRecentTrades() {
+    function renderRecentTrades() {
     var el = document.querySelector('.tt-rt-list');
     if (!el) return;
     var html = '';
     TT.recentTrades.slice(0, 30).forEach(function (t) {
       var timeStr = new Date(t.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      var priceStr = fmtPrice(t.price);
+      var amountStr = t.amount.toFixed(4);
+      var totalStr = '$' + (t.price * t.amount).toFixed(2);
+
       html += '<div class="tt-rt-row ' + t.side + '">' +
-        '<span class="tt-rt-price">' + fmtPrice(t.price) + '</span>' +
-        '<span class="tt-rt-amount">' + t.amount.toFixed(4) + '</span>' +
+        '<span class="tt-rt-price">' + priceStr + '</span>' +
+        '<span class="tt-rt-amount">' + amountStr + '</span>' +
+        '<span class="tt-rt-total">' + totalStr + '</span>' +
         '<span class="tt-rt-time">' + timeStr + '</span>' +
       '</div>';
     });
