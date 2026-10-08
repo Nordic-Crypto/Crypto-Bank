@@ -158,14 +158,34 @@
     }
 
     // 24h change (calculated from portfolio vs deposits)
-    var pnlEl = document.getElementById('exPnl24h');
+   var pnlEl = document.getElementById('exPnl24h');
     if (pnlEl && window.st) {
-      var deposits = (window.st.txs || []).filter(function (t) { return t.amt > 0; })
-        .reduce(function (s, t) { return s + t.amt; }, 0);
-      var pnl = portfolioValue - deposits;
-      var pct = deposits > 0 ? (pnl / deposits * 100) : 0;
-      pnlEl.textContent = (pnl >= 0 ? '+' : '') + pct.toFixed(2) + '%';
-      pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
+      var history = window.st.balanceHistory || [];
+      var now = Date.now();
+      var dayAgo = now - 24 * 60 * 60 * 1000;
+      
+      // Find closest snapshot to 24h ago
+      var snapshot24h = null;
+      for (var i = 0; i < history.length; i++) {
+        if (history[i].t >= dayAgo) { snapshot24h = history[i]; break; }
+      }
+      
+      var pct = 0;
+      if (snapshot24h && snapshot24h.v > 0) {
+        // Real 24h change from history
+        pct = ((portfolioValue - snapshot24h.v) / snapshot24h.v) * 100;
+      } else {
+        // Fallback: compare vs external deposits
+        var extDeposits = (typeof window.getTotalExternalDeposits === 'function')
+          ? window.getTotalExternalDeposits()
+          : 0;
+        if (extDeposits > 0) {
+          pct = ((portfolioValue - extDeposits) / extDeposits) * 100;
+        }
+      }
+      
+      pnlEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      pnlEl.style.color = pct >= 0 ? '#10b981' : '#ef4444';
     }
 
     // Total deposits
