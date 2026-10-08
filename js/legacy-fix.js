@@ -1209,18 +1209,27 @@
    * Does NOT count trade proceeds (sell USD) or internal transfers.
    */
   window.getTotalExternalDeposits = function () {
-    if (!window.st || !Array.isArray(window.st.txs)) return 0;
-    return window.st.txs
-      .filter(function (t) {
-        if (t.amt <= 0) return false;
-        // Exclude trade proceeds
-        if (t.tradeType === 'sell' || t.tradeType === 'convert') return false;
-        if (t.desc && t.desc.indexOf('Sold') === 0) return false;
-        if (t.desc && t.desc.indexOf('Converted') === 0) return false;
-        return true;
-      })
-      .reduce(function (sum, t) { return sum + t.amt; }, 0);
-  };
+  if (!window.st || !Array.isArray(window.st.txs)) return 0;
+  return window.st.txs
+    .filter(function (t) {
+      if (t.amt <= 0) return false;
+      // Only count EXTERNAL deposits (bank, card, crypto from outside)
+      var desc = (t.desc || '').toLowerCase();
+      if (desc.indexOf('sold') !== -1) return false;        // trade: sell
+      if (desc.indexOf('convert') !== -1) return false;      // trade: convert
+      if (desc.indexOf('buy') === 0) return false;           // trade: buy shouldn't be positive
+      if (t.tradeType === 'sell') return false;
+      if (t.tradeType === 'convert') return false;
+      if (t.tradeType === 'buy') return false;
+      // Only allow real deposit descriptions
+      if (desc.indexOf('deposit') !== -1) return true;
+      if (desc.indexOf('admin') !== -1) return true;
+      if (desc.indexOf('bonus') !== -1) return true;
+      if (desc.indexOf('transfer') !== -1) return true;
+      return false;
+    })
+    .reduce(function (sum, t) { return sum + t.amt; }, 0);
+};
 
   /**
    * Update "Total trade volume" counter.
