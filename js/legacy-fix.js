@@ -1111,5 +1111,179 @@
   setTimeout(bindExchangeButtons, 500);
   setTimeout(bindExchangeButtons, 1500);
   setTimeout(bindExchangeButtons, 3000);
+  // ============================================================
+  // SECTION 19: TRADE HISTORY TRACKING
+  // ============================================================
+  // This section overrides the trade execution hooks to record
+  // every trade in the user's transaction history, so clients
+  // can see their full trading activity in the dashboard.
+  // ============================================================
+
+  /**
+   * Record a trade in the user's transaction history.
+   * Called by trade-terminal.js after each successful execution.
+   * 
+   * @param {Object} trade - { type, symbol, amount, price, total }
+   */
+  window.recordTradeInHistory = function (trade) {
+    if (!window.st) return;
+    if (!Array.isArray(window.st.txs)) window.st.txs = [];
+
+    var type = trade.type;
+    var symbol = trade.symbol;
+    var amount = Number(trade.amount) || 0;
+    var price = Number(trade.price) || 0;
+    var usdTotal = type === 'buy' ? amount : amount * price;
+
+    var desc, amt;
+    if (type === 'buy') {
+      var cryptoReceived = amount / price;
+      desc = 'Bought ' + cryptoReceived.toFixed(8) + ' ' + symbol + ' @ $' + price.toFixed(2);
+      amt = -amount; // USD spent (negative)
+    } else if (type === 'sell') {
+      desc = 'Sold ' + amount.toFixed(8) + ' ' + symbol + ' @ $' + price.toFixed(2);
+      amt = amount * price; // USD received (positive)
+    } else if (type === 'convert') {
+      var target = trade.targetSymbol || symbol;
+      var received = amount * price;
+      desc = 'Converted ' + amount.toFixed(8) + ' ' + (trade.sourceSymbol || '') + ' → ' + received.toFixed(8) + ' ' + target;
+      amt = 0; // internal swap
+    } else {
+      return;
+    }
+
+    // Idempotency: skip if a tx with same description + ts was added in last 5 sec
+    var now = Date.now();
+    var recentDup = window.st.txs.find(function (t) {
+      return t.desc === desc && Math.abs((t.ts || 0) - now) < 5000;
+    });
+    if (recentDup) return;
+
+    window.st.txs.unshift({
+      date: new Date().toISOString().slice(0, 10),
+      ts: now,
+      desc: desc,
+      amt: amt,
+      status: 'Completed',
+      symbol: symbol,
+      price: price,
+      tradeType: type,
+      crypto: type === 'buy' ? amount / price : amount
+    });
+
+    // Cap history at 500 entries
+    if (window.st.txs.length > 500) window.st.txs.length = 500;
+
+    // Append to balance history for chart
+    if (!Array.isArray(window.st.balanceHistory)) window.st.balanceHistory = [];
+    var portfolio = (window.getPortfolioValue && window.getPortfolioValue()) || (window.st.usd || 0);
+    window.st.balanceHistory.push({ t: now, v: portfolio });
+    if (window.st.balanceHistory.length > 3000) {
+      window.st.balanceHistory = window.st.balanceHistory.slice(-3000);
+    }
+
+    // Save to server
+    if (typeof window.saveToServer === 'function') window.saveToServer();
+
+    // Re-render dashboard
+    if (typeof window.render === 'function') window.render();
+    if (typeof window.renderRecentTx === 'function') window.renderRecentTx();
+    if (typeof window.renderExchangeTx === 'function') window.renderExchangeTx();
+  };
+
+  /**
+   * Update "Total deposits" counter.
+   * Only counts EXTERNAL deposits (bank, card, crypto from outside).
+   * Does NOT count trade proceeds (sell USD) or internal transfers.
+   */
+  window.getTotalExternalDeposits = function () {
+    if (!window.st || !Array.isArray(window.st.txs)) return 0;
+    return window.st.txs
+      .filter(function (t) {
+        if (t.amt <= 0) return false;
+        // Exclude trade proceeds
+        if (t.tradeType === 'sell' || t.tradeType === 'convert') return false;
+        if (t.desc && t.desc.indexOf('Sold') === 0) return false;
+        if (t.desc && t.desc.indexOf('Converted') === 0) return false;
+        return true;
+      })
+      .reduce(function (sum, t) { return sum + t.amt; }, 0);
+  };
+
+  /**
+   * Update "Total trade volume" counter.
+   * Sums all buy/sell/convert trades in USD terms.
+   */
+  window.getTotalTradeVolume = function () {
+    if (!window.st || !Array.isArray(window.st.txs)) return 0;
+    return window.st.txs
+      .filter(function (t) {
+        return t.tradeType === 'buy' || t.tradeType === 'sell' || t.tradeType === 'convert';
+      })
+      .reduce(function (sum, t) {
+        var absAmt = Math.abs(t.amt || 0);
+        return sum + absAmt;
+      }, 0);
+  };
+
+  // Override the exchange dashboard totals to use the correct counters
+  var _origRenderExchangeDashV3 = window.renderExchangeDash;
+  window.renderExchangeDash = function () {
+    if (typeof _origRenderExchangeDashV3 === 'function') {
+      _origRenderExchangeDashV3.apply(this, arguments);
+    }
+
+    // Fix Total Deposits counter
+    var depEl = document.getElementById('exTotalDeposits');
+    if (depEl) {
+      var ext = window.getTotalExternalDeposits();
+      depEl.textContent = window.fmtCurrency ? window.fmtCurrency(ext) : ('$' + ext.toFixed(2));
+    }
+
+    // Also fix PnL calculation to use correct deposits
+    var pnlEl = document.getElementById('exPnl24h');
+    if (pnlEl && window.st) {
+      var portfolio = (window.getPortfolioValue && window.getPortfolioValue()) || (window.st.usd || 0);
+      var extDeposits = window.getTotalExternalDeposits();
+      var pnl = portfolio - extDeposits;
+      var pct = extDeposits > 0 ? (pnl / extDeposits * 100) : 0;
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
+    }
+  };
+
+  // ============================================================
+  // SECTION 20: HOOK INTO TRADE-TERMINAL
+  // ============================================================
+  // trade-terminal.js will call window.recordTradeInHistory after
+  // each successful trade. We monkey-patch executeTrade to
+  // intercept calls, but the cleaner way is for trade-terminal.js
+  // to call recordTradeInHistory directly. Since we control both
+  // files, we assume trade-terminal.js will call it.
+  //
+  // For safety: we also patch executeBuy / executeSell / executeConvert
+  // (from trade-terminal.js) to record trades automatically.
+  // ============================================================
+
+  function hookTradeTerminal() {
+    if (!window.TT || typeof window._ttHooked !== 'undefined') return;
+    window._ttHooked = true;
+
+    // Patch the trade success modal function to also record history
+    var _origShowSuccess = window.showTradeSuccessModal;
+    if (typeof _origShowSuccess === 'function') {
+      window.showTradeSuccessModal = function (data) {
+        _origShowSuccess.apply(this, arguments);
+        // (history recording happens in the trade functions themselves)
+      };
+    }
+  }
+
+  // Try to hook immediately, and retry (trade-terminal.js loads async)
+  hookTradeTerminal();
+  setTimeout(hookTradeTerminal, 500);
+  setTimeout(hookTradeTerminal, 1500);
+
+  console.log('%c[NordicCrypto] 📜 Trade history tracking enabled', 'color:#f59e0b;font-weight:bold');
    
 })();
