@@ -1278,15 +1278,97 @@
   /**
    * Bind filter buttons.
    */
-  function bindOrderHistoryFilters() {
-    document.querySelectorAll('.tt-oh-filters button').forEach(function (btn) {
+   function bindOrderHistoryFilters() {
+    // Bottom tabs: Order History / Open Orders / Recent Trades
+    document.querySelectorAll('.tt-bottom-tabs button').forEach(function (btn) {
       if (btn._bound) return;
       btn._bound = true;
       btn.onclick = function () {
-        document.querySelectorAll('.tt-oh-filters button').forEach(function (b) { b.classList.remove('on'); });
+        var tab = this.getAttribute('data-tab');
+        document.querySelectorAll('.tt-bottom-tabs button').forEach(function (b) { b.classList.remove('on'); });
+        this.classList.add('on');
+        document.querySelectorAll('.tt-tab-content').forEach(function (c) {
+          c.classList.toggle('on', c.getAttribute('data-tab-content') === tab);
+        });
+
+        // Show/hide filters (only on history tab)
+        var filters = document.getElementById('ttOhFilters');
+        if (filters) filters.classList.toggle('hidden', tab !== 'history');
+
+        // Load data for this tab
+        if (tab === 'history') {
+          loadOrderHistory();
+        } else if (tab === 'open') {
+          if (typeof window.refreshOpenOrders === 'function') window.refreshOpenOrders();
+          renderOpenOrders();
+        } else if (tab === 'trades') {
+          renderRecentTrades();
+        }
+      };
+    });
+
+    // Filters: All / Filled / Open / Cancelled
+    document.querySelectorAll('.tt-bottom-filters button').forEach(function (btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.onclick = function () {
+        document.querySelectorAll('.tt-bottom-filters button').forEach(function (b) { b.classList.remove('on'); });
         this.classList.add('on');
         var filter = this.getAttribute('data-filter');
         loadOrderHistory(filter);
+      };
+    });
+  }
+
+  /**
+   * Render Open Orders list from window.st.openOrders.
+   */
+  function renderOpenOrders() {
+    var el = document.querySelector('.tt-oo-list');
+    if (!el) return;
+
+    var orders = (window.st && window.st.openOrders) || [];
+    var openOrders = orders.filter(function (o) { return o.status === 'open'; });
+
+    // Update tab count
+    var countEl = document.getElementById('ttCountOpen');
+    if (countEl) {
+      countEl.textContent = openOrders.length;
+      countEl.dataset.empty = openOrders.length === 0 ? '1' : '0';
+    }
+
+    if (!openOrders.length) {
+      el.innerHTML = '<div class="tt-empty">No open orders</div>';
+      return;
+    }
+
+    var html = '';
+    openOrders.forEach(function (o) {
+      var typeLabel = o.type === 'buy' ? 'BUY' : 'SELL';
+      var typeClass = o.type === 'buy' ? 'buy' : 'sell';
+      var amtStr = (Number(o.amount) / Number(o.price)).toFixed(6) + ' ' + o.symbol;
+      var priceStr = '$' + Number(o.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var totalStr = '$' + Number(o.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var timeStr = new Date(o.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+      html += '<div class="tt-oo-row" data-order-id="' + o.id + '">' +
+        '<span class="tt-oh-status-icon open">⏳</span>' +
+        '<span class="tt-oh-type ' + typeClass + '">' + typeLabel + '</span>' +
+        '<span class="tt-oh-symbol">' + o.symbol + '</span>' +
+        '<span class="tt-oh-amount">' + amtStr + '</span>' +
+        '<span class="tt-oh-price">' + priceStr + '</span>' +
+        '<span class="tt-oh-total">' + totalStr + '</span>' +
+        '<span class="tt-oh-time">' + timeStr + '</span>' +
+        '<span><button class="tt-oo-cancel" data-order-id="' + o.id + '">Cancel</button></span>' +
+      '</div>';
+    });
+    el.innerHTML = html;
+
+    el.querySelectorAll('.tt-oo-cancel').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        var orderId = this.getAttribute('data-order-id');
+        if (typeof cancelOrder === 'function') cancelOrder(orderId);
       };
     });
   }
@@ -1305,6 +1387,7 @@
   // Expose for external use
   window.loadOrderHistory = loadOrderHistory;
   window.renderOrderHistory = renderOrderHistory;
+  window.renderOpenOrders = renderOpenOrders;
   window.cancelOrder = cancelOrder;
 
   // Hook into terminal open
@@ -1322,7 +1405,7 @@
   // Start periodic refresh
   startOrderHistoryRefresh();
 
-  // Bind filters on load (in case terminal already open)
+  // Bind filters on load
   setTimeout(bindOrderHistoryFilters, 1000);
   console.log('%c[NordicCrypto] 📊 Trade Terminal v1.0 loaded', 'color:#8b5cf6;font-weight:bold;font-size:13px');
 
