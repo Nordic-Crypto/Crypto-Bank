@@ -4976,6 +4976,7 @@ playChime();
 spawnConfetti();
 toast('✓ Submitted for admin review', false);
 }
+} 
    
 /* ---------- AUTO DEPOSIT CHECK ---------- */
 (function(){
