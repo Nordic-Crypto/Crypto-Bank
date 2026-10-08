@@ -1172,9 +1172,15 @@
   /**
    * Render the order history list.
    */
-  function renderOrderHistory(orders) {
+    function renderOrderHistory(orders) {
     var el = document.querySelector('.tt-oh-list');
     if (!el) return;
+
+    var countEl = document.getElementById('ttCountHistory');
+    if (countEl) {
+      countEl.textContent = orders.length;
+      countEl.dataset.empty = orders.length === 0 ? '1' : '0';
+    }
 
     if (!orders.length) {
       el.innerHTML = '<div class="tt-empty">No orders yet</div>';
@@ -1184,37 +1190,21 @@
     var html = '';
     orders.forEach(function (o) {
       var statusIcon, statusClass;
-      if (o.status === 'filled') {
-        statusIcon = '✓';
-        statusClass = 'filled';
-      } else if (o.status === 'open') {
-        statusIcon = '⏳';
-        statusClass = 'open';
-      } else if (o.status === 'cancelled') {
-        statusIcon = '✗';
-        statusClass = 'cancelled';
-      } else {
-        statusIcon = '•';
-        statusClass = 'cancelled';
-      }
+      if (o.status === 'filled') { statusIcon = '✓'; statusClass = 'filled'; }
+      else if (o.status === 'open') { statusIcon = '⏳'; statusClass = 'open'; }
+      else if (o.status === 'cancelled') { statusIcon = '✗'; statusClass = 'cancelled'; }
+      else { statusIcon = '•'; statusClass = 'cancelled'; }
 
       var typeLabel = o.type === 'buy' ? 'BUY' : (o.type === 'sell' ? 'SELL' : 'CONV');
       var typeClass = o.type === 'buy' ? 'buy' : 'sell';
 
-      // Amount formatting
-      var amtStr;
-      if (o.type === 'buy') {
-        amtStr = (Number(o.amount) / Number(o.price)).toFixed(6) + ' ' + o.symbol;
-      } else {
-        amtStr = Number(o.amount).toFixed(6) + ' ' + o.symbol;
-      }
+      var amtStr = (o.type === 'buy')
+        ? (Number(o.amount) / Number(o.price)).toFixed(6) + ' ' + o.symbol
+        : Number(o.amount).toFixed(6) + ' ' + o.symbol;
 
-      var priceStr = '$' + Number(o.price).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      var priceStr = '$' + Number(o.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var totalStr = '$' + Number(o.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-      // Time
       var t = new Date(o.ts);
       var now = Date.now();
       var diff = now - o.ts;
@@ -1224,31 +1214,18 @@
       else if (diff < 86400000) timeStr = t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       else timeStr = t.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
-      // Cancel button (only for open orders)
-      var cancelBtn = (o.status === 'open')
-        ? '<button class="tt-oh-cancel" data-order-id="' + o.id + '">Cancel</button>'
-        : '';
-
       html += '<div class="tt-oh-row" data-order-id="' + o.id + '">' +
         '<span class="tt-oh-status-icon ' + statusClass + '">' + statusIcon + '</span>' +
         '<span class="tt-oh-type ' + typeClass + '">' + typeLabel + '</span>' +
         '<span class="tt-oh-symbol">' + o.symbol + '</span>' +
         '<span class="tt-oh-amount">' + amtStr + '</span>' +
         '<span class="tt-oh-price">' + priceStr + '</span>' +
+        '<span class="tt-oh-total">' + totalStr + '</span>' +
         '<span class="tt-oh-time">' + timeStr + '</span>' +
-      '</div>' + (cancelBtn ? '<div style="text-align:right;padding:0 16px 6px;">' + cancelBtn + '</div>' : '');
+        '<span></span>' +
+      '</div>';
     });
-
     el.innerHTML = html;
-
-    // Bind cancel buttons
-    el.querySelectorAll('.tt-oh-cancel').forEach(function (btn) {
-      btn.onclick = function (e) {
-        e.stopPropagation();
-        var orderId = this.getAttribute('data-order-id');
-        cancelOrder(orderId);
-      };
-    });
   }
 
   /**
