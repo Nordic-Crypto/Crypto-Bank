@@ -2359,23 +2359,23 @@ function confirmModal(){
   if (!a || a <= 0){ toast('Please enter a valid amount', true); return; }
 
   if (mode === 'add'){
-    if (isCrypto(m)){
-      var coin = (m === 'Bitcoin (BTC)') ? 'BTC' : 'ETH';
-      var wallet = getDepositWallet(coin);
-      if (!wallet){ toast('Deposit address is not set. Contact support.', true); return; }
-      toast('Send crypto to the address. Watching blockchain...', false);
-      doAutoCheck();
-      return;
-    }
-    st.usd += a;
-    addTx('Deposit via ' + m, a, 'Under Review');
-    addNotification('Deposit submitted via ' + m + ': ' + fmtCurrency(a), '💰');
-    toast('Added ' + fmt(a));
-    closeModal();
-    render();
-    saveToServer();
+  if (isCrypto(m)){
+    var coin = (m === 'Bitcoin (BTC)') ? 'BTC' : 'ETH';
+    var wallet = getDepositWallet(coin);
+    if (!wallet){ toast('Deposit address is not set. Contact support.', true); return; }
+    toast('Send crypto to the address. Watching blockchain...', false);
+    doAutoCheck();
     return;
   }
+  // 🛡️ НЕ зачисляем сразу — все депозиты требуют approve админа
+  addTx('Deposit via ' + m + ' — pending review', a, 'Under Review');
+  addNotification('Deposit submitted via ' + m + ': ' + fmtCurrency(a) + ' — pending review', '⏳');
+  toast('Deposit submitted! Waiting for approval.');
+  closeModal();
+  render();
+  saveToServer();
+  return;
+}
 
   if (a > st.usd){ toast('Insufficient balance', true); return; }
   var dest = '';
