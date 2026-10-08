@@ -4975,7 +4975,8 @@ addNotification('Deposit(s) submitted for review', '⏳');
 playChime();
 spawnConfetti();
 toast('✓ Submitted for admin review', false);
-
+}
+   
 /* ---------- AUTO DEPOSIT CHECK ---------- */
 (function(){
   var CHECK_INTERVAL = 15000;
