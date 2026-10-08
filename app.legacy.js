@@ -4975,7 +4975,11 @@ addNotification('Deposit(s) submitted for review', '⏳');
 playChime();
 spawnConfetti();
 toast('✓ Submitted for admin review', false);
-}
+  } catch(e) {                             // <-- ДОБАВИТЬ catch
+    console.error('[scanAllDeposits]', e);
+    toast('Scan error — try again', true);
+  }
+} 
    
 /* ---------- AUTO DEPOSIT CHECK ---------- */
 (function(){
