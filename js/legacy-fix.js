@@ -347,6 +347,17 @@
 
       // Notify
       if (typeof window.playChime === 'function') window.playChime();
+             // Record convert in history
+      if (typeof window.recordTradeInHistory === 'function') {
+        window.recordTradeInHistory({
+          type: 'convert',
+          symbol: toCoin,
+          sourceSymbol: fromCoin,
+          targetSymbol: toCoin,
+          amount: amount,
+          price: rate
+        });
+      }
       if (typeof window.addNotification === 'function') {
         window.addNotification('Bought ' + Number(amount / price).toFixed(8) + ' ' + coin, '📈');
       }
