@@ -397,6 +397,17 @@
   // SECTION 11: GENERATE CANDLES
   // ============================================================
 
+      /**
+   * Generate realistic OHLC candles for the chart.
+   * 
+   * Strategy:
+   *   1. Start from the current live price (last candle close).
+   *   2. Walk backwards in time — each earlier candle is derived
+   *      from the next one with realistic volatility.
+   *   3. Use mean reversion: price gently gravitates toward a
+   *      long-term anchor (current price ± 3%) to avoid runaway.
+   *   4. Result: smooth, realistic chart with no end-of-chart jumps.
+   */
   function generateCandles() {
     var basePrice = getCoinPrice(TT.coin);
     if (basePrice <= 0) basePrice = 100;
@@ -404,35 +415,73 @@
     var tfMinutes = { '1h': 60, '4h': 240, '1d': 1440 };
     var minutes = tfMinutes[TT.timeframe] || 240;
     var now = Date.now();
-    var candles = [];
-    var price = basePrice * (0.92 + Math.random() * 0.16); // start within ±8%
+    var N = TT.maxCandles;
 
-    var vol = basePrice * 0.008; // candle volatility
+    // Volatility per candle (scaled by timeframe)
+    // 4h → ~1.2% swing; 1h → ~0.6%; 1d → ~3%
+    var tfVolFactor = { '1h': 0.006, '4h': 0.012, '1d': 0.03 };
+    var sigma = basePrice * (tfVolFactor[TT.timeframe] || 0.012);
 
-    for (var i = TT.maxCandles - 1; i >= 0; i--) {
-      var t = now - i * minutes * 60 * 1000;
-      var o = price;
-      var drift = (Math.random() - 0.5) * vol * 2;
-      var c = o + drift;
-      var h = Math.max(o, c) + Math.random() * vol;
-      var l = Math.min(o, c) - Math.random() * vol;
-      var v = Math.random() * basePrice * 100 + 50;
+    // Mean-reversion anchor: current price is the long-term center
+    var anchor = basePrice;
 
-      candles.push({ t: t, o: o, h: h, l: l, c: c, v: v });
-      price = c;
+    // Generate candles backwards: index 0 = oldest, N-1 = newest
+    // We start with newest candle close = current price, then walk back.
+    var closes = new Array(N);
+    closes[N - 1] = basePrice;
+
+    for (var i = N - 2; i >= 0; i--) {
+      var next = closes[i + 1];
+      // Random walk with mean reversion toward anchor
+      var reversion = (anchor - next) * 0.03; // pull toward anchor
+      var noise = (Math.random() - 0.5) * sigma * 2;
+      var c = next + reversion + noise;
+      // Clamp to ±15% from anchor (prevents runaway)
+      var maxDev = anchor * 0.15;
+      if (c < anchor - maxDev) c = anchor - maxDev;
+      if (c > anchor + maxDev) c = anchor + maxDev;
+      closes[i] = c;
     }
 
-    // Force last candle close = current price
+    // Build OHLC from closes
+    var candles = [];
+    for (var k = 0; k < N; k++) {
+      var closePrice = closes[k];
+      var openPrice = (k === 0) ? closePrice : closes[k - 1];
+
+      // Wick size — small relative to body
+      var wickSize = sigma * (0.3 + Math.random() * 0.7);
+      var high = Math.max(openPrice, closePrice) + wickSize * Math.random();
+      var low  = Math.min(openPrice, closePrice) - wickSize * Math.random();
+
+      // Volume — higher on larger moves
+      var movePct = Math.abs(closePrice - openPrice) / openPrice;
+      var baseVol = basePrice * 80;
+      var vol = baseVol * (0.5 + Math.random() * 1.0) * (1 + movePct * 20);
+
+      candles.push({
+        t: now - (N - 1 - k) * minutes * 60 * 1000,
+        o: openPrice,
+        h: high,
+        l: low,
+        c: closePrice,
+        v: vol
+      });
+    }
+
+    // Last candle close MUST equal live price exactly (no jump)
     if (candles.length) {
-      candles[candles.length - 1].c = basePrice;
-      candles[candles.length - 1].h = Math.max(candles[candles.length - 1].h, basePrice);
-      candles[candles.length - 1].l = Math.min(candles[candles.length - 1].l, basePrice);
+      var last = candles[candles.length - 1];
+      last.c = basePrice;
+      last.h = Math.max(last.h, basePrice);
+      last.l = Math.min(last.l, basePrice);
+      last.o = Math.max(0.001, Math.min(last.o, basePrice * 1.005));
     }
 
     TT.candles = candles;
     TT.viewStart = Math.max(0, candles.length - TT.viewCount);
   }
-
+   
   // ============================================================
   // SECTION 12: GENERATE ORDER BOOK
   // ============================================================
