@@ -655,8 +655,9 @@
   // SECTION 10: INIT — Apply patches
   // ============================================================
 
-  function applyAllPatches() {
+    function applyAllPatches() {
     if (typeof window.initNav === 'function') window.initNav();
+    bindExchangeButtons();
     startLivePriceTicker();
   }
 
