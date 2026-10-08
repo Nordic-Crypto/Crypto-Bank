@@ -3662,6 +3662,163 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="chat-footer">🔒 Encrypted • Powered by Nordic Crypto Support</div>
   </div>
 </div>
+<!-- ═══════════════════════════════════════════════════════════
+     TRADE TERMINAL MODALS — BUY / SELL / CONVERT
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- BUY MODAL -->
+<div class="trade-mask" id="buyModal">
+  <div class="trade-box">
+    <div class="trade-header">
+      <div class="trade-title-group">
+        <div class="trade-icon buy">📈</div>
+        <div>
+          <div class="trade-title">Buy Crypto</div>
+          <div class="trade-sub">Instant purchase at market price</div>
+        </div>
+      </div>
+      <button class="trade-close" onclick="closeTradeModal('buyModal')">×</button>
+    </div>
+    <div class="trade-body">
+      <div class="trade-field">
+        <label>Coin</label>
+        <div class="trade-coin-selector" id="buyCoinSelector">
+          <button class="trade-coin-btn on" data-coin="BTC"><span class="coin-dot btc"></span> BTC</button>
+          <button class="trade-coin-btn" data-coin="ETH"><span class="coin-dot eth"></span> ETH</button>
+          <button class="trade-coin-btn" data-coin="USDT"><span class="coin-dot usdt"></span> USDT</button>
+          <button class="trade-coin-btn" data-coin="SOL"><span class="coin-dot sol"></span> SOL</button>
+          <button class="trade-coin-btn" data-coin="BNB"><span class="coin-dot bnb"></span> BNB</button>
+        </div>
+      </div>
+      <div class="trade-field">
+        <label>Amount (USD)</label>
+        <div class="trade-input-wrap">
+          <span class="trade-input-prefix">$</span>
+          <input type="number" id="buyAmount" class="trade-input" placeholder="0.00" min="10" step="0.01">
+          <button class="trade-max-btn" onclick="setMaxBuy()">MAX</button>
+        </div>
+        <div class="trade-quick-amounts">
+          <button onclick="setBuyAmount(50)">$50</button>
+          <button onclick="setBuyAmount(100)">$100</button>
+          <button onclick="setBuyAmount(500)">$500</button>
+          <button onclick="setBuyAmount(1000)">$1000</button>
+        </div>
+      </div>
+      <div class="trade-preview">
+        <div class="trade-preview-row"><span>You receive</span><b id="buyReceive">0.00000000 BTC</b></div>
+        <div class="trade-preview-row"><span>Rate</span><b id="buyRate">—</b></div>
+        <div class="trade-preview-row"><span>Available balance</span><b id="buyBalance">$0.00</b></div>
+        <div class="trade-preview-row"><span>Network fee</span><b style="color:#22c55e">Free</b></div>
+      </div>
+      <div class="trade-error" id="buyError"></div>
+      <button class="trade-submit buy" onclick="executeBuy()">Buy <span id="buyBtnCoin">BTC</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- SELL MODAL -->
+<div class="trade-mask" id="sellModal">
+  <div class="trade-box">
+    <div class="trade-header">
+      <div class="trade-title-group">
+        <div class="trade-icon sell">📉</div>
+        <div>
+          <div class="trade-title">Sell Crypto</div>
+          <div class="trade-sub">Convert crypto to USD instantly</div>
+        </div>
+      </div>
+      <button class="trade-close" onclick="closeTradeModal('sellModal')">×</button>
+    </div>
+    <div class="trade-body">
+      <div class="trade-field">
+        <label>Coin</label>
+        <div class="trade-coin-selector" id="sellCoinSelector">
+          <button class="trade-coin-btn on" data-coin="BTC"><span class="coin-dot btc"></span> BTC</button>
+          <button class="trade-coin-btn" data-coin="ETH"><span class="coin-dot eth"></span> ETH</button>
+        </div>
+      </div>
+      <div class="trade-field">
+        <label>Amount (<span id="sellCoinLabel">BTC</span>)</label>
+        <div class="trade-input-wrap">
+          <input type="number" id="sellAmount" class="trade-input" placeholder="0.00000000" min="0" step="0.00000001">
+          <button class="trade-max-btn" onclick="setMaxSell()">MAX</button>
+        </div>
+      </div>
+      <div class="trade-preview">
+        <div class="trade-preview-row"><span>You receive</span><b id="sellReceive">$0.00</b></div>
+        <div class="trade-preview-row"><span>Rate</span><b id="sellRate">—</b></div>
+        <div class="trade-preview-row"><span>Available</span><b id="sellBalance">0.00000000 BTC</b></div>
+      </div>
+      <div class="trade-error" id="sellError"></div>
+      <button class="trade-submit sell" onclick="executeSell()">Sell <span id="sellBtnCoin">BTC</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERT MODAL -->
+<div class="trade-mask" id="convertModal">
+  <div class="trade-box">
+    <div class="trade-header">
+      <div class="trade-title-group">
+        <div class="trade-icon convert">🔄</div>
+        <div>
+          <div class="trade-title">Convert Crypto</div>
+          <div class="trade-sub">Swap between any assets</div>
+        </div>
+      </div>
+      <button class="trade-close" onclick="closeTradeModal('convertModal')">×</button>
+    </div>
+    <div class="trade-body">
+      <div class="convert-row">
+        <div class="convert-side">
+          <label>From</label>
+          <select id="convertFrom" class="trade-select" onchange="updateConvertPreview()">
+            <option value="BTC">BTC — Bitcoin</option>
+            <option value="ETH">ETH — Ethereum</option>
+            <option value="USDT">USDT — Tether</option>
+          </select>
+          <div class="trade-input-wrap">
+            <input type="number" id="convertAmount" class="trade-input" placeholder="0.00000000" step="0.00000001" oninput="updateConvertPreview()">
+            <button class="trade-max-btn" onclick="setMaxConvert()">MAX</button>
+          </div>
+          <div class="convert-balance" id="convertFromBalance">Balance: 0.00000000</div>
+        </div>
+        <button class="convert-swap" onclick="swapConvert()" title="Swap">⇅</button>
+        <div class="convert-side">
+          <label>To</label>
+          <select id="convertTo" class="trade-select" onchange="updateConvertPreview()">
+            <option value="ETH">ETH — Ethereum</option>
+            <option value="BTC">BTC — Bitcoin</option>
+            <option value="USDT">USDT — Tether</option>
+          </select>
+          <div class="trade-input-wrap">
+            <input type="text" id="convertResult" class="trade-input" placeholder="0.00000000" readonly>
+          </div>
+          <div class="convert-balance" id="convertToBalance">Balance: 0.00000000</div>
+        </div>
+      </div>
+      <div class="trade-preview" style="margin-top:20px">
+        <div class="trade-preview-row"><span>Exchange rate</span><b id="convertRate">—</b></div>
+        <div class="trade-preview-row"><span>Network fee</span><b style="color:#22c55e">Free</b></div>
+      </div>
+      <div class="trade-error" id="convertError"></div>
+      <button class="trade-submit convert" onclick="executeConvert()">Convert Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="trade-mask" id="tradeSuccessModal">
+  <div class="trade-box trade-success-box">
+    <div class="trade-success-icon">✓</div>
+    <div class="trade-success-title">Trade executed!</div>
+    <div class="trade-success-desc" id="tradeSuccessDesc">Your order has been filled</div>
+    <div class="trade-success-amount" id="tradeSuccessAmount">+0 BTC</div>
+    <div class="trade-success-details" id="tradeSuccessDetails"></div>
+    <button class="trade-submit buy" onclick="closeTradeModal('tradeSuccessModal')" style="margin-top:24px">Done</button>
+  </div>
+</div>
+  
 <script src="app.js?v=20261008"></script>
 <script>
 // Отключаем Service Worker и чистим кэш (чтобы всегда была свежая версия)
