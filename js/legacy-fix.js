@@ -218,10 +218,11 @@
           '</div>' +
         '</div>' +
 
-        '<div style="display:flex;gap:10px;position:relative;z-index:1;">' +
-          '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); if(typeof toast===\'function\') toast(\'We will notify you when Trade launches 🚀\');" style="flex:1;padding:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;">Notify me when live</button>' +
-          '<button onclick="document.getElementById(\'tradeTerminalModal\').remove()" style="flex:1;padding:14px;background:rgba(255,255,255,.05);color:#8b95a5;border:1px solid rgba(255,255,255,.1);border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;">Close</button>' +
-        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;position:relative;z-index:1;">' +
+  '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); window.openTradeModal(\'buyModal\');" style="padding:14px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;box-shadow:0 12px 30px -8px rgba(16,185,129,.6);">📈 Buy</button>' +
+  '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); window.openTradeModal(\'sellModal\');" style="padding:14px;background:linear-gradient(135deg,#ef4444,#f87171);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;box-shadow:0 12px 30px -8px rgba(239,68,68,.6);">📉 Sell</button>' +
+  '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); window.openTradeModal(\'convertModal\');" style="padding:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;box-shadow:0 12px 30px -8px rgba(139,92,246,.6);">🔄 Convert</button>' +
+'</div>' +
 
         '<style>@keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}</style>' +
       '</div>';
