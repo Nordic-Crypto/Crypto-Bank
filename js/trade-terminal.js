@@ -960,9 +960,15 @@
     }
   }
 
+    /**
+   * Execute a market/limit trade via Worker ?action=trade.
+   * This is the ONLY function that sends trades — no legacy overrides.
+   */
   async function executeTrade(type, symbol, amount, price, orderType) {
     var token = localStorage.getItem('session_token');
     if (!token) { alert('Not authenticated'); return; }
+
+    var clientTradeId = 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
     try {
       var res = await fetch(window.WORKER_URL + '?action=trade', {
@@ -970,12 +976,12 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: token,
-          clientTradeId: 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          clientTradeId: clientTradeId,
           type: type,
           symbol: symbol,
           amount: amount,
           price: price,
-          orderType: orderType,
+          orderType: orderType || 'market',
           limitPrice: orderType === 'limit' ? price : null
         })
       });
@@ -992,6 +998,7 @@
         if (data.bnb !== undefined) window.st.bnb = data.bnb;
       }
 
+      // Re-render
       if (typeof window.render === 'function') window.render();
       if (typeof window.renderExchangeDash === 'function') window.renderExchangeDash();
       if (typeof window.playChime === 'function') window.playChime();
@@ -1001,20 +1008,36 @@
         ? (amount / price).toFixed(8) + ' ' + symbol
         : amount.toFixed(8) + ' ' + symbol;
       if (typeof window.addNotification === 'function') {
-        window.addNotification(action + ' ' + amountStr + ' @ ' + fmtPrice(price), type === 'buy' ? '📈' : '📉');
+        window.addNotification(action + ' ' + amountStr + ' @ $' + price.toFixed(2), type === 'buy' ? '📈' : '📉');
       }
 
-      selectCoin(TT.coin); // refresh
-      if (orderType === 'market') closeTradeTerminalFull();
+      // Record in history
+      if (typeof window.recordTradeInHistory === 'function') {
+        window.recordTradeInHistory({
+          type: type,
+          symbol: symbol,
+          amount: amount,
+          price: price
+        });
+      }
+
+      // Refresh order history + open orders immediately
+      if (typeof window.loadOrderHistory === 'function') window.loadOrderHistory();
+      if (typeof window.refreshOpenOrders === 'function') window.refreshOpenOrders();
 
       if (typeof window.toast === 'function') {
         window.toast('✅ ' + action + ' ' + amountStr);
       }
+
+      // For market orders: keep terminal OPEN (don't close)
+      // The user can see their trade appear in Order History instantly.
+      return data;
+
     } catch (e) {
       alert('Trade failed: ' + e.message);
+      throw e;
     }
   }
-
   // ============================================================
   // SECTION 16: LIVE UPDATES
   // ============================================================
