@@ -1,13 +1,13 @@
 /* ============================================================
-   NORDIC CRYPTO — TRADE TERMINAL v2.0
-   Clean rebuild. No duplicate rules. No conflicts.
+   NORDIC CRYPTO — TRADE TERMINAL v3.0
+   Professional trading terminal. Binance-grade UI.
    ============================================================ */
 
 /* ---------- Terminal container ---------- */
 .trade-terminal {
   position: fixed;
   inset: 0;
-  background: #0a0e15;
+  background: #080b12;
   z-index: 9999;
   display: none;
   flex-direction: column;
@@ -24,7 +24,7 @@
   align-items: center;
   padding: 0 20px;
   height: 64px;
-  background: #0f1720;
+  background: linear-gradient(180deg, #0f1720 0%, #0a0e15 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
   gap: 20px;
@@ -459,15 +459,15 @@
 .tt-submit-convert { background: linear-gradient(135deg, #8b5cf6, #ec4899); box-shadow: 0 8px 24px -8px rgba(139, 92, 246, 0.6); }
 
 /* ============================================================
-   BOTTOM PANEL — Unified Orders / Trades
+   BOTTOM PANEL v3.0 — Pro Trading Table
    ============================================================ */
 
 .tt-bottom {
-  background: #0a0e15;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: #080b12;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  height: 240px;
+  height: 280px;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -476,30 +476,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
-  background: #0f1720;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 0 20px;
+  background: linear-gradient(180deg, #0f1720 0%, #0d131c 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
-  height: 44px;
-  gap: 12px;
+  height: 48px;
+  gap: 16px;
 }
 
 .tt-bottom-tabs {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   height: 100%;
 }
 
 .tt-bottom-tabs button {
-  padding: 0 16px;
+  padding: 0 18px;
   background: transparent;
   border: none;
-  color: #7a8a9e;
-  font-size: 12px;
+  color: #64748b;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -508,7 +508,7 @@
   height: 100%;
 }
 
-.tt-bottom-tabs button:hover { color: #fff; }
+.tt-bottom-tabs button:hover { color: #cbd5e1; }
 .tt-bottom-tabs button.on { color: #fff; }
 
 .tt-bottom-tabs button.on::after {
@@ -516,44 +516,61 @@
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  background: linear-gradient(90deg, #00e5ff, #8b5cf6);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
 }
 
 .tt-tab-count {
-  background: rgba(139, 92, 246, 0.2);
+  background: rgba(139, 92, 246, 0.18);
   color: #c4b5fd;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
-  min-width: 20px;
+  min-width: 22px;
   text-align: center;
+  font-family: ui-monospace, monospace;
 }
 .tt-tab-count[data-empty="1"] { display: none; }
 
 .tt-bottom-filters {
   display: flex;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
   transition: opacity 0.2s;
 }
 .tt-bottom-filters.hidden { opacity: 0; pointer-events: none; }
-
-.tt-bottom-filters button {
-  padding: 5px 11px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: #7a8a9e;
+.tt-filter-label {
   font-size: 10px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 6px;
+}
+.tt-bottom-filters button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
   transition: all 0.15s;
 }
-.tt-bottom-filters button:hover { background: rgba(255, 255, 255, 0.04); color: #fff; }
-.tt-bottom-filters button.on { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+.tt-bottom-filters button:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #cbd5e1;
+}
+.tt-bottom-filters button.on {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #c4b5fd;
+}
 
 .tt-bottom-body {
   flex: 1;
@@ -569,130 +586,186 @@
   display: none;
 }
 .tt-tab-content.on { display: block; }
-.tt-tab-content::-webkit-scrollbar { width: 6px; }
-.tt-tab-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 3px; }
+.tt-tab-content::-webkit-scrollbar { width: 8px; }
+.tt-tab-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.tt-tab-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 
-/* --- Order History row --- */
-.tt-oh-list { display: flex; flex-direction: column; }
+.tt-table {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
 
-.tt-oh-row {
+.tt-table-head {
   display: grid;
-  grid-template-columns: 24px 56px 60px 1fr 1fr 1fr 100px;
-  padding: 10px 16px;
+  grid-template-columns: 32px 70px 80px 1fr 1fr 1fr 100px 90px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  gap: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748b;
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+}
+.tt-table-head-rt {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+.tt-table-head .tt-col-right { text-align: right; }
+
+.tt-oh-list,
+.tt-oo-list,
+.tt-rt-list { display: flex; flex-direction: column; }
+
+.tt-oh-row,
+.tt-oo-row {
+  display: grid;
+  grid-template-columns: 32px 70px 80px 1fr 1fr 1fr 100px 90px;
+  padding: 12px 20px;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  gap: 10px;
+  gap: 12px;
   transition: background 0.15s;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  cursor: pointer;
 }
-.tt-oh-row:hover { background: rgba(255, 255, 255, 0.02); }
+.tt-oh-row:hover,
+.tt-oo-row:hover {
+  background: rgba(139, 92, 246, 0.04);
+}
+.tt-oh-row:nth-child(even),
+.tt-oo-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.01);
+}
 
 .tt-oh-status-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
+  flex-shrink: 0;
 }
 .tt-oh-status-icon.filled {
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
 }
 .tt-oh-status-icon.open {
   background: rgba(251, 191, 36, 0.15);
   color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  border: 1.5px solid rgba(251, 191, 36, 0.4);
   animation: ohPulse 2s ease-in-out infinite;
 }
 @keyframes ohPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); }
-  50% { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
 }
 .tt-oh-status-icon.cancelled {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
 }
 
 .tt-oh-type {
   font-weight: 800;
   text-transform: uppercase;
   font-size: 10px;
-  padding: 3px 7px;
+  padding: 4px 8px;
   border-radius: 4px;
   text-align: center;
   letter-spacing: 0.5px;
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 .tt-oh-type.buy { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 .tt-oh-type.sell { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
-.tt-oh-symbol { color: #fff; font-weight: 800; font-size: 12px; }
-.tt-oh-amount { color: #c4ccd8; text-align: right; font-weight: 600; }
-.tt-oh-price { color: #7a8a9e; text-align: right; }
-.tt-oh-total { color: #fff; text-align: right; font-weight: 700; }
-.tt-oh-time { color: #5a6673; text-align: right; font-size: 10px; }
+.tt-oh-symbol { color: #fff; font-weight: 800; font-size: 13px; }
+.tt-oh-amount,
+.tt-oh-price,
+.tt-oh-total {
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tt-oh-amount { color: #cbd5e1; font-weight: 600; }
+.tt-oh-price { color: #94a3b8; }
+.tt-oh-total { color: #fff; font-weight: 700; }
+.tt-oh-time {
+  text-align: right;
+  color: #64748b;
+  font-size: 11px;
+}
 
-/* --- Recent Trades row --- */
-.tt-rt-list { display: flex; flex-direction: column; }
 .tt-rt-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  padding: 8px 16px;
+  padding: 8px 20px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   font-family: ui-monospace, monospace;
   font-size: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  gap: 12px;
+}
+.tt-rt-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.01);
 }
 .tt-rt-row .tt-rt-price { font-weight: 700; }
 .tt-rt-row.buy .tt-rt-price { color: #10b981; }
 .tt-rt-row.sell .tt-rt-price { color: #ef4444; }
 .tt-rt-row .tt-rt-amount,
 .tt-rt-row .tt-rt-total,
-.tt-rt-row .tt-rt-time { text-align: right; color: #7a8a9e; }
-
-/* --- Open Orders row --- */
-.tt-oo-list { display: flex; flex-direction: column; }
-.tt-oo-row {
-  display: grid;
-  grid-template-columns: 24px 56px 60px 1fr 1fr 1fr 100px;
-  padding: 10px 16px;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  gap: 10px;
+.tt-rt-row .tt-rt-time {
+  text-align: right;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
 }
+
 .tt-oo-cancel {
-  padding: 4px 10px;
-  background: rgba(255, 84, 112, 0.15);
+  padding: 5px 12px;
+  background: rgba(255, 84, 112, 0.1);
   border: 1px solid rgba(255, 84, 112, 0.3);
   color: #ff6b6b;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 10px;
-  font-weight: 700;
-  font-family: inherit;
+  font-weight: 800;
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
   transition: all 0.15s;
+  width: 100%;
 }
-.tt-oo-cancel:hover { background: rgba(255, 84, 112, 0.25); }
+.tt-oo-cancel:hover {
+  background: rgba(255, 84, 112, 0.2);
+  border-color: rgba(255, 84, 112, 0.5);
+}
 
 .tt-empty {
-  padding: 40px 20px;
+  padding: 60px 20px;
   text-align: center;
-  color: #4b5769;
-  font-size: 12px;
+  color: #4b5563;
+  font-size: 13px;
 }
 
 /* ---------- Scrollbar ---------- */
 .tt-ob-asks::-webkit-scrollbar,
 .tt-ob-bids::-webkit-scrollbar,
 .tt-form::-webkit-scrollbar { width: 6px; }
-
 .tt-ob-asks::-webkit-scrollbar-thumb,
 .tt-ob-bids::-webkit-scrollbar-thumb,
 .tt-form::-webkit-scrollbar-thumb {
@@ -718,11 +791,17 @@
   .tt-chart-panel { grid-column: 1; grid-row: 1; min-height: 400px; }
   .tt-orderbook-panel { grid-column: 1; grid-row: 2; max-height: 300px; }
   .tt-form-panel { grid-column: 1; grid-row: 3; }
-  .tt-bottom { height: 200px; }
-  .tt-oh-row, .tt-oo-row {
-    grid-template-columns: 20px 50px 55px 1fr 1fr 80px;
-    font-size: 11px; padding: 8px 12px; gap: 6px;
+  .tt-bottom { height: 220px; }
+  .tt-table-head,
+  .tt-oh-row,
+  .tt-oo-row {
+    grid-template-columns: 26px 60px 65px 1fr 1fr 80px;
+    font-size: 11px;
+    padding: 8px 12px;
+    gap: 8px;
   }
   .tt-oh-total { display: none; }
-  .tt-bottom-tabs button { padding: 0 10px; font-size: 11px; }
+  .tt-oh-time { display: none; }
+  .tt-bottom-tabs button { padding: 0 12px; font-size: 12px; }
+  .tt-filter-label { display: none; }
 }
