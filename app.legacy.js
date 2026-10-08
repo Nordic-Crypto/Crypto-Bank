@@ -103,9 +103,22 @@ function saveToServer(){
   if (localStorage.getItem('user_role') === 'admin') return;
   var token = getSessionToken();
   if (!token) return;
+
+  // 🛡️ Защита: не отправлять, если st не полностью загружен
+  if (!stateLoaded) {
+    console.warn('[saveToServer] skipped — state not loaded yet');
+    return;
+  }
+
+  // 🛡️ Защита: не отправлять пустое состояние (часто при logout/refresh)
+  if (!st.usd && !st.btc && !st.eth && (!st.txs || !st.txs.length)) {
+    console.warn('[saveToServer] skipped — empty state');
+    return;
+  }
+
   fetch(WORKER_LOGIN_URL + '?action=setUserState', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token, state: st, email: window.adminViewingEmail || undefined })
+    body: JSON.stringify({ token: token, state: st })
   }).catch(function(){});
 }
 
