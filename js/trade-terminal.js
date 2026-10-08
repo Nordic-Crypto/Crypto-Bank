@@ -1013,6 +1013,34 @@
 
       // Record in history
       if (typeof window.recordTradeInHistory === 'function') {
+               // 🛡️ SAFETY NET: Ensure trade lands in state.orders even if Worker
+      // hasn't been updated to do it. This guarantees Order History works.
+      if (window.st) {
+        if (!Array.isArray(window.st.orders)) window.st.orders = [];
+        var orderId = data.trade && data.trade.id ? data.trade.id : ('trade_' + Date.now());
+        var already = window.st.orders.some(function (o) { return o.id === orderId; });
+        if (!already) {
+          window.st.orders.unshift({
+            id: orderId,
+            ts: Date.now(),
+            type: type,
+            symbol: symbol,
+            amount: Number(amount),
+            price: Number(price),
+            total: type === 'buy' ? Number(amount) : Number(amount) * Number(price),
+            orderType: orderType || 'market',
+            status: 'filled',
+            filled: type === 'buy' ? Number(amount) / Number(price) : Number(amount),
+            filledAt: Date.now()
+          });
+          if (window.st.orders.length > 500) window.st.orders.length = 500;
+        }
+
+        // Save to server (best-effort)
+        if (typeof window.saveToServer === 'function') {
+          try { window.saveToServer(); } catch (e) {}
+        }
+      }
         window.recordTradeInHistory({
           type: type,
           symbol: symbol,
