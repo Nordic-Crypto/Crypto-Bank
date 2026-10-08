@@ -1132,24 +1132,43 @@
    * Fetch order history from Worker and render.
    */
   async function loadOrderHistory(filter) {
-    var token = localStorage.getItem('session_token');
-    if (!token) return;
-    _ohCurrentFilter = filter || _ohCurrentFilter;
+  var token = localStorage.getItem('session_token');
+  if (!token) return;
+  _ohCurrentFilter = filter || _ohCurrentFilter;
 
-    try {
-      var res = await fetch(window.WORKER_URL + '?action=getOrders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token, filter: _ohCurrentFilter })
-      });
-      var data = await res.json();
-      if (!data.ok) return;
-      renderOrderHistory(data.orders || []);
-    } catch (e) {
-      console.warn('[TT] Order history fetch failed:', e);
-    }
+  var serverOrders = [];
+
+  // Try server first
+  try {
+    var res = await fetch(window.WORKER_URL + '?action=getOrders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, filter: _ohCurrentFilter })
+    });
+    var data = await res.json();
+    if (data.ok) serverOrders = data.orders || [];
+  } catch (e) {
+    console.warn('[TT] Order history fetch failed:', e);
   }
 
+  // Merge with local state.orders (in case Worker hasn't been updated)
+  var localOrders = (window.st && window.st.orders) || [];
+  var byId = {};
+  serverOrders.forEach(function (o) { byId[o.id] = o; });
+  localOrders.forEach(function (o) { if (!byId[o.id]) byId[o.id] = o; });
+
+  var merged = Object.values(byId);
+
+  // Apply filter
+  if (_ohCurrentFilter && _ohCurrentFilter !== 'all') {
+    merged = merged.filter(function (o) { return o.status === _ohCurrentFilter; });
+  }
+
+  // Sort by timestamp desc
+  merged.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+
+  renderOrderHistory(merged.slice(0, 100));
+}
   /**
    * Render the order history list.
    */
