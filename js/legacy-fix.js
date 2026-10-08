@@ -677,7 +677,328 @@
   window.getPositionPnL = getPositionPnL;
   window.getCoinPrice = getCoinPrice;
   window.getCoinBalance = getCoinBalance;
+  // ============================================================
+  // SECTION 12: TRADE MODAL (open/close)
+  // ============================================================
 
+  /**
+   * Open a trade modal (buy/sell/convert/success).
+   * Hides all other trade modals first.
+   * @param {string} modalId
+   */
+  window.openTradeModal = function (modalId) {
+    ['buyModal', 'sellModal', 'convertModal', 'tradeSuccessModal'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('on');
+    });
+
+    var modal = document.getElementById(modalId);
+    if (!modal) {
+      console.warn('[fix] Modal not found:', modalId);
+      return;
+    }
+    modal.classList.add('on');
+
+    // Reset inputs and refresh previews
+    if (modalId === 'buyModal') {
+      var a = document.getElementById('buyAmount');
+      if (a) a.value = '';
+      if (typeof updateBuyPreview === 'function') updateBuyPreview();
+    } else if (modalId === 'sellModal') {
+      var b = document.getElementById('sellAmount');
+      if (b) b.value = '';
+      if (typeof updateSellPreview === 'function') updateSellPreview();
+    } else if (modalId === 'convertModal') {
+      var c = document.getElementById('convertAmount');
+      if (c) c.value = '';
+      if (typeof updateConvertPreview === 'function') updateConvertPreview();
+    }
+  };
+
+  /**
+   * Close a trade modal.
+   * @param {string} modalId
+   */
+  window.closeTradeModal = function (modalId) {
+    var modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('on');
+  };
+
+  // ============================================================
+  // SECTION 13: TRADE PREVIEWS (live updates on input)
+  // ============================================================
+
+  function updateBuyPreview() {
+    var amountEl = document.getElementById('buyAmount');
+    if (!amountEl) return;
+    var amount = parseFloat(amountEl.value) || 0;
+    var coin = window._tradeCoin || 'BTC';
+    var price = getCoinPrice(coin);
+    var received = price > 0 ? amount / price : 0;
+
+    var receiveEl = document.getElementById('buyReceive');
+    if (receiveEl) receiveEl.textContent = received.toFixed(8) + ' ' + coin;
+    var rateEl = document.getElementById('buyRate');
+    if (rateEl) rateEl.textContent = '1 ' + coin + ' = $' + price.toFixed(2);
+    var balEl = document.getElementById('buyBalance');
+    if (balEl) balEl.textContent = '$' + ((window.st && window.st.usd) || 0).toFixed(2);
+    var btnCoin = document.getElementById('buyBtnCoin');
+    if (btnCoin) btnCoin.textContent = coin;
+
+    var err = document.getElementById('buyError');
+    if (err) {
+      err.classList.remove('on');
+      err.textContent = '';
+      var balance = (window.st && window.st.usd) || 0;
+      if (amount > 0 && amount < 10) {
+        err.textContent = 'Minimum purchase is $10';
+        err.classList.add('on');
+      } else if (amount > balance) {
+        err.textContent = 'Insufficient balance. You have $' + balance.toFixed(2);
+        err.classList.add('on');
+      }
+    }
+  }
+  window.updateBuyPreview = updateBuyPreview;
+
+  function updateSellPreview() {
+    var amountEl = document.getElementById('sellAmount');
+    if (!amountEl) return;
+    var amount = parseFloat(amountEl.value) || 0;
+    var coin = window._sellCoin || 'BTC';
+    var price = getCoinPrice(coin);
+    var received = amount * price;
+
+    var receiveEl = document.getElementById('sellReceive');
+    if (receiveEl) receiveEl.textContent = '$' + received.toFixed(2);
+    var rateEl = document.getElementById('sellRate');
+    if (rateEl) rateEl.textContent = '1 ' + coin + ' = $' + price.toFixed(2);
+    var balEl = document.getElementById('sellBalance');
+    if (balEl) balEl.textContent = getCoinBalance(coin).toFixed(8) + ' ' + coin;
+    var lblEl = document.getElementById('sellCoinLabel');
+    if (lblEl) lblEl.textContent = coin;
+    var btnCoin = document.getElementById('sellBtnCoin');
+    if (btnCoin) btnCoin.textContent = coin;
+
+    var err = document.getElementById('sellError');
+    if (err) {
+      err.classList.remove('on');
+      err.textContent = '';
+      var balance = getCoinBalance(coin);
+      if (amount > balance) {
+        err.textContent = 'Insufficient ' + coin + '. You have ' + balance.toFixed(8);
+        err.classList.add('on');
+      }
+    }
+  }
+  window.updateSellPreview = updateSellPreview;
+
+  function updateConvertPreview() {
+    var amountEl = document.getElementById('convertAmount');
+    var fromEl = document.getElementById('convertFrom');
+    var toEl = document.getElementById('convertTo');
+    if (!amountEl || !fromEl || !toEl) return;
+
+    var amount = parseFloat(amountEl.value) || 0;
+    var fromCoin = fromEl.value;
+    var toCoin = toEl.value;
+
+    var fromPrice = getCoinPrice(fromCoin);
+    var toPrice = getCoinPrice(toCoin);
+    var rate = toPrice > 0 ? fromPrice / toPrice : 0;
+    var result = amount * rate;
+
+    var resultEl = document.getElementById('convertResult');
+    if (resultEl) resultEl.value = result > 0 ? result.toFixed(8) : '';
+    var rateEl = document.getElementById('convertRate');
+    if (rateEl) rateEl.textContent = '1 ' + fromCoin + ' = ' + rate.toFixed(8) + ' ' + toCoin;
+    var fromBalEl = document.getElementById('convertFromBalance');
+    if (fromBalEl) fromBalEl.textContent = 'Balance: ' + getCoinBalance(fromCoin).toFixed(8) + ' ' + fromCoin;
+    var toBalEl = document.getElementById('convertToBalance');
+    if (toBalEl) toBalEl.textContent = 'Balance: ' + getCoinBalance(toCoin).toFixed(8) + ' ' + toCoin;
+
+    var err = document.getElementById('convertError');
+    if (err) {
+      err.classList.remove('on');
+      err.textContent = '';
+      if (fromCoin === toCoin) {
+        err.textContent = 'Choose different coins';
+        err.classList.add('on');
+      } else if (amount > getCoinBalance(fromCoin)) {
+        err.textContent = 'Insufficient ' + fromCoin;
+        err.classList.add('on');
+      }
+    }
+  }
+  window.updateConvertPreview = updateConvertPreview;
+
+  // ============================================================
+  // SECTION 14: BUY / SELL / CONVERT MODAL BINDINGS
+  // ============================================================
+
+  function bindTradeModals() {
+    // Buy coin selector
+    document.querySelectorAll('#buyCoinSelector .trade-coin-btn').forEach(function (btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.onclick = function () {
+        document.querySelectorAll('#buyCoinSelector .trade-coin-btn').forEach(function (b) { b.classList.remove('on'); });
+        this.classList.add('on');
+        window._tradeCoin = this.getAttribute('data-coin');
+        if (typeof updateBuyPreview === 'function') updateBuyPreview();
+      };
+    });
+
+    // Sell coin selector
+    document.querySelectorAll('#sellCoinSelector .trade-coin-btn').forEach(function (btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.onclick = function () {
+        document.querySelectorAll('#sellCoinSelector .trade-coin-btn').forEach(function (b) { b.classList.remove('on'); });
+        this.classList.add('on');
+        window._sellCoin = this.getAttribute('data-coin');
+        if (typeof updateSellPreview === 'function') updateSellPreview();
+      };
+    });
+
+    // Buy amount input
+    var buyInput = document.getElementById('buyAmount');
+    if (buyInput && !buyInput._bound) {
+      buyInput._bound = true;
+      buyInput.addEventListener('input', updateBuyPreview);
+    }
+
+    // Sell amount input
+    var sellInput = document.getElementById('sellAmount');
+    if (sellInput && !sellInput._bound) {
+      sellInput._bound = true;
+      sellInput.addEventListener('input', updateSellPreview);
+    }
+
+    // Convert inputs
+    var convAmount = document.getElementById('convertAmount');
+    if (convAmount && !convAmount._bound) {
+      convAmount._bound = true;
+      convAmount.addEventListener('input', updateConvertPreview);
+    }
+    var convFrom = document.getElementById('convertFrom');
+    if (convFrom && !convFrom._bound) {
+      convFrom._bound = true;
+      convFrom.addEventListener('change', updateConvertPreview);
+    }
+    var convTo = document.getElementById('convertTo');
+    if (convTo && !convTo._bound) {
+      convTo._bound = true;
+      convTo.addEventListener('change', updateConvertPreview);
+    }
+
+    // Mask click to close
+    ['buyModal', 'sellModal', 'convertModal', 'tradeSuccessModal'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && !el._clickBound) {
+        el._clickBound = true;
+        el.addEventListener('click', function (e) {
+          if (e.target === el) el.classList.remove('on');
+        });
+      }
+    });
+
+    // Quick amount buttons
+    document.querySelectorAll('.trade-quick-amounts button').forEach(function (btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.onclick = function () {
+        var val = parseInt(this.textContent.replace('$', ''), 10);
+        var input = document.getElementById('buyAmount');
+        if (input) {
+          input.value = val;
+          updateBuyPreview();
+        }
+      };
+    });
+
+    // MAX buttons
+    var maxBuyBtn = document.querySelector('#buyAmount ~ .trade-max-btn');
+    if (maxBuyBtn && !maxBuyBtn._bound) {
+      maxBuyBtn._bound = true;
+      maxBuyBtn.onclick = function () {
+        var balance = (window.st && window.st.usd) || 0;
+        var input = document.getElementById('buyAmount');
+        if (input) { input.value = balance.toFixed(2); updateBuyPreview(); }
+      };
+    }
+    var maxSellBtn = document.querySelector('#sellAmount ~ .trade-max-btn');
+    if (maxSellBtn && !maxSellBtn._bound) {
+      maxSellBtn._bound = true;
+      maxSellBtn.onclick = function () {
+        var coin = window._sellCoin || 'BTC';
+        var balance = getCoinBalance(coin);
+        var input = document.getElementById('sellAmount');
+        if (input) { input.value = balance.toFixed(8); updateSellPreview(); }
+      };
+    }
+  }
+
+  // ============================================================
+  // SECTION 15: TRADE TERMINAL (preview modal — until Sprint 2)
+  // ============================================================
+
+  /**
+   * Open the Trade Terminal modal.
+   * Currently a preview with 3 action buttons (Buy/Sell/Convert).
+   * Will be replaced by the full terminal in Sprint 2.
+   */
+  window.openTradeTerminal = function () {
+    var old = document.getElementById('tradeTerminalModal');
+    if (old) { old.remove(); return; }
+
+    var modal = document.createElement('div');
+    modal.id = 'tradeTerminalModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;animation:fadeIn .3s ease;';
+
+    modal.innerHTML =
+      '<div style="background:linear-gradient(145deg,#0f1720,#0a0e15);border:1px solid rgba(139,92,246,.3);border-radius:24px;width:100%;max-width:560px;padding:36px;color:#e7edf5;box-shadow:0 40px 100px -20px rgba(139,92,246,.4);position:relative;overflow:hidden;">' +
+        '<button id="tradeTerminalClose" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8b95a5;font-size:20px;cursor:pointer;line-height:1;">×</button>' +
+        '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">' +
+          '<div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;">⚡</div>' +
+          '<div>' +
+            '<div style="font-size:1.5rem;font-weight:800;">Trading Terminal</div>' +
+            '<div style="font-size:.85rem;color:#8b95a5;margin-top:4px;">Choose an action below</div>' +
+          '</div>' +
+        '</div>' +
+        '<p style="color:#94a3b8;font-size:.95rem;line-height:1.6;margin:0 0 24px;">' +
+          'Buy crypto with USD, sell crypto back to USD, or convert between any assets instantly at market price.' +
+        '</p>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">' +
+          '<button id="tradeBtnBuy" style="padding:16px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;font-family:inherit;">📈 Buy</button>' +
+          '<button id="tradeBtnSell" style="padding:16px;background:linear-gradient(135deg,#ef4444,#f87171);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;font-family:inherit;">📉 Sell</button>' +
+          '<button id="tradeBtnConvert" style="padding:16px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;font-family:inherit;">🔄 Convert</button>' +
+        '</div>' +
+        '<style>@keyframes fadeIn{from{opacity:0}to{opacity:1}}</style>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    // Bind close
+    var closeBtn = document.getElementById('tradeTerminalClose');
+    if (closeBtn) closeBtn.onclick = function () { modal.remove(); };
+
+    // Bind action buttons
+    var buyBtn = document.getElementById('tradeBtnBuy');
+    if (buyBtn) buyBtn.onclick = function () { modal.remove(); window.openTradeModal('buyModal'); };
+    var sellBtn = document.getElementById('tradeBtnSell');
+    if (sellBtn) sellBtn.onclick = function () { modal.remove(); window.openTradeModal('sellModal'); };
+    var convertBtn = document.getElementById('tradeBtnConvert');
+    if (convertBtn) convertBtn.onclick = function () { modal.remove(); window.openTradeModal('convertModal'); };
+
+    // Close on backdrop click
+    modal.onclick = function (e) { if (e.target === modal) modal.remove(); };
+  };
+
+  // Bind trade modals on load
+  setTimeout(bindTradeModals, 500);
+  setTimeout(bindTradeModals, 1500);
+  setTimeout(bindTradeModals, 3000);
   console.log('%c[NordicCrypto] 🔧 legacy-fix.js v3.0 loaded (Portfolio + P&L + Trade endpoint)',
     'color:#22d3ee;font-weight:bold;font-size:13px');
   // ============================================================
@@ -743,4 +1064,5 @@
   setTimeout(bindExchangeButtons, 500);
   setTimeout(bindExchangeButtons, 1500);
   setTimeout(bindExchangeButtons, 3000);
+   
 })();
