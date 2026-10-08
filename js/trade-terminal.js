@@ -1071,7 +1071,189 @@
   // ============================================================
 
   window.TT = TT;
+  // ============================================================
+  // SECTION 19: ORDER HISTORY
+  // ============================================================
 
+  var _ohCurrentFilter = 'all';
+
+  /**
+   * Fetch order history from Worker and render.
+   */
+  async function loadOrderHistory(filter) {
+    var token = localStorage.getItem('session_token');
+    if (!token) return;
+    _ohCurrentFilter = filter || _ohCurrentFilter;
+
+    try {
+      var res = await fetch(window.WORKER_URL + '?action=getOrders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, filter: _ohCurrentFilter })
+      });
+      var data = await res.json();
+      if (!data.ok) return;
+      renderOrderHistory(data.orders || []);
+    } catch (e) {
+      console.warn('[TT] Order history fetch failed:', e);
+    }
+  }
+
+  /**
+   * Render the order history list.
+   */
+  function renderOrderHistory(orders) {
+    var el = document.querySelector('.tt-oh-list');
+    if (!el) return;
+
+    if (!orders.length) {
+      el.innerHTML = '<div class="tt-empty">No orders yet</div>';
+      return;
+    }
+
+    var html = '';
+    orders.forEach(function (o) {
+      var statusIcon, statusClass;
+      if (o.status === 'filled') {
+        statusIcon = '✓';
+        statusClass = 'filled';
+      } else if (o.status === 'open') {
+        statusIcon = '⏳';
+        statusClass = 'open';
+      } else if (o.status === 'cancelled') {
+        statusIcon = '✗';
+        statusClass = 'cancelled';
+      } else {
+        statusIcon = '•';
+        statusClass = 'cancelled';
+      }
+
+      var typeLabel = o.type === 'buy' ? 'BUY' : (o.type === 'sell' ? 'SELL' : 'CONV');
+      var typeClass = o.type === 'buy' ? 'buy' : 'sell';
+
+      // Amount formatting
+      var amtStr;
+      if (o.type === 'buy') {
+        amtStr = (Number(o.amount) / Number(o.price)).toFixed(6) + ' ' + o.symbol;
+      } else {
+        amtStr = Number(o.amount).toFixed(6) + ' ' + o.symbol;
+      }
+
+      var priceStr = '$' + Number(o.price).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      // Time
+      var t = new Date(o.ts);
+      var now = Date.now();
+      var diff = now - o.ts;
+      var timeStr;
+      if (diff < 60000) timeStr = 'Just now';
+      else if (diff < 3600000) timeStr = Math.floor(diff / 60000) + 'm';
+      else if (diff < 86400000) timeStr = t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      else timeStr = t.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+      // Cancel button (only for open orders)
+      var cancelBtn = (o.status === 'open')
+        ? '<button class="tt-oh-cancel" data-order-id="' + o.id + '">Cancel</button>'
+        : '';
+
+      html += '<div class="tt-oh-row" data-order-id="' + o.id + '">' +
+        '<span class="tt-oh-status-icon ' + statusClass + '">' + statusIcon + '</span>' +
+        '<span class="tt-oh-type ' + typeClass + '">' + typeLabel + '</span>' +
+        '<span class="tt-oh-symbol">' + o.symbol + '</span>' +
+        '<span class="tt-oh-amount">' + amtStr + '</span>' +
+        '<span class="tt-oh-price">' + priceStr + '</span>' +
+        '<span class="tt-oh-time">' + timeStr + '</span>' +
+      '</div>' + (cancelBtn ? '<div style="text-align:right;padding:0 16px 6px;">' + cancelBtn + '</div>' : '');
+    });
+
+    el.innerHTML = html;
+
+    // Bind cancel buttons
+    el.querySelectorAll('.tt-oh-cancel').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        var orderId = this.getAttribute('data-order-id');
+        cancelOrder(orderId);
+      };
+    });
+  }
+
+  /**
+   * Cancel an open order.
+   */
+  async function cancelOrder(orderId) {
+    var token = localStorage.getItem('session_token');
+    if (!token) return;
+
+    try {
+      var res = await fetch(window.WORKER_URL + '?action=cancelOrder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, orderId: orderId })
+      });
+      var data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Cancel failed');
+
+      if (typeof window.toast === 'function') window.toast('✅ Order cancelled');
+      loadOrderHistory();
+      if (typeof window.refreshOpenOrders === 'function') window.refreshOpenOrders();
+    } catch (e) {
+      if (typeof window.toast === 'function') window.toast('❌ ' + e.message);
+    }
+  }
+
+  /**
+   * Bind filter buttons.
+   */
+  function bindOrderHistoryFilters() {
+    document.querySelectorAll('.tt-oh-filters button').forEach(function (btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.onclick = function () {
+        document.querySelectorAll('.tt-oh-filters button').forEach(function (b) { b.classList.remove('on'); });
+        this.classList.add('on');
+        var filter = this.getAttribute('data-filter');
+        loadOrderHistory(filter);
+      };
+    });
+  }
+
+  /**
+   * Refresh order history while terminal is open.
+   */
+  function startOrderHistoryRefresh() {
+    setInterval(function () {
+      if (window.TT && window.TT.open) {
+        loadOrderHistory();
+      }
+    }, 5000);
+  }
+
+  // Expose for external use
+  window.loadOrderHistory = loadOrderHistory;
+  window.renderOrderHistory = renderOrderHistory;
+  window.cancelOrder = cancelOrder;
+
+  // Hook into terminal open
+  var _origOpenTTFull = window.openTradeTerminalFull;
+  if (typeof _origOpenTTFull === 'function') {
+    window.openTradeTerminalFull = function () {
+      _origOpenTTFull.apply(this, arguments);
+      setTimeout(function () {
+        bindOrderHistoryFilters();
+        loadOrderHistory('all');
+      }, 300);
+    };
+  }
+
+  // Start periodic refresh
+  startOrderHistoryRefresh();
+
+  // Bind filters on load (in case terminal already open)
+  setTimeout(bindOrderHistoryFilters, 1000);
   console.log('%c[NordicCrypto] 📊 Trade Terminal v1.0 loaded', 'color:#8b5cf6;font-weight:bold;font-size:13px');
 
 })();
