@@ -4619,28 +4619,47 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
 
   </div>
+  <div class="tt-bottom">
+    <div class="tt-bottom-header">
+      <div class="tt-bottom-tabs">
+        <button data-tab="history" class="on">
+          Order History
+          <span class="tt-tab-count" id="ttCountHistory">0</span>
+        </button>
+        <button data-tab="open">
+          Open Orders
+          <span class="tt-tab-count" id="ttCountOpen">0</span>
+        </button>
+        <button data-tab="trades">
+          Recent Trades
+        </button>
+      </div>
+      <div class="tt-bottom-filters" id="ttOhFilters">
+        <button data-filter="all" class="on">All</button>
+        <button data-filter="filled">Filled</button>
+        <button data-filter="open">Open</button>
+        <button data-filter="cancelled">Cancelled</button>
+      </div>
+    </div>
 
-    <div class="tt-bottom">
-    <div class="tt-recent-trades">
-      <div class="tt-rt-header">Recent Trades</div>
-      <div class="tt-rt-list"></div>
-    </div>
-    <div class="tt-open-orders">
-      <div class="tt-oo-header">Open Orders</div>
-      <div class="tt-oo-list"><div class="tt-empty">No open orders</div></div>
-    </div>
-    <div class="tt-order-history">
-      <div class="tt-oh-header">
-        <span>Order History</span>
-        <div class="tt-oh-filters">
-          <button data-filter="all" class="on">All</button>
-          <button data-filter="filled">Filled</button>
-          <button data-filter="open">Open</button>
-          <button data-filter="cancelled">Cancelled</button>
+    <div class="tt-bottom-body">
+      <!-- History tab -->
+      <div class="tt-tab-content on" data-tab-content="history">
+        <div class="tt-oh-list">
+          <div class="tt-empty">No orders yet</div>
         </div>
       </div>
-      <div class="tt-oh-list">
-        <div class="tt-empty">No orders yet</div>
+
+      <!-- Open orders tab -->
+      <div class="tt-tab-content" data-tab-content="open">
+        <div class="tt-oo-list">
+          <div class="tt-empty">No open orders</div>
+        </div>
+      </div>
+
+      <!-- Recent trades tab -->
+      <div class="tt-tab-content" data-tab-content="trades">
+        <div class="tt-rt-list"></div>
       </div>
     </div>
   </div>
