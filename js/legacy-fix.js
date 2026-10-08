@@ -679,5 +679,67 @@
 
   console.log('%c[NordicCrypto] 🔧 legacy-fix.js v3.0 loaded (Portfolio + P&L + Trade endpoint)',
     'color:#22d3ee;font-weight:bold;font-size:13px');
+  // ============================================================
+  // SECTION 11: EXCHANGE DASHBOARD BUTTONS
+  // ============================================================
 
+  /**
+   * Bind Deposit / Withdraw / Trade buttons in exchange dashboard.
+   * Called after initNav and on DOM mutations.
+   */
+  function bindExchangeButtons() {
+    // Deposit → open "Add funds" modal
+    var btnExDep = document.getElementById('exBtnDeposit');
+    if (btnExDep && !btnExDep._bound) {
+      btnExDep._bound = true;
+      btnExDep.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.openModal === 'function') {
+          window.openModal('add');
+        } else {
+          var b = document.getElementById('btnAdd');
+          if (b) b.click();
+        }
+      };
+    }
+
+    // Withdraw → open withdraw modal
+    var btnExWd = document.getElementById('exBtnWithdraw');
+    if (btnExWd && !btnExWd._bound) {
+      btnExWd._bound = true;
+      btnExWd.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.openWithdraw === 'function') {
+          window.openWithdraw();
+        } else {
+          console.warn('[fix] openWithdraw not available');
+        }
+      };
+    }
+
+    // Trade → open trade terminal
+    var btnExTrade = document.getElementById('exBtnTrade');
+    if (btnExTrade && !btnExTrade._bound) {
+      btnExTrade._bound = true;
+      btnExTrade.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.openTradeTerminal === 'function') {
+          window.openTradeTerminal();
+        } else if (typeof window.openTradeModal === 'function') {
+          // Fallback: open buy modal directly
+          window.openTradeModal('buyModal');
+        } else {
+          console.warn('[fix] Trade Terminal not available');
+        }
+      };
+    }
+  }
+
+  // Re-apply bindings on load and after mutations
+  setTimeout(bindExchangeButtons, 500);
+  setTimeout(bindExchangeButtons, 1500);
+  setTimeout(bindExchangeButtons, 3000);
 })();
