@@ -1057,6 +1057,7 @@
   setTimeout(bindTradeModals, 500);
   setTimeout(bindTradeModals, 1500);
   setTimeout(bindTradeModals, 3000);
+   
   console.log('%c[NordicCrypto] 🔧 legacy-fix.js v3.0 loaded (Portfolio + P&L + Trade endpoint)',
     'color:#22d3ee;font-weight:bold;font-size:13px');
   // ============================================================
@@ -1296,5 +1297,85 @@
   setTimeout(hookTradeTerminal, 1500);
 
   console.log('%c[NordicCrypto] 📜 Trade history tracking enabled', 'color:#f59e0b;font-weight:bold');
+     // ============================================================
+  // SECTION 21: TX Details Close — bulletproof rebind
+  // ============================================================
+  // Guarantees that the X button, Close button, backdrop click,
+  // and Escape key all close the txDetails modal — regardless of
+  // when or where the modal is rendered in the DOM.
+  // ============================================================
+
+  function rebindTxDetailsClose() {
+    var closeFunc = window.closeTxDetails || function () {
+      var mask = document.getElementById('txDetailsMask');
+      if (mask) mask.classList.remove('on');
+    };
+
+    // X button (top-right)
+    var txdClose = document.getElementById('txdClose');
+    if (txdClose && !txdClose._rebound) {
+      txdClose._rebound = true;
+      txdClose.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeFunc();
+      };
+    }
+
+    // Close button (bottom)
+    var txdCloseBtn = document.getElementById('txdCloseBtn');
+    if (txdCloseBtn && !txdCloseBtn._rebound) {
+      txdCloseBtn._rebound = true;
+      txdCloseBtn.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeFunc();
+      };
+    }
+
+    // Backdrop click
+    var txdMask = document.getElementById('txDetailsMask');
+    if (txdMask && !txdMask._rebound) {
+      txdMask._rebound = true;
+      txdMask.addEventListener('click', function (e) {
+        if (e.target === txdMask) closeFunc();
+      });
+    }
+  }
+
+  // Escape key — global, bound once
+  if (!window._txdEscBound) {
+    window._txdEscBound = true;
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var mask = document.getElementById('txDetailsMask');
+        if (mask && mask.classList.contains('on')) {
+          var closeFunc = window.closeTxDetails || function () {
+            mask.classList.remove('on');
+          };
+          closeFunc();
+        }
+      }
+    });
+  }
+
+  // Apply on load + intervals (catches late DOM mutations)
+  rebindTxDetailsClose();
+  setTimeout(rebindTxDetailsClose, 300);
+  setTimeout(rebindTxDetailsClose, 1000);
+  setTimeout(rebindTxDetailsClose, 3000);
+
+  // Also rebind every time the modal opens
+  var _origOpenTxDetails = window.openTxDetails;
+  if (typeof _origOpenTxDetails === 'function') {
+    window.openTxDetails = function () {
+      _origOpenTxDetails.apply(this, arguments);
+      setTimeout(rebindTxDetailsClose, 50);
+      setTimeout(rebindTxDetailsClose, 200);
+    };
+  }
+
+  // Expose for debugging
+  window.rebindTxDetailsClose = rebindTxDetailsClose;
    
 })();
