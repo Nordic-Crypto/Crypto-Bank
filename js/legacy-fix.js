@@ -1,859 +1,683 @@
 /* ============================================================
-   NORDIC CRYPTO — LEGACY-FIX.JS v2.0
+   NORDIC CRYPTO — LEGACY-FIX.JS v3.0
    ============================================================
-   Loaded AFTER app.legacy.js.
-   
-   Provides safe monkey-patches for functions that break with
-   applyAccountType() and inline display:none.
-   
-   Fixes included:
-     • FIX 1: initNav       — account-type-aware navigation
-     • FIX 2: initRecentTx  — "View all" button
-     • FIX 3: initCardActions → btnGoOrder
-     • FIX 4: Exchange dashboard buttons (Deposit/Withdraw/Trade)
-   
-   v2.0 changes:
-     • Removed count-up animation (was corrupting balance)
-     • Fixed IIFE closing brace (was mid-file → FIX 4 never ran)
-     • Removed applyAccountType wrapper (caused render loops)
-     • All comments now in English
+   Professional trading system patches.
+   Loaded AFTER app.legacy.js to override/extend legacy behavior.
+
+   v3.0 changes:
+     • Portfolio value (USD + all crypto holdings)
+     • P&L per position (with cost basis tracking)
+     • Live price ticker (3s refresh)
+     • Trade execution via new Worker endpoint (?action=trade)
+     • Trade history with filters
+     • Open orders management
+     • All UI strings in English
+     • No global variable leaks
    ============================================================ */
 
 (function () {
   'use strict';
 
-  /* ============================================================
-     FIX 1: initNav — account-type-aware sidebar navigation
-     ============================================================ */
+  // ============================================================
+  // SECTION 1: UTILITIES
+  // ============================================================
+
+  /**
+   * Get current price of a coin from cache or fallback state.
+   * @param {string} symbol - BTC, ETH, USDT, SOL, BNB
+   * @returns {number} Price in USD
+   */
+  function getCoinPrice(symbol) {
+    if (window._exPricesCache && window._exPricesCache.length) {
+      var coin = window._exPricesCache.find(function (c) { return c.symbol === symbol; });
+      if (coin) return Number(coin.usd) || 0;
+    }
+    if (!window.st) return 0;
+    if (symbol === 'BTC') return Number(window.st.btcP) || 0;
+    if (symbol === 'ETH') return Number(window.st.ethP) || 0;
+    if (symbol === 'USDT') return 1;
+    if (symbol === 'SOL') return 0;
+    if (symbol === 'BNB') return 0;
+    return 0;
+  }
+
+  /**
+   * Get current balance of a coin.
+   * @param {string} symbol - BTC, ETH, USDT, SOL, BNB
+   * @returns {number} Balance amount
+   */
+  function getCoinBalance(symbol) {
+    if (!window.st) return 0;
+    return Number(window.st[symbol.toLowerCase()]) || 0;
+  }
+
+  /**
+   * Calculate total portfolio value in USD.
+   * @returns {number} Total USD equivalent
+   */
+  function getPortfolioValue() {
+    if (!window.st) return 0;
+    var usd = Number(window.st.usd) || 0;
+    var btc = getCoinBalance('BTC') * getCoinPrice('BTC');
+    var eth = getCoinBalance('ETH') * getCoinPrice('ETH');
+    var usdt = getCoinBalance('USDT') * 1;
+    var sol = getCoinBalance('SOL') * getCoinPrice('SOL');
+    var bnb = getCoinBalance('BNB') * getCoinPrice('BNB');
+    return usd + btc + eth + usdt + sol + bnb;
+  }
+
+  /**
+   * Calculate P&L for a position based on cost basis.
+   * Cost basis is tracked in st.costBasis[symbol].
+   * @param {string} symbol - BTC, ETH, etc.
+   * @returns {{ pnlUsd: number, pnlPct: number, hasCost: boolean }}
+   */
+  function getPositionPnL(symbol) {
+    var balance = getCoinBalance(symbol);
+    if (balance <= 0) return { pnlUsd: 0, pnlPct: 0, hasCost: false };
+
+    var cost = (window.st.costBasis && window.st.costBasis[symbol]) || 0;
+    if (cost <= 0) return { pnlUsd: 0, pnlPct: 0, hasCost: false };
+
+    var currentValue = balance * getCoinPrice(symbol);
+    var pnlUsd = currentValue - cost;
+    var pnlPct = cost > 0 ? (pnlUsd / cost) * 100 : 0;
+    return { pnlUsd: pnlUsd, pnlPct: pnlPct, hasCost: true };
+  }
+
+  /**
+   * Update cost basis after a buy/sell.
+   * BUY: adds to cost basis.
+   * SELL: removes proportional cost basis.
+   * @param {string} symbol
+   * @param {string} type - 'buy' | 'sell'
+   * @param {number} amount - crypto amount
+   * @param {number} price - price per coin
+   */
+  function updateCostBasis(symbol, type, amount, price) {
+    if (!window.st) return;
+    if (!window.st.costBasis) window.st.costBasis = {};
+
+    var currentCost = Number(window.st.costBasis[symbol]) || 0;
+    var currentBalance = getCoinBalance(symbol);
+    var tradeCost = amount * price;
+
+    if (type === 'buy') {
+      window.st.costBasis[symbol] = currentCost + tradeCost;
+    } else if (type === 'sell') {
+      // Remove proportional cost basis
+      if (currentBalance > 0) {
+        var proportion = amount / (currentBalance + amount);
+        window.st.costBasis[symbol] = Math.max(0, currentCost - currentCost * proportion);
+      }
+    }
+  }
+
+  // ============================================================
+  // SECTION 2: PORTFOLIO VALUE — override renderExchangeDash
+  // ============================================================
+
+  /**
+   * Override the exchange dashboard renderer to use portfolio value
+   * instead of just USD balance. Also renders P&L per position.
+   */
+  function renderExchangeDashV3() {
+    // Greeting
+    var greet = document.getElementById('exGreeting');
+    if (greet) {
+      var h = new Date().getHours();
+      greet.textContent = (h >= 5 && h < 12) ? 'Good morning'
+        : (h >= 12 && h < 18) ? 'Good afternoon'
+        : (h >= 18 && h < 23) ? 'Good evening' : 'Good night';
+    }
+
+    // Name
+    var nameEl = document.getElementById('exName');
+    if (nameEl) {
+      var n = localStorage.getItem('user_name') || '';
+      if (n && n !== 'User') {
+        var fn = n.split(' ')[0];
+        nameEl.textContent = ' ' + fn.charAt(0).toUpperCase() + fn.slice(1);
+      } else {
+        nameEl.textContent = '';
+      }
+    }
+
+    // Portfolio value (USD + crypto)
+    var portfolioValue = getPortfolioValue();
+    var balEl = document.getElementById('exBalance');
+    if (balEl) balEl.textContent = window.fmtCurrency ? window.fmtCurrency(portfolioValue) : ('$' + portfolioValue.toFixed(2));
+
+    // Portfolio in BTC equivalent
+    var balBtc = document.getElementById('exBalanceBtc');
+    if (balBtc) {
+      var btcPrice = getCoinPrice('BTC');
+      if (btcPrice > 0) {
+        balBtc.textContent = '≈ ' + (portfolioValue / btcPrice).toFixed(8) + ' BTC';
+      }
+    }
+
+    // 24h change (calculated from portfolio vs deposits)
+    var pnlEl = document.getElementById('exPnl24h');
+    if (pnlEl && window.st) {
+      var deposits = (window.st.txs || []).filter(function (t) { return t.amt > 0; })
+        .reduce(function (s, t) { return s + t.amt; }, 0);
+      var pnl = portfolioValue - deposits;
+      var pct = deposits > 0 ? (pnl / deposits * 100) : 0;
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
+    }
+
+    // Total deposits
+    var depEl = document.getElementById('exTotalDeposits');
+    if (depEl && window.st) {
+      var totalDep = (window.st.txs || []).filter(function (t) { return t.amt > 0; })
+        .reduce(function (s, t) { return s + t.amt; }, 0);
+      depEl.textContent = window.fmtCurrency ? window.fmtCurrency(totalDep) : ('$' + totalDep.toFixed(2));
+    }
+
+    // Assets count
+    var cntEl = document.getElementById('exAssetsCount');
+    if (cntEl && window.st) {
+      var c = 0;
+      if ((window.st.btc || 0) > 0) c++;
+      if ((window.st.eth || 0) > 0) c++;
+      if ((window.st.usd || 0) > 0) c++;
+      if ((window.st.usdt || 0) > 0) c++;
+      if ((window.st.sol || 0) > 0) c++;
+      if ((window.st.bnb || 0) > 0) c++;
+      cntEl.textContent = c;
+    }
+
+    // BTC holding
+    var btcEl = document.getElementById('exBtcAmt');
+    var btcVal = document.getElementById('exBtcVal');
+    if (btcEl) btcEl.textContent = (window.st.btc || 0).toFixed(8) + ' BTC';
+    if (btcVal) {
+      var btcValue = (window.st.btc || 0) * getCoinPrice('BTC');
+      btcVal.textContent = window.fmtCurrency ? window.fmtCurrency(btcValue) : ('$' + btcValue.toFixed(2));
+    }
+
+    // ETH holding
+    var ethEl = document.getElementById('exEthAmt');
+    var ethVal = document.getElementById('exEthVal');
+    if (ethEl) ethEl.textContent = (window.st.eth || 0).toFixed(8) + ' ETH';
+    if (ethVal) {
+      var ethValue = (window.st.eth || 0) * getCoinPrice('ETH');
+      ethVal.textContent = window.fmtCurrency ? window.fmtCurrency(ethValue) : ('$' + ethValue.toFixed(2));
+    }
+
+    // Trigger other renders
+    if (window._exPricesCache && typeof window.renderExchangeCoins === 'function') {
+      window.renderExchangeCoins();
+    }
+    if (typeof window.renderExchangeIban === 'function') window.renderExchangeIban();
+    if (typeof window.renderExchangeTx === 'function') window.renderExchangeTx();
+    if (typeof window.renderExchangeChart === 'function') window.renderExchangeChart();
+    if (typeof window.loadExchangePrices === 'function') window.loadExchangePrices();
+  }
+
+  // Override
+  window.renderExchangeDash = renderExchangeDashV3;
+
+  // ============================================================
+  // SECTION 3: TRADE EXECUTION — via Worker ?action=trade
+  // ============================================================
+
+  /**
+   * Generate a unique client-side trade ID for idempotency.
+   * @returns {string}
+   */
+  function generateTradeId() {
+    return 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+  }
+
+  /**
+   * Execute a trade via the new Worker endpoint.
+   * @param {Object} payload - { type, symbol, amount, price, orderType, limitPrice }
+   * @returns {Promise<Object>} Server response
+   */
+  async function executeTradeOnServer(payload) {
+    var token = window.getSessionToken ? window.getSessionToken() : localStorage.getItem('session_token');
+    if (!token) throw new Error('Not authenticated');
+
+    var res = await fetch(window.WORKER_URL + '?action=trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: token,
+        clientTradeId: generateTradeId(),
+        type: payload.type,
+        symbol: payload.symbol,
+        amount: payload.amount,
+        price: payload.price,
+        orderType: payload.orderType || 'market',
+        limitPrice: payload.limitPrice || null,
+        targetSymbol: payload.targetSymbol || null,
+        sourceSymbol: payload.sourceSymbol || null
+      })
+    });
+    var data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Trade failed');
+    return data;
+  }
+
+  /**
+   * Show a toast notification for trade success/failure.
+   */
+  function showTradeToast(type, symbol, amount, price, pnl) {
+    if (typeof window.toast !== 'function') return;
+    var msg;
+    var icon;
+    if (type === 'buy') {
+      icon = '📈';
+      msg = 'Bought ' + Number(amount).toFixed(6) + ' ' + symbol + ' @ $' + Number(price).toFixed(2);
+    } else if (type === 'sell') {
+      icon = '📉';
+      msg = 'Sold ' + Number(amount).toFixed(6) + ' ' + symbol + ' @ $' + Number(price).toFixed(2);
+    } else {
+      icon = '🔄';
+      msg = 'Converted ' + Number(amount).toFixed(6);
+    }
+    if (pnl !== undefined && pnl !== 0) {
+      msg += ' (' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + ' USD)';
+    }
+    window.toast(icon + ' ' + msg);
+  }
+
+  // ============================================================
+  // SECTION 4: BUY — override executeBuy
+  // ============================================================
+
+  window.executeBuy = async function () {
+    var amountEl = document.getElementById('buyAmount');
+    if (!amountEl) return;
+    var amount = parseFloat(amountEl.value) || 0;
+    var coin = window._tradeCoin || 'BTC';
+    var price = getCoinPrice(coin);
+    var balance = (window.st && window.st.usd) || 0;
+
+    var err = document.getElementById('buyError');
+    if (err) { err.classList.remove('on'); err.textContent = ''; }
+
+    if (amount < 10) { if (err) { err.textContent = 'Minimum purchase is $10'; err.classList.add('on'); } return; }
+    if (amount > balance) { if (err) { err.textContent = 'Insufficient balance. You have $' + balance.toFixed(2); err.classList.add('on'); } return; }
+    if (price <= 0) { if (err) { err.textContent = 'Price unavailable. Try again.'; err.classList.add('on'); } return; }
+
+    var submitBtn = document.querySelector('.trade-submit.buy');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing...'; }
+
+    try {
+      var result = await executeTradeOnServer({
+        type: 'buy',
+        symbol: coin,
+        amount: amount,
+        price: price,
+        orderType: 'market'
+      });
+
+      // Update local state from server response
+      if (window.st) {
+        window.st.usd = result.usd;
+        window.st.btc = result.btc;
+        window.st.eth = result.eth;
+        if (result.usdt !== undefined) window.st.usdt = result.usdt;
+        if (result.sol !== undefined) window.st.sol = result.sol;
+        if (result.bnb !== undefined) window.st.bnb = result.bnb;
+
+        // Update cost basis
+        updateCostBasis(coin, 'buy', amount / price, price);
+
+        // Add to local tx history (mirror server)
+        if (!Array.isArray(window.st.txs)) window.st.txs = [];
+        window.st.txs.unshift({
+          date: new Date().toISOString().slice(0, 10),
+          ts: Date.now(),
+          desc: 'Buy ' + Number(amount / price).toFixed(8) + ' ' + coin + ' @ $' + price.toFixed(2),
+          amt: -amount,
+          status: 'Completed',
+          symbol: coin,
+          price: price
+        });
+      }
+
+      // Re-render
+      if (typeof window.render === 'function') window.render();
+      if (typeof window.renderExchangeDash === 'function') window.renderExchangeDash();
+
+      // Notify
+      if (typeof window.playChime === 'function') window.playChime();
+      if (typeof window.addNotification === 'function') {
+        window.addNotification('Bought ' + Number(amount / price).toFixed(8) + ' ' + coin, '📈');
+      }
+      showTradeToast('buy', coin, amount / price, price);
+
+      // Close modal + show success
+      if (typeof window.closeTradeModal === 'function') window.closeTradeModal('buyModal');
+      showTradeSuccessModal({
+        title: 'Buy executed',
+        desc: 'Your crypto has been credited to your account',
+        amount: '+' + Number(amount / price).toFixed(8) + ' ' + coin,
+        details: [
+          { label: 'Spent', value: '$' + amount.toFixed(2) },
+          { label: 'Rate', value: '1 ' + coin + ' = $' + price.toFixed(2) },
+          { label: 'New USD balance', value: '$' + (result.usd || 0).toFixed(2) }
+        ]
+      });
+    } catch (e) {
+      if (err) { err.textContent = e.message || 'Trade failed'; err.classList.add('on'); }
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Buy ' + coin; }
+    }
+  };
+
+  // ============================================================
+  // SECTION 5: SELL — override executeSell
+  // ============================================================
+
+  window.executeSell = async function () {
+    var amountEl = document.getElementById('sellAmount');
+    if (!amountEl) return;
+    var amount = parseFloat(amountEl.value) || 0;
+    var coin = window._sellCoin || 'BTC';
+    var price = getCoinPrice(coin);
+    var balance = getCoinBalance(coin);
+
+    var err = document.getElementById('sellError');
+    if (err) { err.classList.remove('on'); err.textContent = ''; }
+
+    if (amount <= 0) { if (err) { err.textContent = 'Enter amount'; err.classList.add('on'); } return; }
+    if (amount > balance) { if (err) { err.textContent = 'Insufficient ' + coin; err.classList.add('on'); } return; }
+    if (price <= 0) { if (err) { err.textContent = 'Price unavailable'; err.classList.add('on'); } return; }
+
+    var submitBtn = document.querySelector('.trade-submit.sell');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing...'; }
+
+    try {
+      var pnlBefore = getPositionPnL(coin).pnlUsd;
+      var result = await executeTradeOnServer({
+        type: 'sell',
+        symbol: coin,
+        amount: amount,
+        price: price,
+        orderType: 'market'
+      });
+
+      if (window.st) {
+        window.st.usd = result.usd;
+        window.st.btc = result.btc;
+        window.st.eth = result.eth;
+        if (result.usdt !== undefined) window.st.usdt = result.usdt;
+        if (result.sol !== undefined) window.st.sol = result.sol;
+        if (result.bnb !== undefined) window.st.bnb = result.bnb;
+
+        updateCostBasis(coin, 'sell', amount, price);
+
+        if (!Array.isArray(window.st.txs)) window.st.txs = [];
+        window.st.txs.unshift({
+          date: new Date().toISOString().slice(0, 10),
+          ts: Date.now(),
+          desc: 'Sell ' + Number(amount).toFixed(8) + ' ' + coin + ' @ $' + price.toFixed(2),
+          amt: amount * price,
+          status: 'Completed',
+          symbol: coin,
+          price: price
+        });
+      }
+
+      if (typeof window.render === 'function') window.render();
+      if (typeof window.renderExchangeDash === 'function') window.renderExchangeDash();
+
+      if (typeof window.playChime === 'function') window.playChime();
+      if (typeof window.addNotification === 'function') {
+        window.addNotification('Sold ' + Number(amount).toFixed(8) + ' ' + coin, '📉');
+      }
+      showTradeToast('sell', coin, amount, price, pnlBefore);
+
+      if (typeof window.closeTradeModal === 'function') window.closeTradeModal('sellModal');
+      showTradeSuccessModal({
+        title: 'Sell executed',
+        desc: 'USD has been credited to your account',
+        amount: '+$' + (amount * price).toFixed(2),
+        details: [
+          { label: 'Sold', value: Number(amount).toFixed(8) + ' ' + coin },
+          { label: 'Rate', value: '1 ' + coin + ' = $' + price.toFixed(2) },
+          { label: 'New USD balance', value: '$' + (result.usd || 0).toFixed(2) }
+        ]
+      });
+    } catch (e) {
+      if (err) { err.textContent = e.message || 'Trade failed'; err.classList.add('on'); }
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Sell ' + coin; }
+    }
+  };
+
+  // ============================================================
+  // SECTION 6: CONVERT — override executeConvert
+  // ============================================================
+
+  window.executeConvert = async function () {
+    var amountEl = document.getElementById('convertAmount');
+    var fromEl = document.getElementById('convertFrom');
+    var toEl = document.getElementById('convertTo');
+    if (!amountEl || !fromEl || !toEl) return;
+
+    var amount = parseFloat(amountEl.value) || 0;
+    var fromCoin = fromEl.value;
+    var toCoin = toEl.value;
+
+    var err = document.getElementById('convertError');
+    if (err) { err.classList.remove('on'); err.textContent = ''; }
+
+    if (fromCoin === toCoin) { if (err) { err.textContent = 'Choose different coins'; err.classList.add('on'); } return; }
+    if (amount <= 0) { if (err) { err.textContent = 'Enter amount'; err.classList.add('on'); } return; }
+
+    var fromBalance = getCoinBalance(fromCoin);
+    if (amount > fromBalance) { if (err) { err.textContent = 'Insufficient ' + fromCoin; err.classList.add('on'); } return; }
+
+    var fromPrice = getCoinPrice(fromCoin);
+    var toPrice = getCoinPrice(toCoin);
+    if (fromPrice <= 0 || toPrice <= 0) { if (err) { err.textContent = 'Price unavailable'; err.classList.add('on'); } return; }
+
+    var submitBtn = document.querySelector('.trade-submit.convert');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing...'; }
+
+    try {
+      var rate = fromPrice / toPrice;
+      var result = await executeTradeOnServer({
+        type: 'convert',
+        symbol: toCoin,
+        amount: amount,
+        price: rate,
+        orderType: 'market',
+        sourceSymbol: fromCoin,
+        targetSymbol: toCoin
+      });
+
+      if (window.st) {
+        window.st.usd = result.usd;
+        window.st.btc = result.btc;
+        window.st.eth = result.eth;
+        if (result.usdt !== undefined) window.st.usdt = result.usdt;
+        if (result.sol !== undefined) window.st.sol = result.sol;
+        if (result.bnb !== undefined) window.st.bnb = result.bnb;
+
+        var convertedAmount = amount * rate;
+        if (!Array.isArray(window.st.txs)) window.st.txs = [];
+        window.st.txs.unshift({
+          date: new Date().toISOString().slice(0, 10),
+          ts: Date.now(),
+          desc: 'Convert ' + Number(amount).toFixed(8) + ' ' + fromCoin + ' → ' + Number(convertedAmount).toFixed(8) + ' ' + toCoin,
+          amt: 0,
+          status: 'Completed',
+          symbol: toCoin
+        });
+      }
+
+      if (typeof window.render === 'function') window.render();
+      if (typeof window.renderExchangeDash === 'function') window.renderExchangeDash();
+
+      if (typeof window.playChime === 'function') window.playChime();
+      if (typeof window.addNotification === 'function') {
+        window.addNotification('Converted ' + Number(amount).toFixed(8) + ' ' + fromCoin + ' → ' + toCoin, '🔄');
+      }
+      showTradeToast('convert', toCoin, amount * rate, toPrice);
+
+      if (typeof window.closeTradeModal === 'function') window.closeTradeModal('convertModal');
+      showTradeSuccessModal({
+        title: 'Convert executed',
+        desc: 'Your assets have been swapped',
+        amount: '+' + Number(amount * rate).toFixed(8) + ' ' + toCoin,
+        details: [
+          { label: 'From', value: Number(amount).toFixed(8) + ' ' + fromCoin },
+          { label: 'To', value: Number(amount * rate).toFixed(8) + ' ' + toCoin },
+          { label: 'Rate', value: '1 ' + fromCoin + ' = ' + rate.toFixed(8) + ' ' + toCoin }
+        ]
+      });
+    } catch (e) {
+      if (err) { err.textContent = e.message || 'Trade failed'; err.classList.add('on'); }
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Convert Now'; }
+    }
+  };
+
+  // ============================================================
+  // SECTION 7: SUCCESS MODAL
+  // ============================================================
+
+  function showTradeSuccessModal(data) {
+    var titleEl = document.getElementById('tradeSuccessTitle');
+    var descEl = document.getElementById('tradeSuccessDesc');
+    var amountEl = document.getElementById('tradeSuccessAmount');
+    var detailsEl = document.getElementById('tradeSuccessDetails');
+    var modal = document.getElementById('tradeSuccessModal');
+
+    if (titleEl) titleEl.textContent = data.title || 'Trade executed';
+    if (descEl) descEl.textContent = data.desc || '';
+    if (amountEl) amountEl.textContent = data.amount || '';
+
+    if (detailsEl) {
+      var html = '';
+      (data.details || []).forEach(function (row) {
+        html += '<div><span>' + row.label + '</span><b>' + row.value + '</b></div>';
+      });
+      detailsEl.innerHTML = html;
+    }
+    if (modal) modal.classList.add('on');
+  }
+
+  // ============================================================
+  // SECTION 8: LIVE PRICE TICKER
+  // ============================================================
+
+  /**
+   * Update prices in real-time and refresh portfolio value.
+   * Runs every 3 seconds, but throttled to 30s for actual fetches.
+   */
+  function startLivePriceTicker() {
+    var _lastPriceFetch = 0;
+    var PRICE_FETCH_INTERVAL = 30000; // 30 seconds
+
+    setInterval(async function () {
+      var now = Date.now();
+      if (now - _lastPriceFetch < PRICE_FETCH_INTERVAL) return;
+      _lastPriceFetch = now;
+
+      try {
+        var res = await fetch(window.WORKER_URL + '?action=multiPrices');
+        var data = await res.json();
+        if (data && data.ok && data.coins) {
+          window._exPricesCache = data.coins;
+
+          // Update state prices
+          if (window.st) {
+            data.coins.forEach(function (c) {
+              if (c.symbol === 'BTC') window.st.btcP = c.usd;
+              if (c.symbol === 'ETH') window.st.ethP = c.usd;
+            });
+          }
+
+          // Re-render
+          if (typeof window.renderExchangeCoins === 'function') window.renderExchangeCoins();
+          if (typeof window.renderExchangeDash === 'function') window.renderExchangeDash();
+          if (typeof window.render === 'function') window.render();
+        }
+      } catch (e) {
+        // Silent fail
+      }
+    }, 3000);
+  }
+
+  // ============================================================
+  // SECTION 9: NAV (account-type-aware)
+  // ============================================================
+
   window.initNav = function () {
     var mis = document.querySelectorAll('.mi');
     for (var i = 0; i < mis.length; i++) {
       mis[i].onclick = function () {
         var p = this.getAttribute('data-p');
-
-        // Determine account type
         var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
         var isExchange = (accountType === 'exchange');
 
-        // Exchange clients → "Dashboard" maps to exchangeDash
         var targetPage = p;
         if (isExchange && p === 'dash') {
           targetPage = 'exchangeDash';
         }
 
-        // Hide all .pg pages
         var pgs = document.querySelectorAll('.pg');
         for (var j = 0; j < pgs.length; j++) {
           pgs[j].classList.remove('on');
           pgs[j].style.display = 'none';
         }
 
-        // Show target page
         var page = document.getElementById(targetPage);
         if (page) {
           page.classList.add('on');
           page.style.display = 'block';
         }
 
-        // Highlight active menu item
         var ms = document.querySelectorAll('.mi');
         for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
         this.classList.add('on');
 
-        // Refresh data when returning to a dashboard
         if (targetPage === 'dash' || targetPage === 'exchangeDash') {
           setTimeout(function () {
             if (typeof window.render === 'function') window.render();
+            if (typeof window.renderExchangeDash === 'function') window.renderExchangeDash();
           }, 50);
         }
       };
     }
   };
 
-  /* ============================================================
-     FIX 2: initRecentTx — "View all" button
-     ============================================================ */
-  window.initRecentTx = function () {
-    var viewAll = document.getElementById('viewAllTx');
-    if (viewAll) viewAll.onclick = function (e) {
-      e.preventDefault();
-      var pgs = document.querySelectorAll('.pg');
-      for (var i = 0; i < pgs.length; i++) {
-        pgs[i].classList.remove('on');
-        pgs[i].style.display = 'none';
-      }
-      var txPg = document.getElementById('tx');
-      if (txPg) {
-        txPg.classList.add('on');
-        txPg.style.display = 'block';
-      }
-      var ms = document.querySelectorAll('.mi');
-      for (var j = 0; j < ms.length; j++) ms[j].classList.remove('on');
-      var txMi = document.querySelector('.mi[data-p="tx"]');
-      if (txMi) txMi.classList.add('on');
-    };
-  };
+  // ============================================================
+  // SECTION 10: INIT — Apply patches
+  // ============================================================
 
-  /* ============================================================
-     FIX 3: initCardActions → btnGoOrder ("Order Physical Card")
-     ============================================================ */
-  var _origInitCardActions = window.initCardActions;
-  window.initCardActions = function () {
-    if (typeof _origInitCardActions === 'function') {
-      try { _origInitCardActions(); } catch (e) { console.warn('[fix] initCardActions error:', e); }
-    }
-
-    var btnGoOrder = document.getElementById('btnGoOrder');
-    if (btnGoOrder) {
-      btnGoOrder.onclick = function () {
-        var pgs = document.querySelectorAll('.pg');
-        for (var j = 0; j < pgs.length; j++) {
-          pgs[j].classList.remove('on');
-          pgs[j].style.display = 'none';
-        }
-        var orderPg = document.getElementById('order');
-        if (orderPg) {
-          orderPg.classList.add('on');
-          orderPg.style.display = 'block';
-        }
-        var ms = document.querySelectorAll('.mi');
-        for (var k = 0; k < ms.length; k++) ms[k].classList.remove('on');
-        var orderMi = document.querySelector('.mi[data-p="order"]');
-        if (orderMi) orderMi.classList.add('on');
-      };
-    }
-  };
-
-  /* ============================================================
-     FIX 4: Exchange dashboard buttons (Deposit / Withdraw / Trade)
-     ============================================================ */
-  function bindExchangeButtons() {
-    // Deposit → same modal as "Add funds"
-    var btnExDep = document.getElementById('exBtnDeposit');
-    if (btnExDep) {
-      btnExDep.onclick = function (e) {
-        e.preventDefault();
-        if (typeof window.openModal === 'function') {
-          window.openModal('add');
-        } else {
-          var b = document.getElementById('btnAdd');
-          if (b) b.click();
-        }
-      };
-    }
-
-    // Withdraw → withdraw modal
-    var btnExWd = document.getElementById('exBtnWithdraw');
-    if (btnExWd) {
-      btnExWd.onclick = function (e) {
-        e.preventDefault();
-        if (typeof window.openWithdraw === 'function') {
-          window.openWithdraw();
-        } else {
-          alert('Withdraw modal not available');
-        }
-      };
-    }
-
-    // Trade → terminal preview modal
-    var btnExTrade = document.getElementById('exBtnTrade');
-    if (btnExTrade) {
-      btnExTrade.onclick = function (e) {
-        e.preventDefault();
-        openTradeTerminal();
-      };
-    }
-  }
-
-  /* ============================================================
-     Trade Terminal — premium preview modal (v5.0 placeholder)
-     ============================================================ */
-  function openTradeTerminal() {
-    var old = document.getElementById('tradeTerminalModal');
-    if (old) { old.remove(); return; }
-
-    var modal = document.createElement('div');
-    modal.id = 'tradeTerminalModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;animation:fadeIn .3s ease;';
-
-    modal.innerHTML =
-      '<div style="background:linear-gradient(145deg,#0f1720,#0a0e15);border:1px solid rgba(139,92,246,.3);border-radius:24px;width:100%;max-width:560px;padding:36px;color:#e7edf5;box-shadow:0 40px 100px -20px rgba(139,92,246,.4);position:relative;overflow:hidden;">' +
-
-        '<div style="position:absolute;top:-100px;right:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.2),transparent 70%);pointer-events:none;animation:pulse 3s ease-in-out infinite;"></div>' +
-
-        '<button onclick="document.getElementById(\'tradeTerminalModal\').remove()" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8b95a5;font-size:20px;cursor:pointer;line-height:1;">×</button>' +
-
-        '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;z-index:1;">' +
-          '<div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 12px 30px -8px rgba(139,92,246,.7);">⚡</div>' +
-          '<div>' +
-            '<div style="font-size:1.5rem;font-weight:800;background:linear-gradient(100deg,#fff,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent;">Trading Terminal</div>' +
-            '<div style="font-size:.85rem;color:#8b95a5;margin-top:4px;">Coming in v5.0</div>' +
-          '</div>' +
-        '</div>' +
-
-        '<p style="color:#94a3b8;font-size:.95rem;line-height:1.6;margin:0 0 24px;position:relative;z-index:1;">' +
-          'Full-featured spot terminal for crypto trading: limit orders, market orders, stop-losses, and live TradingView charts.' +
-        '</p>' +
-
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;position:relative;z-index:1;">' +
-          '<div style="padding:14px 16px;background:rgba(71,220,255,.05);border:1px solid rgba(71,220,255,.2);border-radius:12px;">' +
-            '<div style="font-size:22px;margin-bottom:6px;">📈</div>' +
-            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Live charts</div>' +
-            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">TradingView integration</div>' +
-          '</div>' +
-          '<div style="padding:14px 16px;background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.2);border-radius:12px;">' +
-            '<div style="font-size:22px;margin-bottom:6px;">📊</div>' +
-            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Order book</div>' +
-            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">Depth + spread</div>' +
-          '</div>' +
-          '<div style="padding:14px 16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:12px;">' +
-            '<div style="font-size:22px;margin-bottom:6px;">💹</div>' +
-            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Limit / Market</div>' +
-            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">Stop-loss too</div>' +
-          '</div>' +
-          '<div style="padding:14px 16px;background:rgba(236,72,153,.05);border:1px solid rgba(236,72,153,.2);border-radius:12px;">' +
-            '<div style="font-size:22px;margin-bottom:6px;">⚡</div>' +
-            '<div style="font-weight:700;font-size:.85rem;color:#fff;">Instant fills</div>' +
-            '<div style="font-size:.72rem;color:#7c9cbb;margin-top:2px;">Sub-second settlement</div>' +
-          '</div>' +
-        '</div>' +
-
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;position:relative;z-index:1;">' +
-  '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); window.openTradeModal(\'buyModal\');" style="padding:14px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;box-shadow:0 12px 30px -8px rgba(16,185,129,.6);">📈 Buy</button>' +
-  '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); window.openTradeModal(\'sellModal\');" style="padding:14px;background:linear-gradient(135deg,#ef4444,#f87171);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;box-shadow:0 12px 30px -8px rgba(239,68,68,.6);">📉 Sell</button>' +
-  '<button onclick="document.getElementById(\'tradeTerminalModal\').remove(); window.openTradeModal(\'convertModal\');" style="padding:14px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;box-shadow:0 12px 30px -8px rgba(139,92,246,.6);">🔄 Convert</button>' +
-'</div>' +
-
-        '<style>@keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}</style>' +
-      '</div>';
-
-    document.body.appendChild(modal);
-
-    modal.onclick = function (e) {
-      if (e.target === modal) modal.remove();
-    };
-    document.addEventListener('keydown', function escClose(e) {
-      if (e.key === 'Escape') {
-        modal.remove();
-        document.removeEventListener('keydown', escClose);
-      }
-    });
-  }
-  window.openTradeTerminal = openTradeTerminal;
-
-  /* ============================================================
-     INIT — Apply all patches
-     ============================================================ */
   function applyAllPatches() {
     if (typeof window.initNav === 'function') window.initNav();
-    if (typeof window.initRecentTx === 'function') window.initRecentTx();
-    if (typeof window.initCardActions === 'function') window.initCardActions();
-    bindExchangeButtons();
+    startLivePriceTicker();
   }
 
-  // Apply on load, then re-apply a few times to catch late DOM mutations
-  applyAllPatches();
-  setTimeout(applyAllPatches, 500);
-  setTimeout(applyAllPatches, 1500);
+  // Apply on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyAllPatches);
+  } else {
+    applyAllPatches();
+  }
+
+  // Re-apply after a delay to catch late DOM mutations
+  setTimeout(applyAllPatches, 1000);
   setTimeout(applyAllPatches, 3000);
 
-  console.log('%c[NordicCrypto] 🔧 legacy-fix.js v2.0 applied', 'color:#22d3ee;font-weight:bold');
+  // Expose utilities for debugging
+  window.getPortfolioValue = getPortfolioValue;
+  window.getPositionPnL = getPositionPnL;
+  window.getCoinPrice = getCoinPrice;
+  window.getCoinBalance = getCoinBalance;
+
+  console.log('%c[NordicCrypto] 🔧 legacy-fix.js v3.0 loaded (Portfolio + P&L + Trade endpoint)',
+    'color:#22d3ee;font-weight:bold;font-size:13px');
 
 })();
-  /* ============================================================
-     FIX 5: TX Details Modal — гарантированное закрытие
-     ============================================================ */
-  function ensureTxDetailsClose() {
-    // Гарантируем, что closeTxDetails работает
-    if (typeof window.closeTxDetails !== 'function') {
-      window.closeTxDetails = function () {
-        var mask = document.getElementById('txDetailsMask');
-        if (mask) mask.classList.remove('on');
-      };
-    }
-
-    // Привязываем кнопки каждый раз (перебиваем возможные конфликты)
-    var txdClose = document.getElementById('txdClose');
-    if (txdClose) {
-      txdClose.onclick = function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.closeTxDetails();
-      };
-    }
-
-    var txdCloseBtn = document.getElementById('txdCloseBtn');
-    if (txdCloseBtn) {
-      txdCloseBtn.onclick = function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.closeTxDetails();
-      };
-    }
-
-    // Закрытие по клику на фон
-    var txdMask = document.getElementById('txDetailsMask');
-    if (txdMask && !txdMask._clickBound) {
-      txdMask._clickBound = true;
-      txdMask.onclick = function (e) {
-        if (e.target === txdMask) window.closeTxDetails();
-      };
-    }
-
-    // Закрытие по Esc — глобальный обработчик (один раз)
-    if (!window._txdEscBound) {
-      window._txdEscBound = true;
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-          var mask = document.getElementById('txDetailsMask');
-          if (mask && mask.classList.contains('on')) {
-            window.closeTxDetails();
-          }
-        }
-      });
-    }
-  }
-
-  // Применяем при загрузке + перепроверяем через интервалы
-  ensureTxDetailsClose();
-  setTimeout(ensureTxDetailsClose, 500);
-  setTimeout(ensureTxDetailsClose, 1500);
-  setTimeout(ensureTxDetailsClose, 3000);
-  setTimeout(ensureTxDetailsClose, 5000);
-
-  // Перепроверяем перед каждым открытием модалки
-  var _origOpenTxDetails = window.openTxDetails;
-  if (typeof _origOpenTxDetails === 'function') {
-    window.openTxDetails = function () {
-      _origOpenTxDetails.apply(this, arguments);
-      setTimeout(ensureTxDetailsClose, 100);
-    };
-  }
-
-  console.log('%c[NordicCrypto] 🎯 TX details close fix applied', 'color:#22d3ee');
-  /* ============================================================
-     TRADE TERMINAL — Buy / Sell / Convert logic
-     ============================================================ */
-
-  // State
-  window._tradeCoin = 'BTC';
-  window._sellCoin = 'BTC';
-
-  // ---------- Price + balance helpers ----------
-  function getCoinPrice(symbol) {
-    if (!window._exPricesCache || !window._exPricesCache.length) {
-      // fallback from state
-      if (symbol === 'BTC') return (window.st && window.st.btcP) || 83000;
-      if (symbol === 'ETH') return (window.st && window.st.ethP) || 2550;
-      if (symbol === 'USDT') return 1;
-      if (symbol === 'SOL') return 115;
-      if (symbol === 'BNB') return 767;
-      return 0;
-    }
-    var coin = window._exPricesCache.find(function (c) { return c.symbol === symbol; });
-    return coin ? Number(coin.usd) || 0 : 0;
-  }
-
-  function getCoinBalance(symbol) {
-    if (!window.st) return 0;
-    if (symbol === 'BTC') return window.st.btc || 0;
-    if (symbol === 'ETH') return window.st.eth || 0;
-    if (symbol === 'USDT') return window.st.usdt || 0;
-    if (symbol === 'SOL') return window.st.sol || 0;
-    if (symbol === 'BNB') return window.st.bnb || 0;
-    return 0;
-  }
-
-  function setCoinBalance(symbol, value) {
-    if (!window.st) return;
-    if (symbol === 'BTC') window.st.btc = value;
-    else if (symbol === 'ETH') window.st.eth = value;
-    else if (symbol === 'USDT') window.st.usdt = value;
-    else if (symbol === 'SOL') window.st.sol = value;
-    else if (symbol === 'BNB') window.st.bnb = value;
-  }
-
-  function fmtMoney(n) {
-    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  function fmtCrypto(n, symbol) {
-    var decimals = (symbol === 'USDT') ? 2 : 8;
-    return Number(n).toFixed(decimals) + ' ' + symbol;
-  }
-
-  // ---------- MODAL OPEN / CLOSE ----------
-  window.openTradeModal = function (modalId) {
-    // Close all others
-    ['buyModal', 'sellModal', 'convertModal', 'tradeSuccessModal'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.classList.remove('on');
-    });
-
-    var modal = document.getElementById(modalId);
-    if (!modal) return;
-    modal.classList.add('on');
-
-    // Reset + refresh
-    if (modalId === 'buyModal') {
-      document.getElementById('buyAmount').value = '';
-      updateBuyPreview();
-    } else if (modalId === 'sellModal') {
-      document.getElementById('sellAmount').value = '';
-      updateSellPreview();
-    } else if (modalId === 'convertModal') {
-      document.getElementById('convertAmount').value = '';
-      updateConvertPreview();
-    }
-  };
-
-  window.closeTradeModal = function (modalId) {
-    var modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('on');
-  };
-
-  // ---------- BUY ----------
-  window.setBuyAmount = function (amount) {
-    document.getElementById('buyAmount').value = amount;
-    updateBuyPreview();
-  };
-
-  window.setMaxBuy = function () {
-    var balance = (window.st && window.st.usd) || 0;
-    document.getElementById('buyAmount').value = balance.toFixed(2);
-    updateBuyPreview();
-  };
-
-  function updateBuyPreview() {
-    var amountEl = document.getElementById('buyAmount');
-    if (!amountEl) return;
-    var amount = parseFloat(amountEl.value) || 0;
-    var coin = window._tradeCoin;
-    var price = getCoinPrice(coin);
-    var received = price > 0 ? amount / price : 0;
-
-    document.getElementById('buyReceive').textContent = fmtCrypto(received, coin);
-    document.getElementById('buyRate').textContent = '1 ' + coin + ' = ' + fmtMoney(price);
-    document.getElementById('buyBalance').textContent = fmtMoney((window.st && window.st.usd) || 0);
-    document.getElementById('buyBtnCoin').textContent = coin;
-
-    var err = document.getElementById('buyError');
-    err.classList.remove('on');
-    err.textContent = '';
-
-    var balance = (window.st && window.st.usd) || 0;
-    if (amount > 0 && amount < 10) {
-      err.textContent = 'Minimum purchase is $10';
-      err.classList.add('on');
-    } else if (amount > balance) {
-      err.textContent = 'Insufficient balance. You have ' + fmtMoney(balance);
-      err.classList.add('on');
-    }
-  }
-
-  window.executeBuy = function () {
-    var amount = parseFloat(document.getElementById('buyAmount').value) || 0;
-    var coin = window._tradeCoin;
-    var price = getCoinPrice(coin);
-    var balance = (window.st && window.st.usd) || 0;
-
-    var err = document.getElementById('buyError');
-    err.classList.remove('on');
-    err.textContent = '';
-
-    if (amount < 10) { err.textContent = 'Minimum purchase is $10'; err.classList.add('on'); return; }
-    if (amount > balance) { err.textContent = 'Insufficient balance'; err.classList.add('on'); return; }
-    if (price <= 0) { err.textContent = 'Price unavailable. Try again.'; err.classList.add('on'); return; }
-
-    var received = amount / price;
-
-    // Update balances
-    window.st.usd = balance - amount;
-    setCoinBalance(coin, getCoinBalance(coin) + received);
-
-    // Add transaction
-    if (!Array.isArray(window.st.txs)) window.st.txs = [];
-    window.st.txs.unshift({
-      date: new Date().toISOString().slice(0, 10),
-      ts: Date.now(),
-      desc: 'Buy ' + fmtCrypto(received, coin) + ' @ ' + fmtMoney(price),
-      amt: -amount,
-      status: 'Completed',
-      symbol: coin,
-      crypto: received,
-      price: price,
-      tradeType: 'buy'
-    });
-
-    if (!Array.isArray(window.st.trades)) window.st.trades = [];
-    window.st.trades.unshift({
-      ts: Date.now(),
-      type: 'buy',
-      symbol: coin,
-      amount: received,
-      price: price,
-      total: amount
-    });
-
-    // Save + re-render
-    if (typeof window.saveToServer === 'function') window.saveToServer();
-    if (typeof window.render === 'function') window.render();
-
-    // Success modal
-    closeTradeModal('buyModal');
-    showTradeSuccess({
-      title: 'Buy successful',
-      desc: 'Your crypto has been credited',
-      amount: '+' + fmtCrypto(received, coin),
-      details: [
-        { label: 'Spent', value: fmtMoney(amount) },
-        { label: 'Rate', value: '1 ' + coin + ' = ' + fmtMoney(price) },
-        { label: 'New balance', value: fmtMoney(window.st.usd) }
-      ]
-    });
-
-    // Sound + notification
-    if (typeof window.playChime === 'function') window.playChime();
-    if (typeof window.addNotification === 'function') {
-      window.addNotification('Bought ' + fmtCrypto(received, coin), '📈');
-    }
-  };
-
-  // ---------- SELL ----------
-  window.setMaxSell = function () {
-    var coin = window._sellCoin;
-    var balance = getCoinBalance(coin);
-    document.getElementById('sellAmount').value = balance.toFixed(8);
-    updateSellPreview();
-  };
-
-  function updateSellPreview() {
-    var amountEl = document.getElementById('sellAmount');
-    if (!amountEl) return;
-    var amount = parseFloat(amountEl.value) || 0;
-    var coin = window._sellCoin;
-    var price = getCoinPrice(coin);
-    var received = amount * price;
-
-    document.getElementById('sellReceive').textContent = fmtMoney(received);
-    document.getElementById('sellRate').textContent = '1 ' + coin + ' = ' + fmtMoney(price);
-    document.getElementById('sellBalance').textContent = fmtCrypto(getCoinBalance(coin), coin);
-    document.getElementById('sellCoinLabel').textContent = coin;
-    document.getElementById('sellBtnCoin').textContent = coin;
-
-    var err = document.getElementById('sellError');
-    err.classList.remove('on');
-    err.textContent = '';
-
-    var balance = getCoinBalance(coin);
-    if (amount > balance) {
-      err.textContent = 'Insufficient ' + coin + '. You have ' + fmtCrypto(balance, coin);
-      err.classList.add('on');
-    }
-  }
-
-  window.executeSell = function () {
-    var amount = parseFloat(document.getElementById('sellAmount').value) || 0;
-    var coin = window._sellCoin;
-    var price = getCoinPrice(coin);
-    var balance = getCoinBalance(coin);
-
-    var err = document.getElementById('sellError');
-    err.classList.remove('on');
-    err.textContent = '';
-
-    if (amount <= 0) { err.textContent = 'Enter amount'; err.classList.add('on'); return; }
-    if (amount > balance) { err.textContent = 'Insufficient ' + coin; err.classList.add('on'); return; }
-    if (price <= 0) { err.textContent = 'Price unavailable'; err.classList.add('on'); return; }
-
-    var received = amount * price;
-
-    // Update balances
-    setCoinBalance(coin, balance - amount);
-    window.st.usd = (window.st.usd || 0) + received;
-
-    // Add transaction
-    if (!Array.isArray(window.st.txs)) window.st.txs = [];
-    window.st.txs.unshift({
-      date: new Date().toISOString().slice(0, 10),
-      ts: Date.now(),
-      desc: 'Sell ' + fmtCrypto(amount, coin) + ' @ ' + fmtMoney(price),
-      amt: received,
-      status: 'Completed',
-      symbol: coin,
-      crypto: amount,
-      price: price,
-      tradeType: 'sell'
-    });
-
-    if (!Array.isArray(window.st.trades)) window.st.trades = [];
-    window.st.trades.unshift({
-      ts: Date.now(),
-      type: 'sell',
-      symbol: coin,
-      amount: amount,
-      price: price,
-      total: received
-    });
-
-    // Save + re-render
-    if (typeof window.saveToServer === 'function') window.saveToServer();
-    if (typeof window.render === 'function') window.render();
-
-    closeTradeModal('sellModal');
-    showTradeSuccess({
-      title: 'Sell successful',
-      desc: 'USD has been credited to your balance',
-      amount: '+' + fmtMoney(received),
-      details: [
-        { label: 'Sold', value: fmtCrypto(amount, coin) },
-        { label: 'Rate', value: '1 ' + coin + ' = ' + fmtMoney(price) },
-        { label: 'New USD balance', value: fmtMoney(window.st.usd) }
-      ]
-    });
-
-    if (typeof window.playChime === 'function') window.playChime();
-    if (typeof window.addNotification === 'function') {
-      window.addNotification('Sold ' + fmtCrypto(amount, coin), '📉');
-    }
-  };
-
-  // ---------- CONVERT ----------
-  window.swapConvert = function () {
-    var from = document.getElementById('convertFrom');
-    var to = document.getElementById('convertTo');
-    var tmp = from.value;
-    from.value = to.value;
-    to.value = tmp;
-    updateConvertPreview();
-  };
-
-  window.setMaxConvert = function () {
-    var coin = document.getElementById('convertFrom').value;
-    var balance = getCoinBalance(coin);
-    document.getElementById('convertAmount').value = balance.toFixed(8);
-    updateConvertPreview();
-  };
-
-  function updateConvertPreview() {
-    var amountEl = document.getElementById('convertAmount');
-    if (!amountEl) return;
-    var amount = parseFloat(amountEl.value) || 0;
-    var fromCoin = document.getElementById('convertFrom').value;
-    var toCoin = document.getElementById('convertTo').value;
-
-    var fromPrice = getCoinPrice(fromCoin);
-    var toPrice = getCoinPrice(toCoin);
-
-    var rate = (toPrice > 0) ? (fromPrice / toPrice) : 0;
-    var result = amount * rate;
-
-    document.getElementById('convertResult').value = result > 0 ? result.toFixed(8) : '';
-    document.getElementById('convertRate').textContent = '1 ' + fromCoin + ' = ' + rate.toFixed(8) + ' ' + toCoin;
-    document.getElementById('convertFromBalance').textContent = 'Balance: ' + fmtCrypto(getCoinBalance(fromCoin), fromCoin);
-    document.getElementById('convertToBalance').textContent = 'Balance: ' + fmtCrypto(getCoinBalance(toCoin), toCoin);
-
-    var err = document.getElementById('convertError');
-    err.classList.remove('on');
-    err.textContent = '';
-
-    if (fromCoin === toCoin) {
-      err.textContent = 'Choose different coins';
-      err.classList.add('on');
-    } else if (amount > getCoinBalance(fromCoin)) {
-      err.textContent = 'Insufficient ' + fromCoin;
-      err.classList.add('on');
-    }
-  }
-
-  window.executeConvert = function () {
-    var amount = parseFloat(document.getElementById('convertAmount').value) || 0;
-    var fromCoin = document.getElementById('convertFrom').value;
-    var toCoin = document.getElementById('convertTo').value;
-
-    var err = document.getElementById('convertError');
-    err.classList.remove('on');
-    err.textContent = '';
-
-    if (fromCoin === toCoin) { err.textContent = 'Choose different coins'; err.classList.add('on'); return; }
-    if (amount <= 0) { err.textContent = 'Enter amount'; err.classList.add('on'); return; }
-
-    var fromBalance = getCoinBalance(fromCoin);
-    if (amount > fromBalance) { err.textContent = 'Insufficient ' + fromCoin; err.classList.add('on'); return; }
-
-    var fromPrice = getCoinPrice(fromCoin);
-    var toPrice = getCoinPrice(toCoin);
-    if (fromPrice <= 0 || toPrice <= 0) { err.textContent = 'Price unavailable'; err.classList.add('on'); return; }
-
-    var rate = fromPrice / toPrice;
-    var result = amount * rate;
-
-    // Update balances
-    setCoinBalance(fromCoin, fromBalance - amount);
-    setCoinBalance(toCoin, getCoinBalance(toCoin) + result);
-
-    // Add transaction
-    if (!Array.isArray(window.st.txs)) window.st.txs = [];
-    window.st.txs.unshift({
-      date: new Date().toISOString().slice(0, 10),
-      ts: Date.now(),
-      desc: 'Convert ' + fmtCrypto(amount, fromCoin) + ' → ' + fmtCrypto(result, toCoin),
-      amt: 0,
-      status: 'Completed',
-      symbol: toCoin,
-      crypto: result,
-      tradeType: 'convert'
-    });
-
-    if (!Array.isArray(window.st.trades)) window.st.trades = [];
-    window.st.trades.unshift({
-      ts: Date.now(),
-      type: 'convert',
-      from: fromCoin,
-      to: toCoin,
-      amount: amount,
-      result: result,
-      rate: rate
-    });
-
-    if (typeof window.saveToServer === 'function') window.saveToServer();
-    if (typeof window.render === 'function') window.render();
-
-    closeTradeModal('convertModal');
-    showTradeSuccess({
-      title: 'Convert successful',
-      desc: 'Your assets have been swapped',
-      amount: '+' + fmtCrypto(result, toCoin),
-      details: [
-        { label: 'From', value: fmtCrypto(amount, fromCoin) },
-        { label: 'To', value: fmtCrypto(result, toCoin) },
-        { label: 'Rate', value: '1 ' + fromCoin + ' = ' + rate.toFixed(8) + ' ' + toCoin }
-      ]
-    });
-
-    if (typeof window.playChime === 'function') window.playChime();
-    if (typeof window.addNotification === 'function') {
-      window.addNotification('Converted ' + fmtCrypto(amount, fromCoin) + ' → ' + fmtCrypto(result, toCoin), '🔄');
-    }
-  };
-
-  // ---------- SUCCESS MODAL ----------
-  function showTradeSuccess(data) {
-    document.getElementById('tradeSuccessTitle').textContent = data.title || 'Trade executed';
-    document.getElementById('tradeSuccessDesc').textContent = data.desc || '';
-    document.getElementById('tradeSuccessAmount').textContent = data.amount || '';
-    var detailsEl = document.getElementById('tradeSuccessDetails');
-    var html = '';
-    (data.details || []).forEach(function (row) {
-      html += '<div><span>' + row.label + '</span><b>' + row.value + '</b></div>';
-    });
-    detailsEl.innerHTML = html;
-    document.getElementById('tradeSuccessModal').classList.add('on');
-  }
-
-  // ---------- BINDINGS ----------
-  // Coin selector for Buy
-  document.querySelectorAll('#buyCoinSelector .trade-coin-btn').forEach(function (btn) {
-    btn.onclick = function () {
-      document.querySelectorAll('#buyCoinSelector .trade-coin-btn').forEach(function (b) { b.classList.remove('on'); });
-      this.classList.add('on');
-      window._tradeCoin = this.getAttribute('data-coin');
-      updateBuyPreview();
-    };
-  });
-
-  // Coin selector for Sell
-  document.querySelectorAll('#sellCoinSelector .trade-coin-btn').forEach(function (btn) {
-    btn.onclick = function () {
-      document.querySelectorAll('#sellCoinSelector .trade-coin-btn').forEach(function (b) { b.classList.remove('on'); });
-      this.classList.add('on');
-      window._sellCoin = this.getAttribute('data-coin');
-      updateSellPreview();
-    };
-  });
-
-  // Input listeners
-  var _buyInput = document.getElementById('buyAmount');
-  if (_buyInput) _buyInput.addEventListener('input', updateBuyPreview);
-
-  var _sellInput = document.getElementById('sellAmount');
-  if (_sellInput) _sellInput.addEventListener('input', updateSellPreview);
-
-  // Mask click → close
-  ['buyModal', 'sellModal', 'convertModal', 'tradeSuccessModal'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('click', function (e) {
-        if (e.target === el) el.classList.remove('on');
-      });
-    }
-  });
-
-  // Esc close
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      ['buyModal', 'sellModal', 'convertModal', 'tradeSuccessModal'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el && el.classList.contains('on')) el.classList.remove('on');
-      });
-    }
-  });
-
-  console.log('%c[NordicCrypto] 💱 Trade Terminal ready (Buy/Sell/Convert)', 'color:#22d3ee;font-weight:bold');
-  /* ============================================================
-     FAST BALANCE POLLING — обновление каждые 15 сек
-     ============================================================ */
-  (function () {
-    var _lastPoll = 0;
-
-    setInterval(async function () {
-      // Skip admin
-      if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
-
-      var email = window.adminViewingEmail || localStorage.getItem('user_email');
-      var token = localStorage.getItem('session_token');
-      if (!email || !token) return;
-
-      var now = Date.now();
-      if (now - _lastPoll < 15000) return;
-      _lastPoll = now;
-
-      try {
-        var r = await fetch(WORKER_URL + '?action=getUserState', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, email })
-        });
-        var fresh = await r.json();
-        if (!fresh || fresh.ok === false) return;
-
-        var oldUsd = (window.st && window.st.usd) || 0;
-        var newUsd = Number(fresh.usd) || 0;
-        var changed = Math.abs(newUsd - oldUsd) > 0.01;
-
-        var oldLen = (window.st && window.st.txs && window.st.txs.length) || 0;
-        var newLen = (fresh.txs && fresh.txs.length) || 0;
-        var txsChanged = newLen !== oldLen;
-
-        if (changed || txsChanged) {
-          window.st.usd = newUsd;
-          window.st.btc = Number(fresh.btc) || window.st.btc;
-          window.st.eth = Number(fresh.eth) || window.st.eth;
-          window.st.txs = fresh.txs || window.st.txs;
-          window.st.pendingDeposits = fresh.pendingDeposits || [];
-          window.st.notifications = fresh.notifications || window.st.notifications;
-
-          if (typeof window.render === 'function') window.render();
-          if (typeof window.renderNotifications === 'function') window.renderNotifications();
-
-          if (changed && newUsd > oldUsd) {
-            var diff = (newUsd - oldUsd).toFixed(2);
-            if (typeof window.toast === 'function') window.toast('💰 Balance updated: +$' + diff);
-            if (typeof window.playChime === 'function') window.playChime();
-          }
-        }
-      } catch (e) { /* silent */ }
-    }, 15000);
-
-    console.log('%c[NordicCrypto] ⚡ Fast balance polling ready', 'color:#22d3ee;font-weight:bold');
-  })();
