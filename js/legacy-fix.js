@@ -948,51 +948,98 @@
    * Currently a preview with 3 action buttons (Buy/Sell/Convert).
    * Will be replaced by the full terminal in Sprint 2.
    */
+    // ============================================================
+  // TRADE TERMINAL — Full-screen trading UI
+  // ============================================================
+  // Delegates to trade-terminal.js (loaded via <script> in index.html).
+  // Fallback: if the full terminal is not available, show the legacy
+  // preview modal so the user is never left with a dead button.
+  // ============================================================
   window.openTradeTerminal = function () {
+    if (typeof window.openTradeTerminalFull === 'function') {
+      window.openTradeTerminalFull();
+      return;
+    }
+
+    // Fallback: legacy preview modal
+    console.warn('[legacy-fix] Full terminal not available, using preview fallback');
+
     var old = document.getElementById('tradeTerminalModal');
-    if (old) { old.remove(); return; }
+    if (old) old.remove();
 
     var modal = document.createElement('div');
     modal.id = 'tradeTerminalModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(3,6,11,.85);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;animation:fadeIn .3s ease;';
+    modal.style.cssText =
+      'position:fixed;inset:0;background:rgba(3,6,11,.85);' +
+      'backdrop-filter:blur(16px);display:flex;align-items:center;' +
+      'justify-content:center;z-index:10000;padding:20px;';
 
     modal.innerHTML =
-      '<div style="background:linear-gradient(145deg,#0f1720,#0a0e15);border:1px solid rgba(139,92,246,.3);border-radius:24px;width:100%;max-width:560px;padding:36px;color:#e7edf5;box-shadow:0 40px 100px -20px rgba(139,92,246,.4);position:relative;overflow:hidden;">' +
-        '<button id="tradeTerminalClose" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8b95a5;font-size:20px;cursor:pointer;line-height:1;">×</button>' +
+      '<div style="background:linear-gradient(145deg,#0f1720,#0a0e15);' +
+        'border:1px solid rgba(139,92,246,.3);border-radius:24px;' +
+        'width:100%;max-width:520px;padding:36px;color:#e7edf5;' +
+        'box-shadow:0 40px 100px -20px rgba(139,92,246,.4);' +
+        'position:relative;overflow:hidden;">' +
+        '<button id="tradeTerminalClose" style="position:absolute;' +
+          'top:16px;right:16px;width:36px;height:36px;border-radius:10px;' +
+          'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);' +
+          'color:#8b95a5;font-size:20px;cursor:pointer;line-height:1;">×</button>' +
         '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">' +
-          '<div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;">⚡</div>' +
+          '<div style="width:64px;height:64px;border-radius:18px;' +
+            'background:linear-gradient(135deg,#8b5cf6,#ec4899);' +
+            'display:flex;align-items:center;justify-content:center;' +
+            'font-size:28px;">⚡</div>' +
           '<div>' +
             '<div style="font-size:1.5rem;font-weight:800;">Trading Terminal</div>' +
-            '<div style="font-size:.85rem;color:#8b95a5;margin-top:4px;">Choose an action below</div>' +
+            '<div style="font-size:.85rem;color:#8b95a5;margin-top:4px;">' +
+              'Choose an action below</div>' +
           '</div>' +
         '</div>' +
         '<p style="color:#94a3b8;font-size:.95rem;line-height:1.6;margin:0 0 24px;">' +
-          'Buy crypto with USD, sell crypto back to USD, or convert between any assets instantly at market price.' +
-        '</p>' +
+          'Buy crypto with USD, sell crypto back to USD, or convert between ' +
+          'any assets instantly at market price.</p>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">' +
-          '<button id="tradeBtnBuy" style="padding:16px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;font-family:inherit;">📈 Buy</button>' +
-          '<button id="tradeBtnSell" style="padding:16px;background:linear-gradient(135deg,#ef4444,#f87171);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;font-family:inherit;">📉 Sell</button>' +
-          '<button id="tradeBtnConvert" style="padding:16px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;font-family:inherit;">🔄 Convert</button>' +
+          '<button id="tradeBtnBuy" style="padding:16px;' +
+            'background:linear-gradient(135deg,#10b981,#34d399);color:#fff;' +
+            'border:none;border-radius:12px;font-weight:700;cursor:pointer;' +
+            'font-size:.95rem;font-family:inherit;">📈 Buy</button>' +
+          '<button id="tradeBtnSell" style="padding:16px;' +
+            'background:linear-gradient(135deg,#ef4444,#f87171);color:#fff;' +
+            'border:none;border-radius:12px;font-weight:700;cursor:pointer;' +
+            'font-size:.95rem;font-family:inherit;">📉 Sell</button>' +
+          '<button id="tradeBtnConvert" style="padding:16px;' +
+            'background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;' +
+            'border:none;border-radius:12px;font-weight:700;cursor:pointer;' +
+            'font-size:.95rem;font-family:inherit;">🔄 Convert</button>' +
         '</div>' +
-        '<style>@keyframes fadeIn{from{opacity:0}to{opacity:1}}</style>' +
       '</div>';
 
     document.body.appendChild(modal);
 
-    // Bind close
     var closeBtn = document.getElementById('tradeTerminalClose');
     if (closeBtn) closeBtn.onclick = function () { modal.remove(); };
 
-    // Bind action buttons
     var buyBtn = document.getElementById('tradeBtnBuy');
-    if (buyBtn) buyBtn.onclick = function () { modal.remove(); window.openTradeModal('buyModal'); };
-    var sellBtn = document.getElementById('tradeBtnSell');
-    if (sellBtn) sellBtn.onclick = function () { modal.remove(); window.openTradeModal('sellModal'); };
-    var convertBtn = document.getElementById('tradeBtnConvert');
-    if (convertBtn) convertBtn.onclick = function () { modal.remove(); window.openTradeModal('convertModal'); };
+    if (buyBtn) buyBtn.onclick = function () {
+      modal.remove();
+      if (typeof window.openTradeModal === 'function') window.openTradeModal('buyModal');
+    };
 
-    // Close on backdrop click
-    modal.onclick = function (e) { if (e.target === modal) modal.remove(); };
+    var sellBtn = document.getElementById('tradeBtnSell');
+    if (sellBtn) sellBtn.onclick = function () {
+      modal.remove();
+      if (typeof window.openTradeModal === 'function') window.openTradeModal('sellModal');
+    };
+
+    var convertBtn = document.getElementById('tradeBtnConvert');
+    if (convertBtn) convertBtn.onclick = function () {
+      modal.remove();
+      if (typeof window.openTradeModal === 'function') window.openTradeModal('convertModal');
+    };
+
+    modal.onclick = function (e) {
+      if (e.target === modal) modal.remove();
+    };
   };
 
   // Bind trade modals on load
