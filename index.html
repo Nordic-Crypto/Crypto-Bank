@@ -4102,59 +4102,96 @@ document.addEventListener('DOMContentLoaded', function(){
 <div id="withdrawModal" class="wd-modal" style="display:none;">
   <div class="wd-modal-bg" onclick="closeWithdraw()"></div>
   <div class="wd-modal-card">
-    <h3>Withdraw funds</h3>
-    <p class="wd-sub">Available: <span id="wdAvailable">—</span></p>
-    <label class="wd-label">Amount</label>
-    <input type="number" id="wdAmount" class="wd-input" placeholder="0.00" min="1" step="0.01">
-    <label class="wd-label">Method</label>
-    <select id="wdMethod" class="wd-input" onchange="wdSwitchMethod()">
-      <option value="iban">Bank transfer (IBAN)</option>
-      <option value="card">Card payout</option>
-      <option value="crypto">Crypto</option>
-    </select>
-    <div id="wdFieldsIban" class="wd-fields">
-      <label class="wd-label">Recipient name</label><input type="text" id="wdIbanName" class="wd-input">
-      <label class="wd-label">IBAN</label><input type="text" id="wdIbanNumber" class="wd-input">
-      <label class="wd-label">SWIFT / BIC</label><input type="text" id="wdIbanSwift" class="wd-input">
-      <label class="wd-label">Bank name</label><input type="text" id="wdIbanBank" class="wd-input">
-      <label class="wd-label">Country</label><input type="text" id="wdIbanCountry" class="wd-input">
-    </div>
-    <div id="wdFieldsCard" class="wd-fields" style="display:none;">
-      <label class="wd-label">Card holder name</label><input type="text" id="wdCardName" class="wd-input">
-      <label class="wd-label">Card number</label><input type="text" id="wdCardNumber" class="wd-input" maxlength="19">
-      <label class="wd-label">Expiry (MM/YY)</label><input type="text" id="wdCardExpiry" class="wd-input" maxlength="5">
-    </div>
-    <div id="wdFieldsCrypto" class="wd-fields" style="display:none;">
-      <label class="wd-label">Destination</label>
-      <select id="wdCryptoDest" class="wd-input" onchange="wdSwitchCryptoDest()">
-        <option value="external">External wallet</option>
-        <option value="binance">Binance</option>
-        <option value="bybit">Bybit</option>
-        <option value="coinbase">Coinbase</option>
-        <option value="kraken">Kraken</option>
+
+    <!-- STAGE 1: FORM -->
+    <div class="wd-form-stage">
+      <div class="wd-form-header">
+        <div>
+          <h2 class="wd-form-title">Withdraw funds</h2>
+          <p class="wd-form-sub">Available: <span id="wdAvailable">—</span></p>
+        </div>
+        <button class="wd-form-close" onclick="closeWithdraw()">×</button>
+      </div>
+
+      <label class="wd-label">Amount</label>
+      <input type="number" id="wdAmount" class="wd-input" placeholder="0.00" min="1" step="0.01">
+
+      <label class="wd-label">Method</label>
+      <select id="wdMethod" class="wd-input" onchange="wdSwitchMethod()">
+        <option value="iban">Bank transfer (IBAN)</option>
+        <option value="card">Card payout</option>
+        <option value="crypto">Crypto</option>
       </select>
-      <label class="wd-label">Network</label>
-      <select id="wdCryptoNetwork" class="wd-input">
-        <option value="ERC20">Ethereum (ERC-20)</option>
-        <option value="TRC20">Tron (TRC-20)</option>
-        <option value="BEP20">BNB Chain (BEP-20)</option>
-        <option value="BTC">Bitcoin</option>
-        <option value="SOL">Solana</option>
-        <option value="TON">TON</option>
-      </select>
-      <label class="wd-label">Coin</label>
-      <select id="wdCryptoCoin" class="wd-input">
-        <option value="USDT">USDT</option><option value="USDC">USDC</option>
-        <option value="BTC">BTC</option><option value="ETH">ETH</option>
-      </select>
-      <label class="wd-label">Wallet address</label><input type="text" id="wdCryptoAddress" class="wd-input">
-      <div id="wdMemoWrap" style="display:none;"><label class="wd-label">Memo / Tag</label><input type="text" id="wdCryptoMemo" class="wd-input"></div>
+
+      <div id="wdFieldsIban" class="wd-fields">
+        <label class="wd-label">Recipient name</label>
+        <input type="text" id="wdIbanName" class="wd-input">
+        <label class="wd-label">IBAN</label>
+        <input type="text" id="wdIbanNumber" class="wd-input">
+        <label class="wd-label">SWIFT / BIC</label>
+        <input type="text" id="wdIbanSwift" class="wd-input">
+        <label class="wd-label">Bank name</label>
+        <input type="text" id="wdIbanBank" class="wd-input">
+        <label class="wd-label">Country</label>
+        <input type="text" id="wdIbanCountry" class="wd-input">
+      </div>
+
+      <div id="wdFieldsCard" class="wd-fields" style="display:none;">
+        <label class="wd-label">Card holder name</label>
+        <input type="text" id="wdCardName" class="wd-input">
+        <label class="wd-label">Card number</label>
+        <input type="text" id="wdCardNumber" class="wd-input" maxlength="19">
+        <label class="wd-label">Expiry (MM/YY)</label>
+        <input type="text" id="wdCardExpiry" class="wd-input" maxlength="5">
+      </div>
+
+      <div id="wdFieldsCrypto" class="wd-fields" style="display:none;">
+        <label class="wd-label">Destination</label>
+        <select id="wdCryptoDest" class="wd-input" onchange="wdSwitchCryptoDest()">
+          <option value="external">External wallet</option>
+          <option value="binance">Binance</option>
+          <option value="bybit">Bybit</option>
+          <option value="coinbase">Coinbase</option>
+          <option value="kraken">Kraken</option>
+        </select>
+        <label class="wd-label">Network</label>
+        <select id="wdCryptoNetwork" class="wd-input">
+          <option value="ERC20">Ethereum (ERC-20)</option>
+          <option value="TRC20">Tron (TRC-20)</option>
+          <option value="BEP20">BNB Chain (BEP-20)</option>
+          <option value="BTC">Bitcoin</option>
+          <option value="SOL">Solana</option>
+          <option value="TON">TON</option>
+        </select>
+        <label class="wd-label">Coin</label>
+        <select id="wdCryptoCoin" class="wd-input">
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+          <option value="BTC">BTC</option>
+          <option value="ETH">ETH</option>
+        </select>
+        <label class="wd-label">Wallet address</label>
+        <input type="text" id="wdCryptoAddress" class="wd-input">
+        <div id="wdMemoWrap" style="display:none;">
+          <label class="wd-label">Memo / Tag</label>
+          <input type="text" id="wdCryptoMemo" class="wd-input">
+        </div>
+      </div>
+
+      <p class="wd-error" id="wdError" style="display:none;"></p>
+
+      <div class="wd-actions">
+        <button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Cancel</button>
+        <button class="wd-btn wd-btn-submit" onclick="submitWithdraw()">Submit request</button>
+      </div>
     </div>
-    <p class="wd-error" id="wdError" style="display:none;"></p>
-    <div class="wd-actions">
-      <button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Cancel</button>
-      <button class="wd-btn wd-btn-submit" onclick="submitWithdraw()">Submit request</button>
-    </div>
+
+    <!-- STAGE 2: PROCESSING (empty — filled by JS) -->
+    <div class="wd-processing"></div>
+
+    <!-- STAGE 3: SUCCESS (empty — filled by JS) -->
+    <div class="wd-success"></div>
+
   </div>
 </div>
 
