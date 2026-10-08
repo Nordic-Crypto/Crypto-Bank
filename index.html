@@ -4437,6 +4437,200 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if (typeof updateChatBadge === 'function') updateChatBadge();
 });
-</script>
+  </script>
+ <!-- ═══════════════════════════════════════════════════════════
+     FULL TRADE TERMINAL — Binance-style
+     ═══════════════════════════════════════════════════════════ -->
+<div class="trade-terminal" id="tradeTerminal">
+
+  <div class="tt-header">
+    <div class="tt-header-left">
+      <div class="tt-coin-selector">
+        <button data-coin="BTC" class="on">BTC/USD</button>
+        <button data-coin="ETH">ETH/USD</button>
+        <button data-coin="USDT">USDT/USD</button>
+        <button data-coin="SOL">SOL/USD</button>
+        <button data-coin="BNB">BNB/USD</button>
+      </div>
+    </div>
+
+    <div class="tt-header-center">
+      <div class="tt-price-display">
+        <div class="tt-price">$—</div>
+        <div class="tt-change up">+0.00%</div>
+      </div>
+      <div class="tt-stats">
+        <div>24h High:<b>$—</b></div>
+        <div>24h Low:<b>$—</b></div>
+        <div>24h Vol:<b>—</b></div>
+      </div>
+    </div>
+
+    <div class="tt-header-right">
+      <button class="tt-close" title="Close (Esc)">×</button>
+    </div>
+  </div>
+
+  <div class="tt-body">
+
+    <div class="tt-chart-panel">
+      <div class="tt-chart-toolbar">
+        <div class="tt-timeframes">
+          <button data-tf="1h">1H</button>
+          <button data-tf="4h" class="on">4H</button>
+          <button data-tf="1d">1D</button>
+        </div>
+        <div class="tt-indicators">
+          <button data-ind="ma" class="on">MA</button>
+          <button data-ind="ema" class="on">EMA</button>
+          <button data-ind="vol" class="on">Vol</button>
+        </div>
+      </div>
+      <canvas id="ttChart"></canvas>
+    </div>
+
+    <div class="tt-orderbook-panel">
+      <div class="tt-ob-header">Order Book</div>
+      <div class="tt-ob-asks"></div>
+      <div class="tt-ob-spread">
+        <div class="tt-ob-spread-price">$—</div>
+        <div class="tt-ob-spread-label">Spread</div>
+      </div>
+      <div class="tt-ob-bids"></div>
+    </div>
+
+    <div class="tt-form-panel">
+
+      <div class="tt-form-tabs">
+        <button data-tab="buy" class="on">Buy</button>
+        <button data-tab="sell">Sell</button>
+        <button data-tab="convert">Convert</button>
+      </div>
+
+      <!-- BUY FORM -->
+      <div class="tt-form on" data-form="buy">
+        <div class="tt-order-type">
+          <button data-type="market" class="on">Market</button>
+          <button data-type="limit">Limit</button>
+        </div>
+
+        <div class="tt-input-group">
+          <label id="ttBuyLabel">Amount (USD)</label>
+          <input type="number" id="ttBuyAmount" placeholder="0.00" min="10" step="0.01">
+          <div class="tt-quick">
+            <button data-pct="25">25%</button>
+            <button data-pct="50">50%</button>
+            <button data-pct="75">75%</button>
+            <button data-pct="100">MAX</button>
+          </div>
+        </div>
+
+        <div class="tt-limit-price">
+          <label>Limit Price (USD)</label>
+          <input type="number" id="ttBuyLimitPrice" placeholder="0.00">
+        </div>
+
+        <div class="tt-preview">
+          <div><span>You receive</span><b id="ttBuyReceive">0.00000000 BTC</b></div>
+          <div><span>Rate</span><b id="ttBuyRate">—</b></div>
+          <div><span>Fee (0.1%)</span><b id="ttBuyFee">$0.00</b></div>
+          <div><span>Available</span><b id="ttBuyBalance">$0.00</b></div>
+        </div>
+
+        <button class="tt-submit tt-submit-buy" id="ttBuySubmit">Buy BTC</button>
+      </div>
+
+      <!-- SELL FORM -->
+      <div class="tt-form" data-form="sell">
+        <div class="tt-order-type">
+          <button data-type="market" class="on">Market</button>
+          <button data-type="limit">Limit</button>
+        </div>
+
+        <div class="tt-input-group">
+          <label id="ttSellLabel">Amount (BTC)</label>
+          <input type="number" id="ttSellAmount" placeholder="0.00000000" step="0.00000001">
+          <div class="tt-quick">
+            <button data-pct="25">25%</button>
+            <button data-pct="50">50%</button>
+            <button data-pct="75">75%</button>
+            <button data-pct="100">MAX</button>
+          </div>
+        </div>
+
+        <div class="tt-limit-price">
+          <label>Limit Price (USD)</label>
+          <input type="number" id="ttSellLimitPrice" placeholder="0.00">
+        </div>
+
+        <div class="tt-preview">
+          <div><span>You receive</span><b id="ttSellReceive">$0.00</b></div>
+          <div><span>Rate</span><b id="ttSellRate">—</b></div>
+          <div><span>Available</span><b id="ttSellBalance">0.00000000 BTC</b></div>
+        </div>
+
+        <button class="tt-submit tt-submit-sell" id="ttSellSubmit">Sell BTC</button>
+      </div>
+
+      <!-- CONVERT FORM -->
+      <div class="tt-form" data-form="convert">
+        <div class="tt-input-group">
+          <label>From</label>
+          <select id="ttConvertFrom" style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#fff;font-size:14px;font-weight:700;font-family:ui-monospace,monospace;outline:none;box-sizing:border-box;cursor:pointer;">
+            <option value="BTC">BTC — Bitcoin</option>
+            <option value="ETH" selected>ETH — Ethereum</option>
+            <option value="USDT">USDT — Tether</option>
+          </select>
+          <div class="tt-input-group" style="margin-top:8px;">
+            <label>Amount</label>
+            <input type="number" id="ttConvertAmount" placeholder="0.00000000" step="0.00000001">
+            <div class="tt-quick">
+              <button data-pct="25">25%</button>
+              <button data-pct="50">50%</button>
+              <button data-pct="75">75%</button>
+              <button data-pct="100">MAX</button>
+            </div>
+          </div>
+          <div id="ttConvertFromBalance" style="font-size:11px;color:#7a8a9e;font-family:ui-monospace,monospace;padding:0 4px;">Balance: 0.00000000</div>
+        </div>
+
+        <div class="tt-input-group">
+          <label>To</label>
+          <select id="ttConvertTo" style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#fff;font-size:14px;font-weight:700;font-family:ui-monospace,monospace;outline:none;box-sizing:border-box;cursor:pointer;">
+            <option value="BTC" selected>BTC — Bitcoin</option>
+            <option value="ETH">ETH — Ethereum</option>
+            <option value="USDT">USDT — Tether</option>
+          </select>
+          <div class="tt-input-group" style="margin-top:8px;">
+            <label>You receive</label>
+            <input type="text" id="ttConvertResult" placeholder="0.00000000" readonly style="background:rgba(0,0,0,0.2);cursor:not-allowed;">
+          </div>
+          <div id="ttConvertToBalance" style="font-size:11px;color:#7a8a9e;font-family:ui-monospace,monospace;padding:0 4px;">Balance: 0.00000000</div>
+        </div>
+
+        <div class="tt-preview">
+          <div><span>Rate</span><b id="ttConvertRate">—</b></div>
+          <div><span>Fee</span><b style="color:#22c55e">Free</b></div>
+        </div>
+
+        <button class="tt-submit tt-submit-convert" id="ttConvertSubmit">Convert</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="tt-bottom">
+    <div class="tt-recent-trades">
+      <div class="tt-rt-header">Recent Trades</div>
+      <div class="tt-rt-list"></div>
+    </div>
+    <div class="tt-open-orders">
+      <div class="tt-oo-header">Open Orders</div>
+      <div class="tt-oo-list"><div class="tt-empty">No open orders</div></div>
+    </div>
+  </div>
+
+</div> 
 </body>
 </html>
