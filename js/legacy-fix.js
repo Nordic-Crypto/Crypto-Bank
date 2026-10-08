@@ -800,3 +800,60 @@
   });
 
   console.log('%c[NordicCrypto] 💱 Trade Terminal ready (Buy/Sell/Convert)', 'color:#22d3ee;font-weight:bold');
+  /* ============================================================
+     FAST BALANCE POLLING — обновление каждые 15 сек
+     ============================================================ */
+  (function () {
+    var _lastPoll = 0;
+
+    setInterval(async function () {
+      // Skip admin
+      if (localStorage.getItem('user_role') === 'admin' && !window.adminViewingEmail) return;
+
+      var email = window.adminViewingEmail || localStorage.getItem('user_email');
+      var token = localStorage.getItem('session_token');
+      if (!email || !token) return;
+
+      var now = Date.now();
+      if (now - _lastPoll < 15000) return;
+      _lastPoll = now;
+
+      try {
+        var r = await fetch(WORKER_URL + '?action=getUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, email })
+        });
+        var fresh = await r.json();
+        if (!fresh || fresh.ok === false) return;
+
+        var oldUsd = (window.st && window.st.usd) || 0;
+        var newUsd = Number(fresh.usd) || 0;
+        var changed = Math.abs(newUsd - oldUsd) > 0.01;
+
+        var oldLen = (window.st && window.st.txs && window.st.txs.length) || 0;
+        var newLen = (fresh.txs && fresh.txs.length) || 0;
+        var txsChanged = newLen !== oldLen;
+
+        if (changed || txsChanged) {
+          window.st.usd = newUsd;
+          window.st.btc = Number(fresh.btc) || window.st.btc;
+          window.st.eth = Number(fresh.eth) || window.st.eth;
+          window.st.txs = fresh.txs || window.st.txs;
+          window.st.pendingDeposits = fresh.pendingDeposits || [];
+          window.st.notifications = fresh.notifications || window.st.notifications;
+
+          if (typeof window.render === 'function') window.render();
+          if (typeof window.renderNotifications === 'function') window.renderNotifications();
+
+          if (changed && newUsd > oldUsd) {
+            var diff = (newUsd - oldUsd).toFixed(2);
+            if (typeof window.toast === 'function') window.toast('💰 Balance updated: +$' + diff);
+            if (typeof window.playChime === 'function') window.playChime();
+          }
+        }
+      } catch (e) { /* silent */ }
+    }, 15000);
+
+    console.log('%c[NordicCrypto] ⚡ Fast balance polling ready', 'color:#22d3ee;font-weight:bold');
+  })();
