@@ -1,21 +1,22 @@
 /* ============================================================
-   NORDIC CRYPTO — MAINTENANCE MODE v5.0 (HARD BLOCK)
+   NORDIC CRYPTO — MAINTENANCE MODE v6.0 (SSE LIVE)
    ============================================================
-   v5.0:
-   • 🔴 ВСЕ клиенты (залогиненные и новые) видят полный экран
-   • 🔴 Админ проходит всегда
-   • 🔴 End Update → моментально всё пропадает
-   • Проверка сервера каждые 5 сек (быстрое закрытие)
+   v6.0:
+   • ⚡ SSE — мгновенная реакция (<1 сек)
+   • ⚡ Без F5 — экран появляется/исчезает сам
+   • ⚡ Fallback на polling если SSE не работает
+   • 🔴 Полный экран для всех кроме админа
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var MM_VERSION = '5.0.0';
+  var MM_VERSION = '6.0.0';
   var STORAGE_KEY = 'nc_maintenance';
-  var CHECK_INTERVAL = 5000; // 5 сек — быстрое закрытие после End Update
+  var CHECK_INTERVAL = 15000; // fallback polling — 15 сек
   var _screenShown = false;
   var _lastServerData = null;
+  var _eventSource = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -40,6 +41,13 @@
     return role === 'admin' || email === 'admin@nordiccrypto.com';
   }
 
+  function getWorker() {
+    return window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
+  }
+
+  // ============================================================
+  // ACTIVATE / DEACTIVATE
+  // ============================================================
   async function activate(opts) {
     opts = opts || {};
     var duration = opts.duration || (5 * 60 * 1000);
@@ -58,9 +66,8 @@
 
     try {
       var token = localStorage.getItem('session_token');
-      var WORKER = window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
       if (token) {
-        await fetch(WORKER + '?action=setMaintenance', {
+        await fetch(getWorker() + '?action=setMaintenance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -71,10 +78,6 @@
       }
     } catch (e) {}
 
-    try {
-      new BroadcastChannel('nc_maintenance').postMessage({ type: 'activated', data: data });
-    } catch (e) {}
-
     return data;
   }
 
@@ -82,33 +85,23 @@
     localStorage.removeItem(STORAGE_KEY);
     try {
       var token = localStorage.getItem('session_token');
-      var WORKER = window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
       if (token) {
-        await fetch(WORKER + '?action=setMaintenance', {
+        await fetch(getWorker() + '?action=setMaintenance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: token, active: false })
         });
       }
     } catch (e) {}
-    try {
-      new BroadcastChannel('nc_maintenance').postMessage({ type: 'deactivated' });
-    } catch (e) {}
     hideScreen();
   }
 
   // ============================================================
-  // 🖥️ ПОЛНЫЙ ЭКРАН для всех (кроме админа)
+  // 🖥️ SCREEN
   // ============================================================
   function showScreen(data) {
-    // 🛡️ Админ проходит всегда
     if (isAdmin()) return;
-
-    // Уже показан?
-    if (_screenShown && document.getElementById('ncMaintenanceScreen')) {
-      // Обновляем таймер на свежих данных
-      return;
-    }
+    if (_screenShown && document.getElementById('ncMaintenanceScreen')) return;
 
     injectCSS();
     var screen = document.createElement('div');
@@ -117,32 +110,19 @@
     document.body.appendChild(screen);
     requestAnimationFrame(function () { screen.classList.add('nc-on'); });
 
-    // Скрываем всё остальное
     hideAllUI();
-
     startCountdown(data.until);
     startProgressUpdate(data);
     _screenShown = true;
-
-    // Проверка не выключилось ли
-    var iv = setInterval(function () {
-      if (!isActive()) {
-        clearInterval(iv);
-        hideScreen();
-      }
-    }, 3000);
   }
 
   function hideAllUI() {
-    // Скрываем основные контейнеры
     var side = document.getElementById('sideBar');
     var main = document.getElementById('mainApp');
     var login = document.getElementById('loginScreen');
     if (side) side.style.display = 'none';
     if (main) main.style.display = 'none';
     if (login) login.style.display = 'none';
-
-    // Скрываем все модалки
     document.querySelectorAll('.mask, .notif-overlay, .dep-verify-overlay, .verify-screen, .onboard, .onb-anim-stage')
       .forEach(function (m) { m.classList.remove('on'); m.style.display = 'none'; });
   }
@@ -159,7 +139,6 @@
     var login = document.getElementById('loginScreen');
     if (login) login.style.display = '';
 
-    // Если клиент залогинен — верни дашборд
     if (localStorage.getItem('user_email')) {
       var side = document.getElementById('sideBar');
       var main = document.getElementById('mainApp');
@@ -170,7 +149,6 @@
       }
     }
 
-    // Confetti + toast
     if (typeof window.spawnConfetti === 'function') {
       setTimeout(function () { window.spawnConfetti(); }, 200);
     }
@@ -183,11 +161,16 @@
     var el = $('ncMmCountdown');
     if (!el) return;
     (function tick() {
+      if (!el) return;
       var left = untilTs - Date.now();
       if (left <= 0) { el.textContent = '00:00'; return; }
-      var min = Math.floor(left / 60000);
+      var hr = Math.floor(left / 3600000);
+      var min = Math.floor((left % 3600000) / 60000);
       var sec = Math.floor((left % 60000) / 1000);
-      el.textContent = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+      var txt = hr > 0
+        ? (String(hr).padStart(2, '0') + ':' + String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0'))
+        : (String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0'));
+      el.textContent = txt;
       setTimeout(tick, 1000);
     })();
   }
@@ -195,22 +178,19 @@
   function startProgressUpdate(data) {
     var totalMs = data.until - data.started;
     if (totalMs <= 0) return;
-
     function update() {
+      var fill = document.querySelector('.nc-mm-progress-fill');
+      var pctEl = $('ncMmPercent');
+      if (!fill || !pctEl) return;
       var elapsed = Date.now() - data.started;
       var pct = Math.min(95, Math.max(5, (elapsed / totalMs) * 100));
-      var fill = document.querySelector('.nc-mm-progress-fill');
-      if (fill) fill.style.width = pct + '%';
-      var pctEl = $('ncMmPercent');
-      if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+      fill.style.width = pct + '%';
+      pctEl.textContent = Math.round(pct) + '%';
       if (pct < 95) setTimeout(update, 1000);
     }
     update();
   }
 
-  // ============================================================
-  // 🎨 HTML — профессиональный экран
-  // ============================================================
   function buildHTML(data) {
     return '' +
       '<div class="nc-mm-bg"></div>' +
@@ -290,326 +270,70 @@
   }
 
   // ============================================================
-  // 🎨 CSS
+  // ⚡ SSE LIVE — мгновенная реакция
   // ============================================================
-  function injectCSS() {
-    if ($('ncMmStyles')) return;
-    var style = document.createElement('style');
-    style.id = 'ncMmStyles';
-    style.textContent = `
-      #ncMaintenanceScreen {
-        position: fixed !important;
-        top: 0 !important; left: 0 !important;
-        right: 0 !important; bottom: 0 !important;
-        z-index: 2147483647 !important;
-        display: flex; align-items: center; justify-content: center;
-        opacity: 0; transition: opacity .5s ease;
-        padding: 24px; overflow-y: auto;
-        font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-      }
-      #ncMaintenanceScreen.nc-on { opacity: 1; }
+  function connectSSE() {
+    if (_eventSource) {
+      try { _eventSource.close(); } catch (e) {}
+    }
 
-      .nc-mm-bg {
-        position: absolute; inset: 0;
-        background:
-          radial-gradient(900px 600px at 20% 10%, rgba(0,229,255,.14), transparent 60%),
-          radial-gradient(800px 600px at 80% 90%, rgba(139,92,246,.18), transparent 60%),
-          linear-gradient(135deg, #060912 0%, #0a0f1a 100%);
-      }
-      .nc-mm-bg::before {
-        content: ''; position: absolute; inset: 0;
-        background-image:
-          radial-gradient(2px 2px at 15% 25%, rgba(0,229,255,.4), transparent),
-          radial-gradient(2px 2px at 85% 70%, rgba(139,92,246,.4), transparent),
-          radial-gradient(1.5px 1.5px at 40% 80%, rgba(236,72,153,.35), transparent),
-          radial-gradient(1px 1px at 70% 15%, rgba(0,229,255,.3), transparent);
-        animation: ncMmFloat 25s ease-in-out infinite alternate;
-      }
-      @keyframes ncMmFloat {
-        0%   { transform: translate(0, 0); opacity: .7; }
-        100% { transform: translate(-30px, -20px); opacity: 1; }
-      }
+    try {
+      var url = getWorker() + '?action=maintenanceStream&_t=' + Date.now();
+      _eventSource = new EventSource(url);
 
-      .nc-mm-content {
-        position: relative; z-index: 1;
-        max-width: 520px; width: 100%;
-        text-align: center;
-        animation: ncMmIn .7s cubic-bezier(.34,1.56,.64,1);
-      }
-      @keyframes ncMmIn {
-        from { opacity: 0; transform: translateY(30px) scale(.95); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
-      }
+      _eventSource.onmessage = function (event) {
+        try {
+          var data = JSON.parse(event.data);
+          if (data.type === 'status') {
+            handleServerStatus(data.maintenance);
+          }
+        } catch (e) {}
+      };
 
-      .nc-mm-brand {
-        display: inline-flex; align-items: center; gap: 12px;
-        margin-bottom: 24px;
-        font-size: 1.5rem; font-weight: 800;
-      }
-      .nc-mm-brand-icon {
-        width: 52px; height: 52px; border-radius: 15px;
-        background: linear-gradient(135deg, #00e5ff, #8b5cf6);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 26px;
-        animation: ncMmIconSpin 4s linear infinite;
-        box-shadow: 0 12px 30px -8px rgba(0,229,255,.6);
-      }
-      @keyframes ncMmIconSpin {
-        0%, 100% { transform: rotate(0deg); }
-        50%      { transform: rotate(180deg); }
-      }
-      .nc-mm-brand-text {
-        color: #fff;
-        background: linear-gradient(90deg, #F8FAFC 0%, #00D4FF 25%, #A855F7 50%, #00D4FF 75%, #F8FAFC 100%);
-        background-size: 200% auto;
-        -webkit-background-clip: text; background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: ncMmShimmer 5s linear infinite;
-      }
-      @keyframes ncMmShimmer { to { background-position: -200% center; } }
+      _eventSource.onerror = function () {
+        console.warn('[maintenance] SSE error — reconnect in 3s');
+        try { _eventSource.close(); } catch (e) {}
+        _eventSource = null;
+        setTimeout(connectSSE, 3000);
+      };
 
-      .nc-mm-status {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 8px 16px;
-        background: rgba(0,229,255,.08);
-        border: 1px solid rgba(0,229,255,.25);
-        border-radius: 999px;
-        font-size: .78rem; color: #7dd3fc;
-        font-weight: 700;
-        margin-bottom: 20px;
-        text-transform: uppercase;
-        letter-spacing: 1.2px;
-      }
-      .nc-mm-status-dot {
-        width: 8px; height: 8px; border-radius: 50%;
-        background: #00e5ff;
-        box-shadow: 0 0 12px #00e5ff;
-        animation: ncMmStatusPulse 1.5s ease-in-out infinite;
-      }
-      @keyframes ncMmStatusPulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50%      { opacity: .4; transform: scale(1.4); }
-      }
+      _eventSource.onopen = function () {
+        console.log('[maintenance] ⚡ SSE connected');
+      };
+    } catch (e) {
+      console.warn('[maintenance] SSE not supported, using polling');
+      startPolling();
+    }
+  }
 
-      .nc-mm-title {
-        font-size: 2.2rem; font-weight: 800;
-        letter-spacing: -.03em;
-        color: #fff;
-        margin: 0 0 12px;
-        line-height: 1.15;
+  // Реакция на статус с сервера
+  function handleServerStatus(maintenance) {
+    if (maintenance && maintenance.active) {
+      if (maintenance.until && Date.now() > maintenance.until) {
+        localStorage.removeItem(STORAGE_KEY);
+        if (_screenShown) hideScreen();
+        return;
       }
-      .nc-mm-sub {
-        font-size: 1rem; color: #94a3b8;
-        line-height: 1.6;
-        margin: 0 0 32px;
-        max-width: 420px; margin-left: auto; margin-right: auto;
-      }
-
-      .nc-mm-illustration {
-        position: relative;
-        height: 140px;
-        margin-bottom: 32px;
-        display: flex; align-items: center; justify-content: center;
-      }
-      .nc-mm-orbit {
-        position: relative;
-        width: 120px; height: 120px;
-      }
-      .nc-mm-orbit-ring {
-        position: absolute; inset: 0;
-        border-radius: 50%;
-        border: 1.5px dashed rgba(0,229,255,.4);
-        animation: ncMmOrbit 8s linear infinite;
-      }
-      .nc-mm-orbit-ring-2 {
-        inset: 20px;
-        border-color: rgba(139,92,246,.5);
-        animation-duration: 5s;
-        animation-direction: reverse;
-      }
-      @keyframes ncMmOrbit { to { transform: rotate(360deg); } }
-      .nc-mm-orbit-core {
-        position: absolute; inset: 30px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #00e5ff, #8b5cf6);
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 20px 40px -10px rgba(0,229,255,.6), inset 0 1px 0 rgba(255,255,255,.3);
-        animation: ncMmCorePulse 3s ease-in-out infinite;
-      }
-      @keyframes ncMmCorePulse {
-        0%, 100% { transform: scale(1); box-shadow: 0 20px 40px -10px rgba(0,229,255,.6), inset 0 1px 0 rgba(255,255,255,.3); }
-        50%      { transform: scale(1.06); box-shadow: 0 25px 50px -10px rgba(0,229,255,.9), inset 0 1px 0 rgba(255,255,255,.3); }
-      }
-
-      .nc-mm-progress-wrap {
-        background: rgba(255,255,255,.03);
-        border: 1px solid rgba(255,255,255,.06);
-        border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 20px;
-      }
-      .nc-mm-progress-bar {
-        height: 6px;
-        background: rgba(255,255,255,.06);
-        border-radius: 3px;
-        overflow: hidden;
-        margin-bottom: 10px;
-      }
-      .nc-mm-progress-fill {
-        height: 100%; width: 5%;
-        background: linear-gradient(90deg, #00e5ff, #8b5cf6, #ec4899);
-        border-radius: 3px;
-        transition: width 1s ease;
-        box-shadow: 0 0 12px rgba(0,229,255,.6);
-      }
-      .nc-mm-progress-meta {
-        display: flex; justify-content: space-between;
-        font-size: .78rem;
-        color: #64748b;
-      }
-      .nc-mm-progress-meta b { color: #00e5ff; }
-      .nc-mm-countdown {
-        font-family: ui-monospace, monospace;
-        color: #94a3b8;
-      }
-      .nc-mm-countdown span { color: #fff; font-weight: 700; }
-
-      .nc-mm-checklist {
-        display: flex; flex-direction: column; gap: 8px;
-        padding: 16px;
-        background: rgba(255,255,255,.02);
-        border: 1px solid rgba(255,255,255,.05);
-        border-radius: 14px;
-        margin-bottom: 24px;
-        text-align: left;
-      }
-      .nc-mm-check {
-        display: flex; align-items: center; gap: 14px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: rgba(255,255,255,.02);
-        opacity: .55;
-        transition: all .3s ease;
-      }
-      .nc-mm-check-done { opacity: 1; background: rgba(16,185,129,.06); }
-      .nc-mm-check-active {
-        opacity: 1;
-        background: rgba(0,229,255,.06);
-        border: 1px solid rgba(0,229,255,.2);
-      }
-      .nc-mm-check-icon {
-        width: 30px; height: 30px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 13px; font-weight: 800;
-        flex-shrink: 0;
-        background: rgba(255,255,255,.05);
-        color: #94a3b8;
-      }
-      .nc-mm-check-done .nc-mm-check-icon {
-        background: rgba(16,185,129,.15);
-        color: #10b981;
-        border: 1px solid rgba(16,185,129,.4);
-      }
-      .nc-mm-check-active .nc-mm-check-icon {
-        background: rgba(0,229,255,.15);
-        color: #00e5ff;
-        border: 1px solid rgba(0,229,255,.4);
-      }
-      .nc-mm-check div b {
-        display: block;
-        font-size: .88rem;
-        color: #fff;
-        font-weight: 700;
-        margin-bottom: 2px;
-      }
-      .nc-mm-check div span {
-        display: block;
-        font-size: .72rem;
-        color: #64748b;
-      }
-      .nc-mm-check-done div span { color: #10b981; }
-      .nc-mm-check-active div span { color: #00e5ff; }
-
-      .nc-mm-spinner-dot {
-        width: 12px; height: 12px;
-        border: 2px solid rgba(0,229,255,.2);
-        border-top-color: #00e5ff;
-        border-radius: 50%;
-        animation: ncMmSpin 1s linear infinite;
-      }
-      @keyframes ncMmSpin { to { transform: rotate(360deg); } }
-
-      .nc-mm-trust {
-        display: flex; justify-content: center; gap: 24px;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-      }
-      .nc-mm-trust-item {
-        display: flex; align-items: center; gap: 8px;
-        font-size: .82rem;
-        color: #94a3b8;
-        font-weight: 600;
-      }
-      .nc-mm-trust-item svg { color: #10b981; }
-
-      .nc-mm-footer {
-        display: flex; flex-direction: column;
-        align-items: center; gap: 16px;
-      }
-      .nc-mm-retry {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 14px 28px;
-        border-radius: 14px;
-        border: 1px solid rgba(0,229,255,.3);
-        background: rgba(0,229,255,.08);
-        color: #00e5ff;
-        font-size: .9rem; font-weight: 700;
-        cursor: pointer;
-        font-family: inherit;
-        transition: all .3s cubic-bezier(.34,1.56,.64,1);
-      }
-      .nc-mm-retry:hover {
-        background: rgba(0,229,255,.15);
-        transform: translateY(-2px);
-        box-shadow: 0 12px 30px -10px rgba(0,229,255,.5);
-      }
-      .nc-mm-support {
-        font-size: .78rem;
-        color: #64748b;
-      }
-      .nc-mm-support a {
-        color: #00e5ff;
-        text-decoration: none;
-        font-weight: 600;
-      }
-      .nc-mm-support a:hover { text-decoration: underline; }
-
-      @media (max-width: 540px) {
-        .nc-mm-title { font-size: 1.6rem; }
-        .nc-mm-sub { font-size: .9rem; }
-        .nc-mm-brand { font-size: 1.3rem; }
-        .nc-mm-brand-icon { width: 44px; height: 44px; font-size: 22px; }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .nc-mm-brand-icon, .nc-mm-orbit-ring, .nc-mm-orbit-core,
-        .nc-mm-status-dot, .nc-mm-spinner-dot {
-          animation: none !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(maintenance));
+      showScreen(maintenance);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      if (_screenShown) hideScreen();
+    }
   }
 
   // ============================================================
-  // 🔄 SERVER CHECK
+  // 🔄 FALLBACK POLLING — если SSE не работает
   // ============================================================
   async function checkServer() {
     try {
-      var WORKER = window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
-      var r = await fetch(WORKER + '?action=getMaintenanceStatus&_t=' + Date.now(), {
+      var r = await fetch(getWorker() + '?action=getMaintenanceStatus&_t=' + Date.now() + '&_r=' + Math.random(), {
         method: 'GET',
-        cache: 'no-store'
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
       var d = await r.json();
       if (d && d.ok && d.maintenance && d.maintenance.active) {
@@ -622,9 +346,17 @@
         return null;
       }
     } catch (e) {
-      console.warn('[maintenance] server check failed:', e.message);
       return _lastServerData;
     }
+  }
+
+  function startPolling() {
+    setInterval(function () {
+      checkServer().then(function (data) {
+        if (data) showScreen(data);
+        else if (_screenShown) hideScreen();
+      });
+    }, CHECK_INTERVAL);
   }
 
   // ============================================================
@@ -635,23 +367,19 @@
     var local = get();
     if (local && !_screenShown) showScreen(local);
 
-    // 2. Через 500мс из сервера
-    setTimeout(function () {
-      checkServer().then(function (data) {
-        if (data) showScreen(data);
-        else if (_screenShown) hideScreen();
-      });
-    }, 500);
+    // 2. Проверяем сервер сразу
+    checkServer().then(function (data) {
+      if (data) showScreen(data);
+      else if (_screenShown) hideScreen();
+    });
 
-    // 3. Проверка каждые 5 сек — быстрое закрытие
-    setInterval(function () {
-      checkServer().then(function (data) {
-        if (data) showScreen(data);
-        else if (_screenShown) hideScreen();
-      });
-    }, CHECK_INTERVAL);
+    // 3. Запускаем SSE (live updates)
+    connectSSE();
 
-    // 4. При возврате на вкладку
+    // 4. Fallback polling (если SSE упадёт)
+    startPolling();
+
+    // 5. При возврате на вкладку
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) {
         checkServer().then(function (data) {
@@ -679,6 +407,7 @@
     autoCheck();
   }
 
+  // Broadcast в другие вкладки
   try {
     var bc = new BroadcastChannel('nc_maintenance');
     bc.onmessage = function (ev) {
@@ -691,6 +420,6 @@
     };
   } catch (e) {}
 
-  console.log('%c[NordicCrypto] ⚙️ maintenance-mode.js v' + MM_VERSION + ' loaded',
+  console.log('%c[NordicCrypto] ⚙️ maintenance-mode.js v' + MM_VERSION + ' (SSE) loaded',
     'color:#8b5cf6;font-weight:bold;font-size:13px');
 })();
