@@ -104,15 +104,20 @@ function saveToServer(){
   var token = getSessionToken();
   if (!token) return;
 
-  // 🛡️ Защита: не отправлять, если st не полностью загружен
   if (!stateLoaded) {
     console.warn('[saveToServer] skipped — state not loaded yet');
     return;
   }
 
-  // 🛡️ Защита: не отправлять пустое состояние (часто при logout/refresh)
-  if (!st.usd && !st.btc && !st.eth && (!st.txs || !st.txs.length)) {
-    console.warn('[saveToServer] skipped — empty state');
+  // 🛡️ Отправлять если есть хоть что-то важное: карта, KYC, balance, транзакции
+  var hasCard = st.card && st.card.num;
+  var hasVerification = st.verification && st.verification.status;
+  var hasBalance = st.usd > 0 || st.btc > 0 || st.eth > 0;
+  var hasTxs = st.txs && st.txs.length > 0;
+  var hasIban = st.user && st.user.iban;
+
+  if (!hasCard && !hasVerification && !hasBalance && !hasTxs && !hasIban) {
+    console.warn('[saveToServer] skipped — truly empty state');
     return;
   }
 
