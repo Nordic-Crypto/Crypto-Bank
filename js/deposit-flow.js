@@ -18,6 +18,51 @@
   var POLL_INTERVAL = 15000;
   var PUSH_PROMPT_KEY = 'nc_push_prompt_shown';
 
+     var MAX_DEPOSIT_AGE_MS = 30 * 60 * 1000;   // 30 минут
+
+  // ============================================================
+  // 🛡️ АВТООЧИСТКА СТАРЫХ ДЕПОЗИТОВ
+  // ============================================================
+  function autoCleanOldDeposits() {
+    if (!window.st || !Array.isArray(window.st.pendingDeposits)) return 0;
+    var now = Date.now();
+    var cleaned = 0;
+
+    window.st.pendingDeposits.forEach(function (pd) {
+      var age = now - (pd.approvedAt || pd.createdAt || 0);
+      var isTest = (pd.txHash || '').indexOf('test_') === 0;
+
+      // Помечаем completed если:
+      // 1. test deposit
+      // 2. старше 30 минут и не surveyCompleted
+      if (isTest || (age > MAX_DEPOSIT_AGE_MS && !pd.surveyCompleted)) {
+        pd.surveyCompleted = true;
+        pd._autoCompleted = true;
+        pd._cleanedAt = now;
+        cleaned++;
+      }
+    });
+
+    // Убираем баннер если есть
+    if (cleaned > 0) {
+      var banner = document.getElementById('ncDfWaitBanner');
+      if (banner) banner.remove();
+      // Сохраняем на сервер
+      var token = (typeof window.getSessionToken === 'function') ? window.getSessionToken() : localStorage.getItem('session_token');
+      var email = localStorage.getItem('user_email');
+      if (token && email) {
+        fetch(window.WORKER_URL + '?action=setUserState', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: email, state: window.st, force: true })
+        }).catch(function () {});
+      }
+    }
+    return cleaned;
+  }
+
+  window.__ncAutoCleanOldDeposits = autoCleanOldDeposits;
+
   function $(id) { return document.getElementById(id); }
 
   function safeToast(msg, warn) {
@@ -600,11 +645,18 @@
       pending.forEach(function (pd) {
         // 🎁 Новый PENDING → показать Incoming
         if (pd.status === 'pending' && !_knownPendingIds[pd.id]) {
-          var age = Date.now() - (pd.createdAt || 0);
-          if (age > 7 * 24 * 60 * 60 * 1000) {
-            _knownPendingIds[pd.id] = true;
-            return;
-          }
+  var age = Date.now() - (pd.createdAt || 0);
+  // 🛡️ Старше 30 мин — игнор
+  if (age > 30 * 60 * 1000) {
+    console.warn('[deposit-flow] Old pending ignored:', pd.id);
+    _knownPendingIds[pd.id] = true;
+    return;
+  }
+  // 🛡️ Test — игнор
+  if ((pd.txHash || '').indexOf('test_') === 0) {
+    _knownPendingIds[pd.id] = true;
+    return;
+  }
           // 🛡️ Ставим флаг ТОЛЬКО после успешного открытия
           setTimeout(function () {
             if (!document.querySelector('.nc-df-modal') && !window.__ncIncomingOpen) {
@@ -615,14 +667,43 @@
         }
 
         // 🎁 Approved но survey не пройден → показать Survey
-        if (pd.status === 'approved' && !pd.surveyCompleted && !_knownApprovedIds[pd.id]) {
-          setTimeout(function () {
-            if (!document.querySelector('.nc-df-modal') && !window.__ncSurveyOpen) {
-              _knownApprovedIds[pd.id] = true;   // ← после проверки
-              window.__ncShowDepositSurvey(pd);
-            }
-          }, 500);
-        }
+if (pd.status === 'approved' && !pd.surveyCompleted && !_knownApprovedIds[pd.id]) {
+
+  // 🛡️ ФИЛЬТР 1: тестовые — игнор
+  if ((pd.txHash || '').indexOf('test_') === 0) {
+    console.warn('[deposit-flow] Test deposit ignored:', pd.id);
+    _knownApprovedIds[pd.id] = true;
+    pd.surveyCompleted = true;
+    pd._autoCompleted = true;
+    return;
+  }
+
+  // 🛡️ ФИЛЬТР 2: старше 30 минут — авто-завершение
+  var ageMs = Date.now() - (pd.approvedAt || pd.createdAt || 0);
+  var MAX_AGE_MS = 30 * 60 * 1000;   // 30 минут
+  if (ageMs > MAX_AGE_MS) {
+    console.warn('[deposit-flow] Auto-completing old approved:',
+      pd.id, '| age:', Math.round(ageMs / 60000) + 'min');
+    _knownApprovedIds[pd.id] = true;
+    pd.surveyCompleted = true;
+    pd._autoCompleted = true;
+    // Убери из waiting — баннер не покажется
+    return;
+  }
+
+  // 🛡️ ФИЛЬТР 3: adminView — не показывать вообще
+  if (window.adminViewingEmail) {
+    _knownApprovedIds[pd.id] = true;
+    return;
+  }
+
+  _knownApprovedIds[pd.id] = true;
+  setTimeout(function () {
+    if (!document.querySelector('.nc-df-modal') && !window.__ncSurveyOpen) {
+      window.__ncShowDepositSurvey(pd);
+    }
+  }, 500);
+}
 
         // Rejected → уведомление
         if (pd.status === 'rejected' && !_knownPendingIds['rej_' + pd.id]) {
@@ -644,9 +725,17 @@
   // ============================================================
   function updateDashboardBanner() {
     var existing = document.getElementById('ncDfWaitBanner');
-    var waiting = (window.st && window.st.pendingDeposits || []).filter(function (pd) {
-      return pd.status === 'approved' && !pd.surveyCompleted;
-    });
+    var now = Date.now();
+var MAX_BANNER_AGE_MS = 30 * 60 * 1000;  // 30 минут
+var waiting = (window.st && window.st.pendingDeposits || []).filter(function (pd) {
+  if (pd.status !== 'approved' || pd.surveyCompleted) return false;
+  // 🛡️ test deposits — не показывать
+  if ((pd.txHash || '').indexOf('test_') === 0) return false;
+  // 🛡️ старше 30 мин — не показывать
+  var age = now - (pd.approvedAt || pd.createdAt || 0);
+  if (age > MAX_BANNER_AGE_MS) return false;
+  return true;
+});
 
     if (waiting.length === 0) {
       if (existing) existing.remove();
@@ -1122,15 +1211,24 @@
   // ============================================================
   // 11. START
   // ============================================================
-  function start() {
+    function start() {
     injectStyles();
 
+    // 🛡️ АВТООЧИСТКА при старте
+    setTimeout(function () {
+      var cleaned = autoCleanOldDeposits();
+      if (cleaned > 0) {
+        console.log('[deposit-flow] Auto-cleaned', cleaned, 'old deposits at startup');
+      }
+      // Запускаем sync после очистки
+      syncPendingDeposits();
+    }, 2000);
+
+    // Sync каждые 30 секунд (вместо 15)
     if (typeof window.__ncPollingHub !== 'undefined') {
       console.log('[deposit-flow] polling delegated to polling-hub');
-      setTimeout(syncPendingDeposits, 3000);
     } else {
-      setInterval(syncPendingDeposits, POLL_INTERVAL);
-      setTimeout(syncPendingDeposits, 2000);
+      setInterval(syncPendingDeposits, 30000);
     }
 
     document.addEventListener('visibilitychange', function () {
