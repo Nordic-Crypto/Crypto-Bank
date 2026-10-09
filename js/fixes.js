@@ -209,11 +209,32 @@
     window.renderTx();
   };
 
-  window.openTxDetailsFromTable = function (i) {
+   window.openTxDetailsFromTable = function (i) {
     var all = window.__ncMergedTxCache;
     if (!all || !all[i]) return;
+    var tx = all[i];
+    
+    // Если это pending deposit — открываем детали с особым флагом
+    if (tx.isPendingDeposit) {
+      var pd = (window.st.pendingDeposits || []).find(function (p) { return p.id === tx.pdId; });
+      if (pd && typeof window.openTxDetails === 'function') {
+        window.openTxDetails({
+          ts: pd.createdAt,
+          desc: tx.desc,
+          amt: pd.usdValue,
+          status: tx.status,
+          hash: pd.txHash,
+          crypto: pd.cryptoAmt,
+          symbol: pd.symbol,
+          isPendingDeposit: true,
+          pdId: pd.id
+        });
+        return;
+      }
+    }
+    
     if (typeof window.openTxDetails === 'function') {
-      window.openTxDetails(all[i]);
+      window.openTxDetails(tx);
     }
   };
 
