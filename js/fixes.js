@@ -1,21 +1,21 @@
 /* ============================================================
-   NORDIC CRYPTO — FIXES.JS v1.3
+   NORDIC CRYPTO — FIXES.JS v1.4
    ============================================================
-   v1.3:
-     • FIXED: broken syntax in updateTxStatuses (v1.1 had bad merge)
-     • NEW: instant cryptoAddress sync (admin sets → client sees in 3s)
-     • NEW: deposit address UI in Add Funds modal with QR code
-     • NEW: waiting indicator when admin hasn't set address yet
-     • ALL v1.1 features preserved
+   v1.4 additions:
+     • FIX: Онбординг после approve KYC (banking, без карты)
+     • FIX: Автопоказ онбординга при заходе на dashboard
+     • FIX: Улучшенный детект banking-клиентов без карты
+     • ALL v1.3 features preserved
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var FIXES_VERSION = '1.3.0';
+  var FIXES_VERSION = '1.4.0';
   var STUCK_THRESHOLD_MS = 5 * 60 * 1000;
   var MIGRATION_FLAG_KEY = 'nc_tx_migrated_v1';
   var WITHDRAW_SYNC_KEY = 'nc_wd_seen_v1';
+  var ONBOARDING_CHECK_FLAG = 'nc_onboarding_checked';
 
   function $(id) { return document.getElementById(id); }
 
@@ -31,6 +31,111 @@
   function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
+
+  // ============================================================
+  // 0. FIX: Онбординг для banking-клиентов без карты
+  // ============================================================
+
+  var _onboardingShown = false;
+
+  function checkNeedOnboarding() {
+    if (!window.st) return false;
+    if (_onboardingShown) return false;
+
+    // Пропускаем для админа
+    if (localStorage.getItem('user_role') === 'admin') return false;
+    if (window.adminViewingEmail) return false;
+
+    var accountType = (window.st.user && window.st.user.accountType) || null;
+    var vStatus = (window.st.verification && window.st.verification.status) || null;
+    var hasCard = !!(window.st.card && window.st.card.num);
+
+    // Онбординг нужен когда: approved + banking + нет карты
+    var needOnboarding = (vStatus === 'approved') && (accountType === 'banking') && !hasCard;
+
+    if (!needOnboarding) return false;
+
+    // Проверка: не показывается ли уже модалка депозита (не перебиваем)
+    if (document.querySelector('.nc-df-modal')) {
+      console.log('[fixes] Onboarding deferred — deposit modal open');
+      return false;
+    }
+
+    var onboardEl = document.getElementById('onboard');
+    var side = document.getElementById('sideBar');
+    var main = document.getElementById('mainApp');
+    var verifyScreen = document.getElementById('verifyScreen');
+    var pendingScreen = document.getElementById('pendingScreen');
+
+    if (!onboardEl) return false;
+
+    // Скрываем всё другое
+    if (verifyScreen) verifyScreen.classList.remove('on');
+    if (pendingScreen) pendingScreen.classList.remove('on');
+    if (side) side.style.display = 'none';
+    if (main) main.style.display = 'none';
+
+    // Показываем онбординг
+    if (!onboardEl.classList.contains('on')) {
+      onboardEl.classList.add('on');
+
+      // Сброс на первый шаг
+      var steps = document.querySelectorAll('.onb-step');
+      for (var i = 0; i < steps.length; i++) {
+        steps[i].classList.remove('on');
+      }
+      var step1 = document.getElementById('onbStep1');
+      if (step1) step1.classList.add('on');
+
+      console.log('%c🎯 Onboarding shown — banking client without card',
+        'color:#47dcff;font-weight:bold;font-size:13px');
+
+      haptic(20);
+    }
+
+    _onboardingShown = true;
+    return true;
+  }
+
+  // Хук после render
+  var _origRenderForOnb = window.render;
+  if (typeof _origRenderForOnb === 'function') {
+    window.render = function () {
+      var result = _origRenderForOnb.apply(this, arguments);
+      setTimeout(checkNeedOnboarding, 100);
+      return result;
+    };
+  }
+
+  // Хук после loadFromServer
+  var _origLoadFromServer = window.loadFromServer;
+  if (typeof _origLoadFromServer === 'function') {
+    window.loadFromServer = function (cb, email) {
+      return _origLoadFromServer.call(this, function () {
+        if (typeof cb === 'function') cb();
+        setTimeout(checkNeedOnboarding, 500);
+      }, email);
+    };
+  }
+
+  // Хук после applyAccountType (когда тип аккаунта меняется)
+  var _origApplyAccountType = window.applyAccountType;
+  if (typeof _origApplyAccountType === 'function') {
+    window.applyAccountType = function () {
+      var result = _origApplyAccountType.apply(this, arguments);
+      setTimeout(checkNeedOnboarding, 300);
+      return result;
+    };
+  }
+
+  // Периодическая проверка (на случай если что-то пропустим)
+  setInterval(function () {
+    // Сбрасываем флаг если карта появилась
+    if (window.st && window.st.card && window.st.card.num) {
+      _onboardingShown = false;
+    }
+    checkNeedOnboarding();
+  }, 3000);
 
   // ============================================================
   // 1. FIX: updateTxStatuses — правильная миграция
@@ -95,19 +200,18 @@
     try { window.updateTxStatuses(); } catch (e) {}
   }, 1500);
 
- // Отключено: polling-hub.js сам вызывает updateTxStatuses когда нужно
-  // setInterval(function () {
-  //   try { window.updateTxStatuses(); } catch (e) {}
-  // }, 30000);
+  setInterval(function () {
+    try { window.updateTxStatuses(); } catch (e) {}
+  }, 30000);
 
   // ============================================================
-  // 2. FIX: renderTx — merge txs + withdrawals
+  // 2. FIX: renderTx — merge txs + withdrawals + pending deposits
   // ============================================================
 
   var TX_PAGE_SIZE = 50;
   var _txShowAll = false;
 
-   function getMergedTransactions() {
+  function getMergedTransactions() {
     var txs = (window.st && window.st.txs) ? window.st.txs.slice() : [];
     var withdrawals = (window.st && window.st.withdrawals) ? window.st.withdrawals : [];
     var pendingDeposits = (window.st && window.st.pendingDeposits) ? window.st.pendingDeposits : [];
@@ -140,8 +244,7 @@
 
     pendingDeposits.forEach(function (pd) {
       if (existingPdHashes[pd.txHash]) return;
-      // Показываем только pending и approved-но-не-пройденные
-      if (pd.surveyCompleted) return; // уже зачислен — не дублируем
+      if (pd.surveyCompleted) return;
 
       var status = pd.status === 'pending' ? 'Under Review'
                  : pd.status === 'approved' ? 'Under Review'
@@ -209,12 +312,11 @@
     window.renderTx();
   };
 
-   window.openTxDetailsFromTable = function (i) {
+  window.openTxDetailsFromTable = function (i) {
     var all = window.__ncMergedTxCache;
     if (!all || !all[i]) return;
     var tx = all[i];
-    
-    // Если это pending deposit — открываем детали с особым флагом
+
     if (tx.isPendingDeposit) {
       var pd = (window.st.pendingDeposits || []).find(function (p) { return p.id === tx.pdId; });
       if (pd && typeof window.openTxDetails === 'function') {
@@ -232,7 +334,7 @@
         return;
       }
     }
-    
+
     if (typeof window.openTxDetails === 'function') {
       window.openTxDetails(tx);
     }
@@ -330,7 +432,7 @@
   }
   loadSeenStatuses();
 
-    window.__ncSyncWithdrawStatuses = async function () {
+  window.__ncSyncWithdrawStatuses = async function () {
     if (!window.st || !Array.isArray(window.st.withdrawals)) return;
     if (!window.getSessionToken) return;
     var token = window.getSessionToken();
@@ -406,7 +508,7 @@
     } catch (e) {
       console.warn('[fixes.syncWithdrawStatuses]', e);
     }
-  }
+  };
 
   function notifyWithdrawChange(wd) {
     if (typeof window.__ncUpdateWithdrawConfirmations === 'function') {
@@ -508,13 +610,13 @@
     ].join('|');
   }
 
-  var _origRender = window.render;
-  if (typeof _origRender === 'function') {
+  var _origRenderGuard = window.render;
+  if (typeof _origRenderGuard === 'function') {
     window.render = function () {
       var h = stateHash();
       if (h === _lastRenderHash) return;
       _lastRenderHash = h;
-      return _origRender.apply(this, arguments);
+      return _origRenderGuard.apply(this, arguments);
     };
   }
 
@@ -859,7 +961,6 @@
 
     _submitting = true;
 
-    // Показываем processing
     if (typeof window.__ncRenderWithdrawProcessing === 'function') {
       window.__ncRenderWithdrawProcessing(method, amount, details, 'pending');
     } else {
@@ -882,7 +983,6 @@
 
       if (!data.ok) {
         _submitting = false;
-        // Сброс UI
         var formStage2 = document.querySelector('.wd-form-stage');
         var processingStage2 = document.querySelector('.wd-processing');
         if (formStage2) formStage2.style.display = 'block';
@@ -925,7 +1025,6 @@
 
       try { if (typeof window.render === 'function') window.render(); } catch (e) {}
 
-      // Success
       if (typeof window.showWithdrawSuccess === 'function') {
         window.showWithdrawSuccess(method, amount, details, wd);
       } else {
@@ -963,7 +1062,7 @@
   }
 
   // ============================================================
-  // 15. URGENT FIX: Deposit address UI in Add Funds modal
+  // 15. FIX: Deposit address UI in Add Funds modal
   // ============================================================
 
   function renderDepositAddressInModal() {
@@ -1107,7 +1206,7 @@
   }
 
   // ============================================================
-  // 16. URGENT FIX: instant cryptoAddress sync
+  // 16. FIX: instant cryptoAddress sync
   // ============================================================
 
   var _lastAddrSync = 0;
@@ -1158,9 +1257,6 @@
     } catch (e) {}
   }
 
-    // Отключено: polling-hub.js управляет polling'ом
-  // setInterval(syncCryptoAddress, 3000);
-  // setTimeout(syncCryptoAddress, 500);
   window.__ncSyncCryptoAddress = syncCryptoAddress;
   ensureQRCodeLib(function () {});
 
@@ -1169,7 +1265,7 @@
   // ============================================================
 
   console.log(
-    '%c[NordicCrypto] 🛠 fixes.js v' + FIXES_VERSION + ' loaded — deposit addr + withdrawals + migrations',
+    '%c[NordicCrypto] 🛠 fixes.js v' + FIXES_VERSION + ' loaded — onboarding + withdrawals + deposits',
     'color:#00e5ff;font-weight:bold;font-size:13px'
   );
 
