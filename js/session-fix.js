@@ -211,46 +211,62 @@
     window.__ncHardLogout(true);
   };
 
-  // ============================================================
-  // 5. ДЕТЕКТ МЁРТВОЙ СЕССИИ
+    // ============================================================
+  // 5. ДЕТЕКТ МЁРТВОЙ СЕССИИ (обновлённый — безопасный)
   // ============================================================
 
-  /**
-   * Проверяет: есть ли токен, но нет данных о юзере.
-   * Если да — принудительный logout.
-   */
   function checkForDeadSession() {
     var token = localStorage.getItem('session_token');
     var email = localStorage.getItem('user_email');
     
-    // Случай: токен есть, но email нет → полусостояние
+    // Если токена нет — не наш случай, страница сама покажет login
+    if (!token) return;
+    
+    // Если email нет — полусостояние, чистим
     if (token && !email) {
       log('⚠️ Мёртвая сессия: токен есть, email нет → logout', '#ffb020');
       window.__ncHardLogout(true);
       return;
     }
     
-    // Случай: оба есть — но через 5 сек проверим загрузился ли st
-    if (token && email) {
-      setTimeout(function () {
-        var stillToken = localStorage.getItem('session_token');
-        if (!stillToken) return; // уже залогаутились
-        
-        // Если через 5 сек state не загрузился — сессия мёртвая
-        if (!window.st || (window.st.usd === 0 && !window.st.txs.length && !window.st.card && !window.st.user?.accountType)) {
-          // Проверяем ещё раз через 3 сек (медленная сеть)
-          setTimeout(function () {
-            var freshToken = localStorage.getItem('session_token');
-            if (!freshToken) return;
-            
-            if (!window.st || (window.st.usd === 0 && !window.st.txs.length && !window.st.card && !window.st.user?.accountType)) {
-              log('⚠️ Мёртвая сессия: state не загрузился за 8 сек → logout', '#ffb020');
-              window.__ncHardLogout(true);
-            }
-          }, 3000);
-        }
-      }, 5000);
+    // 🛡️ БЕЗОПАСНЫЙ ДЕТЕКТ: проверяем что роль админа — не трогаем
+    var role = localStorage.getItem('user_role');
+    if (role === 'admin') {
+      log('👑 Admin session — skipping dead-session check', '#8b5cf6');
+      return;
     }
+    
+    // 🛡️ Проверяем есть ли pending deposit — тогда не мешаем
+    // (пользователь может быть в процессе)
+    // Проверяем только через 30 секунд (было 8)
+    setTimeout(function () {
+      var stillToken = localStorage.getItem('session_token');
+      if (!stillToken) return;
+      
+      // Проверяем, грузится ли что-то до сих пор
+      // (например, pending deposit модалка открыта)
+      if (document.querySelector('.nc-df-modal')) {
+        log('⏸ Skip dead-session: Incoming modal open', '#22d3ee');
+        return;
+      }
+      
+      // Проверяем есть ли вообще активность
+      var hasAnyState = window.st && (
+        window.st.usd > 0 ||
+        (window.st.txs && window.st.txs.length > 0) ||
+        window.st.card ||
+        (window.st.user && window.st.user.accountType) ||
+        (window.st.pendingDeposits && window.st.pendingDeposits.length > 0) ||
+        (window.st.verification && window.st.verification.status)
+      );
+      
+      if (!hasAnyState) {
+        log('⚠️ Мёртвая сессия: state пуст через 30 сек → logout', '#ffb020');
+        window.__ncHardLogout(true);
+      } else {
+        log('✅ Session OK', '#4edca9');
+      }
+    }, 30000);  // ← 30 секунд вместо 8
   }
 
   // ============================================================
