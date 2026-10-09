@@ -1,26 +1,27 @@
 /* ============================================================
-   NORDIC CRYPTO — AUTH.JS v2.0
+   NORDIC CRYPTO — AUTH.JS v2.1
    ============================================================
-   FIXES v2.0:
-   - ✅ Эмит событий nc:auth:login / nc:auth:logout
-   - ✅ Fallback если showApp() не определён
-   - ✅ checkSession не пускает в app до verify
-   - ✅ Автозапуск initLoginLogout / initSignup / initPasswordConfirm
-   - ✅ Защита от race в password confirm
-   - ✅ addEventListener вместо onclick (не затирает legacy)
-   - ✅ Throttle mousemove
-   - ✅ Welcome-бонус при первой регистрации/логине
+   FIXES v2.1:
+   - ✅ Emits nc:auth:login / nc:auth:logout
+   - ✅ Fallback when showApp() is missing
+   - ✅ checkSession does not enter app before verify
+   - ✅ Auto-bootstraps initLoginLogout / initSignup / initPasswordConfirm
+   - ✅ Race-safe password confirm
+   - ✅ addEventListener instead of onclick (no legacy overwrite)
+   - ✅ Throttled mousemove
+   - ✅ Welcome bonus on first signup / login
+   - ✅ All client-facing strings in ENGLISH
    ============================================================ */
 
 (function () {
   'use strict';
 
-  // ---------- Fallback-константы ----------
+  // ---------- Fallback constants ----------
   function WURL()      { return window.WORKER_LOGIN_URL   || 'https://nordic-deposit-checker.otis-790.workers.dev'; }
   function SESSION_MS(){ return window.SESSION_TIMEOUT_MS || 15 * 60 * 1000; }
   function LOGOUT_S()  { return window.LOGOUT_COUNTDOWN   || 60; }
 
-  // ---------- Локальные переменные ----------
+  // ---------- Local state ----------
   var __nc_sessionTimer    = null;
   var __nc_countdownTimer  = null;
   var __nc_countdownLeft   = 60;
@@ -30,15 +31,14 @@
   var __nc_lastMove        = 0;
 
   // ============================================================
-  // ПОМОЩНИК: показать приложение с fallback
+  // HELPER: safe app reveal with fallback
   // ============================================================
   function showAppSafe() {
     if (typeof window.showApp === 'function') {
       window.showApp();
       return;
     }
-    // ✅ FIX: fallback — если app.legacy.js не загрузился
-    console.warn('[Auth] showApp() отсутствует — активирую fallback-показ');
+    console.warn('[Auth] showApp() missing — using fallback reveal');
     var login = document.getElementById('loginScreen');
     var side  = document.getElementById('sideBar');
     var main  = document.getElementById('mainApp');
@@ -49,7 +49,7 @@
   }
 
   // ============================================================
-  // ПОМОЩНИК: эмит событий авторизации
+  // HELPER: auth events
   // ============================================================
   function emitLogin(user, token, restored) {
     try {
@@ -65,13 +65,13 @@
   }
 
   // ============================================================
-  // ПОМОЩНИК: welcome-бонус (только один раз на юзера)
+  // HELPER: welcome bonus (once per user)
   // ============================================================
   function tryWelcomeBonus(user) {
     if (!user || !user.id) return;
     var key = 'nc_welcome_bonus_' + user.id;
-    if (localStorage.getItem(key)) return;             // уже давали
-    if (typeof window.NC_BONUS !== 'object') return;   // система не загружена
+    if (localStorage.getItem(key)) return;
+    if (typeof window.NC_BONUS !== 'object') return;
     window.NC_BONUS.grant(user.id, 'welcome', 10);
     localStorage.setItem(key, String(Date.now()));
   }
@@ -120,10 +120,10 @@
         localStorage.setItem('user_name', niceName);
 
         window.hideLoginScreen();
-        showAppSafe();                                   // ✅ FIX
-        emitLogin(data.user, data.token, false);         // ✅ FIX
+        showAppSafe();
+        emitLogin(data.user, data.token, false);
         window.startInactivityTimer();
-        tryWelcomeBonus(data.user);                      // ✅ NEW: welcome-бонус
+        tryWelcomeBonus(data.user);
 
         if (typeof window.playChime === 'function') window.playChime();
 
@@ -131,14 +131,14 @@
         if (loginForm) loginForm.style.display = 'block';
         if (loginLoad) loginLoad.style.display = 'none';
         if (btnLogin)  btnLogin.disabled = false;
-        window.showLoginError(data.error || 'Login failed');
+        window.showLoginError(data.error || 'Login failed. Please check your credentials.');
         if (typeof window.playTone === 'function') window.playTone(220, 0.2, 'sine', 0.3);
       }
     } catch (e) {
       if (loginForm) loginForm.style.display = 'block';
       if (loginLoad) loginLoad.style.display = 'none';
       if (btnLogin)  btnLogin.disabled = false;
-      window.showLoginError('Connection error. Try again.');
+      window.showLoginError('Connection error. Please try again.');
     }
   };
 
@@ -148,7 +148,7 @@
   };
 
   // ============================================================
-  // SESSION CHECK — не пускаем в app до verify
+  // SESSION CHECK — verify before entering app
   // ============================================================
   window.checkSession = async function () {
     var token = window.getSessionToken();
@@ -175,8 +175,8 @@
       localStorage.setItem('user_role',  data.user.role || 'user');
 
       window.hideLoginScreen();
-      showAppSafe();                                     // ✅ FIX
-      emitLogin(data.user, token, true);                 // ✅ FIX
+      showAppSafe();
+      emitLogin(data.user, token, true);
       window.startInactivityTimer();
 
     } catch (e) {
@@ -216,7 +216,7 @@
   };
 
   // ============================================================
-  // LOGOUT — с эмитом события
+  // LOGOUT — emits event
   // ============================================================
   window.doLogout = async function () {
     var token = window.getSessionToken();
@@ -230,7 +230,7 @@
       } catch (e) {}
     }
 
-    emitLogout();                                        // ✅ FIX — модули остановятся
+    emitLogout();
 
     window.clearSessionToken();
     localStorage.removeItem('user_email');
@@ -258,7 +258,7 @@
   };
 
   // ============================================================
-  // INIT LOGIN / LOGOUT — addEventListener вместо onclick
+  // INIT LOGIN / LOGOUT
   // ============================================================
   window.initLoginLogout = function () {
     var toggle = document.getElementById('passToggle');
@@ -273,7 +273,7 @@
 
     var btnLogin = document.getElementById('btnLogin');
     if (btnLogin) {
-      btnLogin.onclick = null;                           // ✅ FIX
+      btnLogin.onclick = null;
       btnLogin.addEventListener('click', window.doLogin);
     }
 
@@ -285,8 +285,9 @@
     var forgot = document.getElementById('forgotPass');
     if (forgot) forgot.onclick = function (e) {
       e.preventDefault();
-      if (typeof window.toast === 'function') window.toast('Contact support: support@nordiccrypto.com');
-      else alert('Contact support: support@nordiccrypto.com');
+      var msg = 'Contact support: support@nordiccrypto.com';
+      if (typeof window.toast === 'function') window.toast(msg);
+      else alert(msg);
     };
 
     var btnStillHere = document.getElementById('btnStillHere');
@@ -311,7 +312,6 @@
     ['click', 'keydown', 'scroll', 'touchstart'].forEach(function (evt) {
       document.addEventListener(evt, window.resetInactivityTimer, { passive: true });
     });
-    // ✅ FIX: throttle mousemove (раз в 5 сек достаточно)
     document.addEventListener('mousemove', function () {
       var now = Date.now();
       if (now - __nc_lastMove < 5000) return;
@@ -414,7 +414,7 @@
 
       if (errEl) errEl.style.display = 'none';
       if (!name)                                return showSignupError('Please enter your full name');
-      if (!email || email.indexOf('@') === -1)  return showSignupError('Please enter a valid email');
+      if (!email || email.indexOf('@') === -1)  return showSignupError('Please enter a valid email address');
       if (!password || password.length < 6)     return showSignupError('Password must be at least 6 characters');
       if (password !== confirm)                 return showSignupError('Passwords do not match');
 
@@ -437,26 +437,26 @@
 
             if (mask) mask.classList.remove('on');
             window.hideLoginScreen();
-            showAppSafe();                               // ✅ FIX
-            emitLogin(data.user, data.token, false);     // ✅ FIX
+            showAppSafe();
+            emitLogin(data.user, data.token, false);
             window.startInactivityTimer();
-            tryWelcomeBonus(data.user);                  // ✅ NEW: welcome-бонус
+            tryWelcomeBonus(data.user);
 
             if (typeof window.playChime === 'function') window.playChime();
             if (typeof window.toast === 'function')
-              window.toast('Добро пожаловать, ' + name.split(' ')[0] + '! Вам начислено 10 NC');
+              window.toast('Welcome, ' + name.split(' ')[0] + '! You received 10 NC bonus.');
           } else {
             if (formEl)    formEl.style.display    = 'block';
             if (loadingEl) loadingEl.style.display = 'none';
             if (submitBtn) submitBtn.disabled = false;
-            showSignupError(data.error || 'Registration failed');
+            showSignupError(data.error || 'Registration failed. Please try again.');
           }
         })
         .catch(function () {
           if (formEl)    formEl.style.display    = 'block';
           if (loadingEl) loadingEl.style.display = 'none';
           if (submitBtn) submitBtn.disabled = false;
-          showSignupError('Connection error. Try again.');
+          showSignupError('Connection error. Please try again.');
         });
     }
 
@@ -466,7 +466,7 @@
   };
 
   // ============================================================
-  // PASSWORD CONFIRM — с защитой от race
+  // PASSWORD CONFIRM — race-safe
   // ============================================================
   window.openPasswordConfirm = function (message, callback) {
     __nc_pwCallback = callback;
@@ -505,7 +505,7 @@
     if (okBtn) okBtn.onclick = doPasswordConfirm;
 
     function doPasswordConfirm() {
-      if (__nc_pwBusy) return;                          // ✅ FIX: защита от двойного клика
+      if (__nc_pwBusy) return;
       var password = input ? input.value : '';
       if (!password) {
         if (errEl) { errEl.textContent = 'Please enter your password'; errEl.style.display = 'block'; }
@@ -541,7 +541,7 @@
   };
 
   // ============================================================
-  // АВТОЗАПУСК — критично!
+  // BOOTSTRAP
   // ============================================================
   function __nc_auth_bootstrap() {
     if (typeof window.initLoginLogout     === 'function') window.initLoginLogout();
@@ -549,7 +549,7 @@
     if (typeof window.initPasswordConfirm === 'function') window.initPasswordConfirm();
     if (typeof window.checkSession        === 'function') window.checkSession();
 
-    console.log('%c[NordicCrypto] 🔐 auth.js v2.0 ready',
+    console.log('%c[NordicCrypto] 🔐 auth.js v2.1 ready',
       'color:#f472b6;font-weight:bold');
   }
 
