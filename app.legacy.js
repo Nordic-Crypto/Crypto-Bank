@@ -1636,6 +1636,7 @@ var verifyData = { docType: 'Passport', docFile: null, selfieFile: null, address
 function showVerifyScreen(){
   var screen = document.getElementById('verifyScreen');
   if (screen) screen.classList.add('on');
+if (typeof window.__ncPausePolling === 'function') window.__ncPausePolling(600000);
   var pending = document.getElementById('pendingScreen');
   if (pending) pending.classList.remove('on');
   var rejected = document.getElementById('rejectedScreen');
@@ -1824,6 +1825,7 @@ window.submitRealVerification = async function() {
 function showPendingScreen() {
   var s = document.getElementById('pendingScreen');
   if (s) s.classList.add('on');
+  if (typeof window.__ncPausePolling === 'function') window.__ncPausePolling(300000); 
   var r = document.getElementById('rejectedScreen');
   if (r) r.classList.remove('on');
   var v = document.getElementById('verifyScreen');
