@@ -140,15 +140,36 @@
     },
 
     checkLoyalty: function () {
-      if (!window.currentUser) return false;
-      var key  = 'nc_loyalty_' + window.currentUser.id;
-      var last = localStorage.getItem(key);
-      var now  = Date.now();
-      if (last && now - Number(last) < 7 * 24 * 3600 * 1000) return false;
-      window.NC_BONUS.grant(window.currentUser.id, 'loyalty');
-      localStorage.setItem(key, String(now));
-      return true;
-    },
+  if (!window.currentUser || !window.currentUser.id) return false;
+
+  var key = 'nc_loyalty_ts_' + window.currentUser.id;
+  var last = Number(localStorage.getItem(key) || 0);
+  var now = Date.now();
+  var SEVEN_DAYS = 7 * 24 * 3600 * 1000;
+
+  // 🛡️ ЗАЩИТА 1: не чаще 1 раза в 7 дней
+  if (last > 0 && (now - last) < SEVEN_DAYS) {
+    console.log('[Bonus] Loyalty cooldown active. Next in',
+      Math.ceil((SEVEN_DAYS - (now - last)) / 3600000) + 'h');
+    return false;
+  }
+
+  // 🛡️ ЗАЩИТА 2: от двойного вызова за секунду (race condition)
+  var inFlightKey = 'nc_loyalty_inflight_' + window.currentUser.id;
+  var inflight = Number(sessionStorage.getItem(inFlightKey) || 0);
+  if (inflight > 0 && (now - inflight) < 10000) {
+    console.log('[Bonus] Loyalty grant in flight — skip');
+    return false;
+  }
+  sessionStorage.setItem(inFlightKey, String(now));
+
+  // 🛡️ ЗАЩИТА 3: сохраняем timestamp ПЕРЕД grant (чтобы повторный вызов уже видел)
+  localStorage.setItem(key, String(now));
+
+  // Начисляем
+  window.NC_BONUS.grant(window.currentUser.id, 'loyalty');
+  return true;
+}
 
     // Одноразовые бонусы (проверка по флагу)
     _oneTime: function (type, checkFn) {
