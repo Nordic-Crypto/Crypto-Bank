@@ -662,11 +662,11 @@
             '<div class="nc-bonus-stat-value">+' + todayEarned + '</div>' +
           '</div>' +
           '<div class="nc-bonus-stat">' +
-            '<div class="nc-bonus-stat-label">Level</div>' +
-            '<div class="nc-bonus-stat-value" style="color:' + level.color + '">' +
-              level.icon + ' ' + level.name +
-            '</div>' +
-          '</div>' +
+  '<div class="nc-bonus-stat-label">Level</div>' +
+  '<div class="nc-bonus-stat-value" style="color:' + level.color + '">' +
+    getLevelSVG(level.name, 16) + ' ' + level.name +
+  '</div>' +
+'</div>' +
         '</div>' +
         '<div class="nc-bonus-list">' + itemsHtml + '</div>' +
       '</div>';
