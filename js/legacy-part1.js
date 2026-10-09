@@ -1,4 +1,15 @@
 /* ============================================================
+   🛡️ IS ADMIN — проверка роли (added fix)
+   ============================================================ */
+window.isAdmin = function() {
+  return localStorage.getItem('user_role') === 'admin' &&
+         localStorage.getItem('user_email') === 'admin@nordiccrypto.com';
+};
+function isAdmin() {
+  return window.isAdmin();
+}
+
+/* ============================================================
    NORDIC CRYPTO — APP.JS v3.2 — CLEAN REBUILD
    ============================================================ */
 
