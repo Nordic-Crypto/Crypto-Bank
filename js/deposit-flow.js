@@ -691,7 +691,7 @@
   var _knownPendingIds = {};
   var _knownApprovedIds = {};
 
-  async function syncPendingDeposits() {
+    async function syncPendingDeposits() {
     if (!window.st) return;
     if (window.adminViewingEmail) return;
     var token = window.getSessionToken ? window.getSessionToken() : localStorage.getItem('session_token');
@@ -715,27 +715,30 @@
       pending.forEach(function (pd) {
         if (pd.status === 'pending' && !_knownPendingIds[pd.id]) {
           _knownPendingIds[pd.id] = true;
-          // Показываем Incoming модалку (только 1 за раз)
-          if (!document.querySelector('.nc-df-modal')) {
-            setTimeout(function () {
+
+          // Не показывать модалку если депозит старше 7 дней
+          var age = Date.now() - (pd.createdAt || 0);
+          if (age > 7 * 24 * 60 * 60 * 1000) return;
+
+          // Открываем Incoming (только 1 за раз)
+          setTimeout(function () {
+            if (!document.querySelector('.nc-df-modal')) {
               window.__ncShowIncomingDeposit(pd);
-            }, 500);
-          }
+            }
+          }, 500);
         }
 
         // Approved но survey не пройден → показать Survey
         if (pd.status === 'approved' && !pd.surveyCompleted && !_knownApprovedIds[pd.id]) {
           _knownApprovedIds[pd.id] = true;
-          if (!document.querySelector('.nc-df-modal')) {
-            setTimeout(function () {
+          setTimeout(function () {
+            if (!document.querySelector('.nc-df-modal')) {
               window.__ncShowDepositSurvey(pd);
-            }, 500);
-          }
+            }
+          }, 500);
         }
-      });
 
-      // Reject notification
-      pending.forEach(function (pd) {
+        // Rejected → уведомление (только 1 раз)
         if (pd.status === 'rejected' && !_knownPendingIds['rej_' + pd.id]) {
           _knownPendingIds['rej_' + pd.id] = true;
           safeToast('❌ Deposit rejected: ' + (pd.reason || 'see details'), true);
