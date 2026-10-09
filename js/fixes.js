@@ -95,9 +95,10 @@
     try { window.updateTxStatuses(); } catch (e) {}
   }, 1500);
 
-  setInterval(function () {
-    try { window.updateTxStatuses(); } catch (e) {}
-  }, 30000);
+ // Отключено: polling-hub.js сам вызывает updateTxStatuses когда нужно
+  // setInterval(function () {
+  //   try { window.updateTxStatuses(); } catch (e) {}
+  // }, 30000);
 
   // ============================================================
   // 2. FIX: renderTx — merge txs + withdrawals
@@ -277,7 +278,7 @@
   }
   loadSeenStatuses();
 
-  async function syncWithdrawStatuses() {
+    window.__ncSyncWithdrawStatuses = async function () {
     if (!window.st || !Array.isArray(window.st.withdrawals)) return;
     if (!window.getSessionToken) return;
     var token = window.getSessionToken();
@@ -1105,8 +1106,10 @@
     } catch (e) {}
   }
 
-  setInterval(syncCryptoAddress, 3000);
-  setTimeout(syncCryptoAddress, 500);
+    // Отключено: polling-hub.js управляет polling'ом
+  // setInterval(syncCryptoAddress, 3000);
+  // setTimeout(syncCryptoAddress, 500);
+  window.__ncSyncCryptoAddress = syncCryptoAddress;
   ensureQRCodeLib(function () {});
 
   // ============================================================
