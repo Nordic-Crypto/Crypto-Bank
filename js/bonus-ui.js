@@ -476,21 +476,42 @@
   // 🎯 Эмодзи для типа бонуса
   // ============================================================
   function getBonusIcon(type) {
-    var icons = {
-      welcome: '🎁',
-      minor: '🐛',
-      medium: '⚡',
-      major: '💥',
-      critical: '🚨',
-      bug: '🐞',
-      loyalty: '🔥',
-      referral: '👥',
-      firstDeposit: '💰',
-      firstTrade: '📈',
-      kycBonus: '🪪',
-      bigDeposit: '💎'
+    // Каждый бонус — SVG-иконка + уникальный цвет
+    var map = {
+      welcome:      { svg: getIcon('gift',      '#ec4899'), label: 'Welcome' },
+      minor:        { svg: getIcon('bug',       '#94a3b8'), label: 'Minor' },
+      medium:       { svg: getIcon('zap',       '#f59e0b'), label: 'Medium' },
+      major:        { svg: getIcon('flame',     '#ef4444'), label: 'Major' },
+      critical:     { svg: getIcon('alert',     '#dc2626'), label: 'Critical' },
+      bug:          { svg: getIcon('bug',       '#22c55e'), label: 'Bug' },
+      loyalty:      { svg: getIcon('flame',     '#f97316'), label: 'Loyalty' },
+      referral:     { svg: getIcon('users',     '#8b5cf6'), label: 'Referral' },
+      firstDeposit: { svg: getIcon('dollar',    '#10b981'), label: 'First Deposit' },
+      firstTrade:   { svg: getIcon('chart',     '#06b6d4'), label: 'First Trade' },
+      kycBonus:     { svg: getIcon('id',        '#3b82f6'), label: 'KYC' },
+      bigDeposit:   { svg: getIcon('diamond',   '#a78bfa'), label: 'Big Deposit' }
     };
-    return icons[type] || '🎁';
+    var entry = map[type] || map.welcome;
+    return entry.svg;
+  }
+
+  /** Универсальная SVG-иконка */
+  function getIcon(name, color) {
+    var paths = {
+      gift:   'M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z',
+      bug:    'M8 2v4M16 2v4M9 5h6a3 3 0 013 3v6a5 5 0 01-5 5h-2a5 5 0 01-5-5V8a3 3 0 013-3zM4 11h2M18 11h2M4 16h2M18 16h2',
+      zap:    'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+      flame:  'M12 2s4 5 4 9a4 4 0 11-8 0c0-4 4-9 4-9zM12 14a2 2 0 100 4 2 2 0 000-4z',
+      alert:  'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
+      users:  'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
+      dollar: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+      chart:  'M3 17l6-6 4 4 8-8M17 7h4v4',
+      id:     'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM9 9a2 2 0 100 4 2 2 0 000-4zM15 13H9M15 17H9M15 9h4M15 13h4',
+      diamond:'M12 2l4 6-4 14-4-14 4-6zM2 8h20M6 8l6 14M18 8l-6 14'
+    };
+    return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">' +
+      '<path d="' + (paths[name] || paths.gift) + '"/>' +
+    '</svg>';
   }
 
   // ============================================================
