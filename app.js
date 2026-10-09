@@ -22,21 +22,22 @@
   var APP_VERSION = '6.0.0';
 
   var MODULES = [
-    'js/core.js?v=' + APP_VERSION,
-    'js/auth.js?v=' + APP_VERSION,
-    'app.legacy.js?v=' + APP_VERSION,
-    'js/legacy-fix.js?v=' + APP_VERSION,
-    'js/session-fix.js?v=' + APP_VERSION,
-    'js/deposit-flow.js?v=' + APP_VERSION,
-    'js/withdraw-flow.js?v=' + APP_VERSION,
-    'js/withdraw-confirmations.js?v=' + APP_VERSION,
-    'js/fixes.js?v=' + APP_VERSION,
-    'js/chat-fix.js?v=' + APP_VERSION,
-    'js/trade-terminal.js?v=' + APP_VERSION,
-    'js/polling-hub.js?v=' + APP_VERSION,
-    'js/bonus-system.js?v=' + APP_VERSION
-  ];
-
+  'js/core.js?v=' + APP_VERSION,
+  'js/auth.js?v=' + APP_VERSION,
+  'app.legacy.js?v=' + APP_VERSION,
+  'js/legacy-fix.js?v=' + APP_VERSION,
+  'js/session-fix.js?v=' + APP_VERSION,
+  'js/deposit-flow.js?v=' + APP_VERSION,
+  'js/withdraw-flow.js?v=' + APP_VERSION,
+  'js/withdraw-confirmations.js?v=' + APP_VERSION,
+  'js/fixes.js?v=' + APP_VERSION,
+  'js/chat-fix.js?v=' + APP_VERSION,
+  'js/trade-terminal.js?v=' + APP_VERSION,
+  'js/polling-hub.js?v=' + APP_VERSION,
+  'js/bonus-system.js?v=' + APP_VERSION,
+  'js/bonus-ui.js?v=' + APP_VERSION
+];
+   
   console.log('%c[NordicCrypto] 🚀 Loader v' + APP_VERSION + ' starting...',
     'color:#00d4ff;font-weight:bold;font-size:14px');
 
