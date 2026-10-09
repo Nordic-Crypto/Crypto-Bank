@@ -447,12 +447,12 @@
     badge.id = 'ncBadge';
     badge.className = 'nc-badge';
     badge.title = 'View your rewards and bonus history';
-    badge.innerHTML =
-      '<span class="nc-badge-icon">🪙</span>' +
-      '<span class="nc-badge-amount">' + total + ' NC</span>' +
-      '<span class="nc-badge-level" style="color:' + level.color + '">' +
-        level.icon + ' ' + level.name +
-      '</span>';
+   badge.innerHTML =
+  '<span class="nc-badge-icon">' + getCoinSVG(20) + '</span>' +
+  '<span class="nc-badge-amount">' + total + ' NC</span>' +
+  '<span class="nc-badge-level" style="color:' + level.color + '">' +
+    getLevelSVG(level.name, 14) + ' ' + level.name +
+  '</span>';
 
     // Вставляем перед notifBell
     var notifBell = document.getElementById('notifBell');
