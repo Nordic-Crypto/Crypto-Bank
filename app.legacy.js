@@ -268,29 +268,38 @@ function showApp() {
 
     if (!localStorage.getItem('user_email')){ showLoginScreen(); return; }
 
-    var accountType = (st.user && st.user.accountType) || null;
+        var accountType = (st.user && st.user.accountType) || null;
     var vStatus = (st.verification && st.verification.status) || null;
+    var hasCard = !!(st.card && st.card.num);
 
     if (localStorage.getItem('user_role') !== 'admin' && !window.adminViewingEmail) {
+
+      // 1. KYC pending → ждать
       if (vStatus === 'pending') {
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         showPendingScreen();
         return;
       }
+
+      // 2. KYC rejected → отказ
       if (vStatus === 'rejected') {
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         showRejectedScreen(st.verification.reason);
         return;
       }
+
+      // 3. KYC не отправлен → порядок: онбординг → KYC
       if (vStatus !== 'approved') {
-        if (!st.card && accountType !== 'exchange') {
+        // 3a. Сначала онбординг (карта) — только для banking
+        if (!hasCard && accountType !== 'exchange') {
           if (side) side.style.display = 'none';
           if (main) main.style.display = 'none';
           document.getElementById('onboard').classList.add('on');
           return;
         }
+        // 3b. Потом KYC (документы)
         if (side) side.style.display = 'none';
         if (main) main.style.display = 'none';
         var vScreen = document.getElementById('verifyScreen');
@@ -298,8 +307,17 @@ function showApp() {
         showVerifyStep(1);
         return;
       }
+
+      // 4. KYC approved, но карты нет → онбординг
+      if (vStatus === 'approved' && !hasCard && accountType !== 'exchange') {
+        if (side) side.style.display = 'none';
+        if (main) main.style.display = 'none';
+        document.getElementById('onboard').classList.add('on');
+        return;
+      }
     }
 
+    // 5. Всё пройдено → dashboard
     if (side) side.style.display = 'flex';
     if (main) main.style.display = 'flex';
 
