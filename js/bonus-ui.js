@@ -14,6 +14,49 @@
 
   var BUI_VERSION = '1.0.0';
 
+     // ============================================================
+  // 🎯 SVG-ИКОНКИ (замена эмодзи — работает везде)
+  // ============================================================
+
+  /** Монетка NC — золотой кружок с буквой N */
+  function getCoinSVG(size) {
+    size = size || 20;
+    return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" style="display:block">' +
+      '<defs>' +
+        '<radialGradient id="ncCoinGrad" cx="30%" cy="30%">' +
+          '<stop offset="0%" stop-color="#ffe17a"/>' +
+          '<stop offset="55%" stop-color="#f59e0b"/>' +
+          '<stop offset="100%" stop-color="#b45309"/>' +
+        '</radialGradient>' +
+      '</defs>' +
+      '<circle cx="12" cy="12" r="11" fill="url(#ncCoinGrad)" stroke="rgba(255,255,255,.3)" stroke-width="1"/>' +
+      '<circle cx="12" cy="12" r="9" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="0.5" stroke-dasharray="1.5 2"/>' +
+      '<text x="12" y="16.5" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="900" fill="#fff">N</text>' +
+    '</svg>';
+  }
+
+  /** Медаль уровня — цветной кружок с буквой (B/S/G/P) */
+  function getLevelSVG(levelName, size) {
+    size = size || 14;
+    var colors = {
+      'Bronze':   { bg: '#cd7f32', shadow: '#8b5a2b', letter: 'B' },
+      'Silver':   { bg: '#c0c0c0', shadow: '#808080', letter: 'S' },
+      'Gold':     { bg: '#ffd700', shadow: '#b8860b', letter: 'G' },
+      'Platinum': { bg: '#e5e4e2', shadow: '#a8a8a8', letter: 'P' }
+    };
+    var c = colors[levelName] || colors['Bronze'];
+    return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" style="display:inline-block;vertical-align:middle">' +
+      '<defs>' +
+        '<radialGradient id="ncLvl_' + c.letter + '" cx="30%" cy="30%">' +
+          '<stop offset="0%" stop-color="' + c.bg + '" stop-opacity="1"/>' +
+          '<stop offset="100%" stop-color="' + c.shadow + '" stop-opacity="1"/>' +
+        '</radialGradient>' +
+      '</defs>' +
+      '<circle cx="12" cy="12" r="11" fill="url(#ncLvl_' + c.letter + ')" stroke="rgba(255,255,255,.4)" stroke-width="1"/>' +
+      '<text x="12" y="17" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="900" fill="#fff" opacity=".95">' + c.letter + '</text>' +
+    '</svg>';
+  }
+
   // ============================================================
   // 🎯 УРОВНИ (Level system)
   // ============================================================
