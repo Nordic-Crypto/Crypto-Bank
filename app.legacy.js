@@ -3393,7 +3393,57 @@ function showAdminPanel() {
     loadDeletedUsers()
   ]).catch(function(){});
 
-  setTimeout(function(){ showAdminTab('stats'); }, 100);
+setTimeout(function(){ showAdminTab('stats'); }, 100);
+
+// 🚀 Real-time уведомления админу
+if (!window._adminNotifyInterval) {
+  window._adminNotifyInterval = setInterval(async function () {
+    var token = window.getSessionToken && window.getSessionToken();
+    if (!token) return;
+    if (!document.getElementById('adminPanel') || !document.getElementById('adminPanel').classList.contains('on')) return;
+
+    try {
+      // Проверяем pending KYC
+      var rv = await fetch(WORKER_URL + '?action=listVerifications', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+      var dv = await rv.json();
+      var pendingKyc = (dv.verifications || []).filter(function(v){ return v.status === 'pending'; }).length;
+
+      // Проверяем pending deposits
+      var rd = await fetch(WORKER_URL + '?action=listPendingDeposits', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+      var dd = await rd.json();
+      var pendingDep = (dd.deposits || []).length;
+
+      var prevKyc = Number(sessionStorage.getItem('nc_admin_prev_kyc') || 0);
+      var prevDep = Number(sessionStorage.getItem('nc_admin_prev_dep') || 0);
+
+      // Новый KYC появился
+      if (pendingKyc > prevKyc) {
+        if (typeof playChime === 'function') playChime();
+        if (typeof toast === 'function') toast('🪪 New KYC verification pending');
+        var navK = document.getElementById('navVerifCount');
+        if (navK) { navK.textContent = pendingKyc; navK.style.display = 'inline-block'; }
+      }
+
+      // Новый депозит появился
+      if (pendingDep > prevDep) {
+        if (typeof playChime === 'function') playChime();
+        if (typeof toast === 'function') toast('💰 New deposit pending');
+        var navD = document.getElementById('navDepositsCount');
+        if (navD) { navD.textContent = pendingDep; navD.style.display = 'inline-block'; }
+      }
+
+      sessionStorage.setItem('nc_admin_prev_kyc', String(pendingKyc));
+      sessionStorage.setItem('nc_admin_prev_dep', String(pendingDep));
+
+    } catch (e) {}
+  }, 10000);
+}
 }
 
 function hideAdminPanel() {
