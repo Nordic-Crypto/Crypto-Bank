@@ -1,18 +1,19 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.4 — LOADER
+   NORDIC CRYPTO — APP.JS v4.5 — LOADER
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.4.0';
+  var APP_VERSION = '4.5.0';
   var MODULES = [
     'js/core.js',
     'js/auth.js',
     'app.legacy.js?v=' + APP_VERSION,
     'js/legacy-fix.js',
-    'js/fixes.js',              // ← НОВОЕ: фиксы + бонусы
-    'js/withdraw-flow.js',      // ← перемещено ПОСЛЕ fixes (чтобы наш submitWithdraw переопределил старый)
+    'js/withdraw-flow.js',
+    'js/withdraw-confirmations.js',   // ← НОВОЕ: 2/3, тексты, live-обновление
+    'js/fixes.js',                    // ← фиксы + sync (загружается после WC)
     'js/trade-terminal.js'
   ];
 
@@ -37,9 +38,6 @@
     };
     script.onerror = function () {
       console.error('[NordicCrypto] ❌ Failed to load: ' + src);
-      if (typeof window.alert === 'function') {
-        alert('Не удалось загрузить модуль: ' + src);
-      }
     };
     document.head.appendChild(script);
   }
