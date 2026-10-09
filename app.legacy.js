@@ -2641,15 +2641,22 @@ function doAutoCheck(){
 }
 
 function updateTxStatuses(){
+  // 🛡️ FIX: убираем auto-promote. Статус должен идти от воркера.
+  // Клиент не должен видеть "Processing → Completed" через 2 сек.
+  // Если воркер сказал "Completed" — так и останется.
+  // Если "Processing" — значит ждём подтверждения от блокчейна.
+  
   var changed = false;
   for (var i = 0; i < st.txs.length; i++){
     var t = st.txs[i];
-    if (!t.ts) t.ts = Date.now();
-    var age = Date.now() - t.ts;
-    if (t.status === 'Under Review' && age > 60 * 1000){ t.status = 'Processing'; changed = true; }
-    else if (t.status === 'Processing' && age > 3 * 60 * 1000){ t.status = 'Completed'; changed = true; }
+    if (!t.ts) { t.ts = Date.now(); changed = true; }
+    
+    // 🛡️ ТОЛЬКО обновление даты для старых tx без ts
+    // Никакого auto-promote статусов
   }
-  if (changed){ renderTx(); saveToServer(); }
+  
+  // Ничего не сохраняем автоматически — только если реально изменилось
+  if (changed){ renderTx(); }
 }
 
 function attachExpiryFormatter(input) {
