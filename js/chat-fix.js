@@ -215,7 +215,7 @@
 
   var _lastChatHash = '';
 
-  async function pollChat() {
+    window.__ncChatPoll = async function () {
     var token = window.getSessionToken ? window.getSessionToken() : localStorage.getItem('session_token');
     if (!token) return;
     var email = window.adminViewingEmail || localStorage.getItem('user_email');
@@ -280,8 +280,9 @@
   }
 
   // Запускаем polling — не блокирует UI
-  setInterval(pollChat, 1000); // проверка интервала внутри pollChat
-  setTimeout(pollChat, 500);
+   // Отключено: polling-hub.js управляет polling'ом
+  // setInterval(pollChat, 1000);
+  setTimeout(pollChat, 500);  // одноразовая загрузка при старте
 
   // ============================================================
   // 5. Typing indicator (debounced)
