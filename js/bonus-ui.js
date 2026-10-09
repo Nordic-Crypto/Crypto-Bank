@@ -1,32 +1,32 @@
 /* ============================================================
-   NORDIC CRYPTO — BONUS-UI.JS v2.0
+   NORDIC CRYPTO — BONUS-UI.JS v3.0 (PERFORMANCE EDITION)
    ============================================================
-   v2.0 CHANGES (2026-10-09):
-   • 🛡️ Универсальная карточка для banking И exchange
-   • 🎁 Tabs в модалке: History / Earn / Referral
-   • 🎁 Referral link — копирование + кнопка Share
-   • 🎁 Enable notifications кнопка прямо в модалке
-   • 🛡️ Retry: 1.5s / 4s / 8s
-   • 🛡️ Слушатели: account:typechange, dashboard:rendered, menu click
-   • 📊 Tier breakdown — stats по типам в модалке
-   • 🎨 Пульсация badge если клиент ни разу не открывал
-   • 🎁 Smooth animations без мигания
-   • 🛡️ Уникальные SVG ID (без коллизий)
-   • 🛡️ Cleanup при logout
-   • 📈 Кэш getTotalNC (500ms) для performance
+   v3.0 CHANGES:
+   • 🔴 КРИТИЧНЫЙ ФИКС: карточка для exchanger (auto-detect by .on)
+   • 🎨 Спокойный дизайн — меньше gradient, нет filter/blur
+   • ⚡ Оптимизация для слабых ПК:
+     - Кэш 2 сек (было 500ms)
+     - Убраны тяжёлые SVG filter
+     - Retry только 3 раза
+     - Один MutationObserver убран
+     - GPU-friendly анимации (transform, не width)
+   • 🎁 Новые бонусы: dailyLogin, profileComplete
+   • 🎨 Обновлены цвета уровней (мягче)
+   • 📊 Progress bar показывает "до Silver"
+   • 🛡️ Auto-refresh badge каждые 30 сек
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var BUI_VERSION = '2.0.0';
+  var BUI_VERSION = '3.0.0';
 
   // ============================================================
-  // 🎯 CACHE
+  // ⚡ CACHE — 2 секунды (для слабых ПК)
   // ============================================================
   var _totalNCCache = null;
   var _totalNCTs = 0;
-  var _CACHE_TTL = 500;
+  var _CACHE_TTL = 2000;
 
   function getTotalNC(force) {
     var now = Date.now();
@@ -49,50 +49,50 @@
   }
 
   // ============================================================
-  // 🎯 SVG (с уникальными ID)
+  // ⚡ SVG — БЕЗ filter/blur (легче для GPU)
   // ============================================================
   var _svgIdCounter = 0;
   function uid(prefix) {
     _svgIdCounter++;
-    return prefix + '_' + _svgIdCounter + '_' + Math.random().toString(36).slice(2, 7);
+    return prefix + '_' + _svgIdCounter;
   }
 
   function getCoinSVG(size) {
     size = size || 20;
-    var gradId = uid('ncCoinGrad');
+    var id = uid('cg');
     return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" style="display:block">' +
       '<defs>' +
-        '<radialGradient id="' + gradId + '" cx="30%" cy="30%">' +
-          '<stop offset="0%" stop-color="#ffe17a"/>' +
-          '<stop offset="55%" stop-color="#f59e0b"/>' +
+        '<linearGradient id="' + id + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="#fbbf24"/>' +
           '<stop offset="100%" stop-color="#b45309"/>' +
-        '</radialGradient>' +
+        '</linearGradient>' +
       '</defs>' +
-      '<circle cx="12" cy="12" r="11" fill="url(#' + gradId + ')" stroke="rgba(255,255,255,.3)" stroke-width="1"/>' +
-      '<circle cx="12" cy="12" r="9" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="0.5" stroke-dasharray="1.5 2"/>' +
+      '<circle cx="12" cy="12" r="11" fill="url(#' + id + ')"/>' +
       '<text x="12" y="16.5" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="900" fill="#fff">N</text>' +
     '</svg>';
   }
 
+  // 🎨 МЯГКИЕ ЦВЕТА УРОВНЕЙ
+  var LEVEL_COLORS = {
+    'Bronze':   { bg: '#a86d3f', text: '#e8b585' },
+    'Silver':   { bg: '#8a93a0', text: '#c9d1dc' },
+    'Gold':     { bg: '#d4a017', text: '#ffd970' },
+    'Platinum': { bg: '#b8c4d0', text: '#e8eef5' }
+  };
+
   function getLevelSVG(levelName, size) {
     size = size || 14;
-    var colors = {
-      'Bronze':   { bg: '#cd7f32', shadow: '#8b5a2b', letter: 'B' },
-      'Silver':   { bg: '#c0c0c0', shadow: '#808080', letter: 'S' },
-      'Gold':     { bg: '#ffd700', shadow: '#b8860b', letter: 'G' },
-      'Platinum': { bg: '#e5e4e2', shadow: '#a8a8a8', letter: 'P' }
-    };
-    var c = colors[levelName] || colors['Bronze'];
-    var gradId = uid('ncLvl_' + c.letter);
+    var c = LEVEL_COLORS[levelName] || LEVEL_COLORS['Bronze'];
+    var id = uid('lg');
     return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" style="display:inline-block;vertical-align:middle">' +
       '<defs>' +
-        '<radialGradient id="' + gradId + '" cx="30%" cy="30%">' +
-          '<stop offset="0%" stop-color="' + c.bg + '" stop-opacity="1"/>' +
-          '<stop offset="100%" stop-color="' + c.shadow + '" stop-opacity="1"/>' +
-        '</radialGradient>' +
+        '<linearGradient id="' + id + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="' + c.text + '"/>' +
+          '<stop offset="100%" stop-color="' + c.bg + '"/>' +
+        '</linearGradient>' +
       '</defs>' +
-      '<circle cx="12" cy="12" r="11" fill="url(#' + gradId + ')" stroke="rgba(255,255,255,.4)" stroke-width="1"/>' +
-      '<text x="12" y="17" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="900" fill="#fff" opacity=".95">' + c.letter + '</text>' +
+      '<circle cx="12" cy="12" r="11" fill="url(#' + id + ')" stroke="rgba(255,255,255,.25)" stroke-width="1"/>' +
+      '<text x="12" y="17" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="900" fill="#fff">' + levelName.charAt(0) + '</text>' +
     '</svg>';
   }
 
@@ -100,10 +100,10 @@
   // 🎯 LEVELS
   // ============================================================
   var LEVELS = [
-    { name: 'Bronze',   min: 0,    max: 500,      color: '#cd7f32', next: 500 },
-    { name: 'Silver',   min: 500,  max: 2000,     color: '#c0c0c0', next: 2000 },
-    { name: 'Gold',     min: 2000, max: 5000,     color: '#ffd700', next: 5000 },
-    { name: 'Platinum', min: 5000, max: Infinity, color: '#e5e4e2', next: Infinity }
+    { name: 'Bronze',   min: 0,    max: 500,      color: '#a86d3f', text: '#e8b585', next: 500 },
+    { name: 'Silver',   min: 500,  max: 2000,     color: '#8a93a0', text: '#c9d1dc', next: 2000 },
+    { name: 'Gold',     min: 2000, max: 5000,     color: '#d4a017', text: '#ffd970', next: 5000 },
+    { name: 'Platinum', min: 5000, max: Infinity, color: '#b8c4d0', text: '#e8eef5', next: Infinity }
   ];
 
   function getLevel(totalNC) {
@@ -114,61 +114,20 @@
   }
 
   // ============================================================
-  // 🎯 EMOJI для notifications (не SVG)
+  // 🎯 ICONS (emoji-based — легче и понятнее)
   // ============================================================
   function getBonusEmoji(type) {
     var e = {
       welcome: '🎁', minor: '🐛', medium: '⚡', major: '💥',
       critical: '🚨', bug: '🐞', loyalty: '🔥', referral: '👥',
-      firstDeposit: '💰', firstTrade: '📈', kycBonus: '🪪', bigDeposit: '💎'
+      firstDeposit: '💰', firstTrade: '📈', kycBonus: '🪪', bigDeposit: '💎',
+      dailyLogin: '📅', profileComplete: '👤'
     };
     return e[type] || '🎁';
   }
 
   // ============================================================
-  // 🎯 SVG icons для модалки
-  // ============================================================
-  function getBonusIcon(type) {
-    var map = {
-      welcome:      getIcon('gift',    '#ec4899'),
-      minor:        getIcon('bug',     '#94a3b8'),
-      medium:       getIcon('zap',     '#f59e0b'),
-      major:        getIcon('flame',   '#ef4444'),
-      critical:     getIcon('alert',   '#dc2626'),
-      bug:          getIcon('bug',     '#22c55e'),
-      loyalty:      getIcon('flame',   '#f97316'),
-      referral:     getIcon('users',   '#8b5cf6'),
-      firstDeposit: getIcon('dollar',  '#10b981'),
-      firstTrade:   getIcon('chart',   '#06b6d4'),
-      kycBonus:     getIcon('id',      '#3b82f6'),
-      bigDeposit:   getIcon('diamond', '#a78bfa')
-    };
-    return map[type] || map.welcome;
-  }
-
-  function getIcon(name, color) {
-    var paths = {
-      gift:   'M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z',
-      bug:    'M8 2v4M16 2v4M9 5h6a3 3 0 013 3v6a5 5 0 01-5 5h-2a5 5 0 01-5-5V8a3 3 0 013-3zM4 11h2M18 11h2M4 16h2M18 16h2',
-      zap:    'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
-      flame:  'M12 2s4 5 4 9a4 4 0 11-8 0c0-4 4-9 4-9zM12 14a2 2 0 100 4 2 2 0 000-4z',
-      alert:  'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
-      users:  'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
-      dollar: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
-      chart:  'M3 17l6-6 4 4 8-8M17 7h4v4',
-      id:     'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM9 9a2 2 0 100 4 2 2 0 000-4zM15 13H9M15 17H9M15 9h4M15 13h4',
-      diamond:'M12 2l4 6-4 14-4-14 4-6zM2 8h20M6 8l6 14M18 8l-6 14',
-      link:   'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71',
-      bell:   'M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0',
-      check:  'M20 6L9 17l-5-5'
-    };
-    return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">' +
-      '<path d="' + (paths[name] || paths.gift) + '"/>' +
-    '</svg>';
-  }
-
-  // ============================================================
-  // 🎯 CSS
+  // 🎨 CSS — ОПТИМИЗИРОВАН ДЛЯ СЛАБЫХ ПК
   // ============================================================
   function injectCSS() {
     if (document.getElementById('ncBonusStyles')) return;
@@ -179,54 +138,46 @@
       .nc-badge {
         display: flex; align-items: center; gap: 8px;
         padding: 7px 14px;
-        background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(236,72,153,.12));
-        border: 1px solid rgba(245,158,11,.4);
+        background: rgba(245,158,11,.1);
+        border: 1px solid rgba(245,158,11,.35);
         border-radius: 999px;
         color: #f59e0b; font-weight: 800; font-size: .82rem;
-        cursor: pointer; position: relative; user-select: none;
-        transition: all .25s cubic-bezier(.34,1.56,.64,1);
+        cursor: pointer; user-select: none;
+        transition: transform .2s, background .2s;
+        will-change: transform;
       }
       .nc-badge:hover {
-        transform: translateY(-2px) scale(1.03);
-        box-shadow: 0 10px 24px -8px rgba(245,158,11,.6);
+        transform: translateY(-2px);
+        background: rgba(245,158,11,.18);
       }
       .nc-badge-icon {
         display: inline-flex; align-items: center; justify-content: center;
-        animation: ncCoinSpin 3s linear infinite;
-        transform-style: preserve-3d;
+      }
+      .nc-badge-icon svg {
+        animation: ncCoinSpin 4s linear infinite;
+        transform-origin: center;
       }
       @keyframes ncCoinSpin {
         0%   { transform: rotateY(0deg); }
-        50%  { transform: rotateY(180deg); }
         100% { transform: rotateY(360deg); }
-      }
-      @keyframes ncBadgeAttention {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245,158,11,.6); }
-        50% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(245,158,11,0); }
-      }
-      @keyframes ncBadgePulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.15); }
       }
       .nc-badge-amount {
         font-family: ui-monospace, monospace; color: #fff; font-size: .88rem;
       }
       .nc-badge-level {
         display: inline-flex; align-items: center; gap: 4px;
-        font-size: .68rem; opacity: .95; padding: 3px 8px;
-        background: rgba(255,255,255,.08); border-radius: 6px; font-weight: 800;
+        font-size: .68rem; padding: 3px 8px;
+        background: rgba(255,255,255,.06); border-radius: 6px; font-weight: 800;
       }
       .nc-badge-level svg { vertical-align: middle; }
 
       /* ===== REWARDS CARD ===== */
       .nc-rewards-card {
-        background:
-          radial-gradient(500px 250px at 100% 0%, rgba(245,158,11,.15), transparent 60%),
-          linear-gradient(145deg, rgba(16,23,36,.96), rgba(9,14,23,.96));
-        border: 1px solid rgba(245,158,11,.25);
+        background: linear-gradient(145deg, rgba(16,23,36,.96), rgba(9,14,23,.96));
+        border: 1px solid rgba(245,158,11,.2);
         border-radius: 20px; padding: 24px;
-        box-shadow: 0 20px 50px -20px rgba(245,158,11,.4);
-        position: relative; overflow: hidden; margin-top: 24px;
+        box-shadow: 0 10px 30px -15px rgba(0,0,0,.5);
+        margin-top: 24px;
       }
       .nc-rewards-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
       .nc-rewards-kicker {
@@ -236,19 +187,15 @@
       .nc-rewards-title { font-size: 1.4rem; font-weight: 800; color: #fff; margin: 0; }
       .nc-rewards-icon {
         width: 56px; height: 56px; border-radius: 16px;
-        background: linear-gradient(135deg, #f59e0b, #ec4899);
+        background: rgba(245,158,11,.15);
         display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 12px 30px -10px rgba(245,158,11,.6);
-        animation: ncRewardsPulse 3s ease-in-out infinite;
       }
-      @keyframes ncRewardsPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
       .nc-rewards-balance { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
       .nc-rewards-count {
         font-size: 2.5rem; font-weight: 800;
         font-family: ui-monospace, monospace;
-        background: linear-gradient(110deg, #fff, #f59e0b 60%, #ec4899);
-        -webkit-background-clip: text; background-clip: text;
-        color: transparent; letter-spacing: -0.03em;
+        color: #fbbf24;
+        letter-spacing: -0.03em;
       }
       .nc-rewards-unit { font-size: 1rem; color: #8b95a5; font-weight: 700; }
       .nc-rewards-level {
@@ -257,7 +204,6 @@
         border: 1px solid currentColor; border-radius: 999px;
         font-size: .78rem; font-weight: 800;
       }
-      .nc-rewards-level svg { vertical-align: middle; }
       .nc-rewards-progress { margin-top: 16px; }
       .nc-rewards-progress-label {
         display: flex; justify-content: space-between;
@@ -268,34 +214,43 @@
         border-radius: 4px; overflow: hidden;
       }
       .nc-rewards-progress-fill {
-        height: 100%; background: linear-gradient(90deg, #f59e0b, #ec4899);
-        border-radius: 4px; transition: width .8s cubic-bezier(.34,1.56,.64,1);
-        box-shadow: 0 0 16px rgba(245,158,11,.6);
+        height: 100%;
+        background: linear-gradient(90deg, #f59e0b, #ec4899);
+        border-radius: 4px;
+        transition: width .4s ease;
+        transform: translateZ(0);
       }
       .nc-rewards-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
       .nc-rewards-btn {
-        flex: 1; min-width: 130px; padding: 12px 18px; border: none; border-radius: 12px;
+        flex: 1; min-width: 130px; padding: 12px 18px;
+        border: none; border-radius: 12px;
         font-weight: 800; font-size: .85rem; cursor: pointer; font-family: inherit;
-        transition: all .25s cubic-bezier(.34,1.56,.64,1);
-        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        transition: transform .15s, background .15s;
+        will-change: transform;
       }
-      .nc-rewards-btn svg { width: 16px; height: 16px; }
+      .nc-rewards-btn:hover { transform: translateY(-2px); }
       .nc-rewards-btn-primary {
         background: linear-gradient(135deg, #f59e0b, #ec4899); color: #fff;
-        box-shadow: 0 10px 24px -8px rgba(245,158,11,.6);
       }
-      .nc-rewards-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -8px rgba(245,158,11,.8); }
       .nc-rewards-btn-ghost {
-        background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); color: #b6c1d1;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.1);
+        color: #b6c1d1;
       }
-      .nc-rewards-btn-ghost:hover { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.4); color: #f59e0b; }
+      .nc-rewards-btn-ghost:hover {
+        background: rgba(245,158,11,.08);
+        border-color: rgba(245,158,11,.4);
+        color: #f59e0b;
+      }
 
       /* ===== BONUS MODAL ===== */
       .nc-bonus-modal {
         position: fixed; inset: 0; background: rgba(3,6,11,.9);
-        backdrop-filter: blur(20px); display: flex; align-items: center;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex; align-items: center;
         justify-content: center; z-index: 99999; padding: 20px;
-        opacity: 0; transition: opacity .3s ease;
+        opacity: 0; transition: opacity .25s ease;
       }
       .nc-bonus-modal.nc-on { opacity: 1; }
       .nc-bonus-card {
@@ -303,24 +258,23 @@
         background: linear-gradient(165deg, #0f1720 0%, #0a0e15 100%);
         border: 1px solid rgba(245,158,11,.3); border-radius: 24px;
         padding: 32px 28px 24px; color: #e7edf5;
-        position: relative; overflow: hidden;
-        box-shadow: 0 40px 100px -20px rgba(0,0,0,.9), 0 0 80px -20px rgba(245,158,11,.3);
+        overflow: hidden;
+        box-shadow: 0 20px 60px -20px rgba(0,0,0,.8);
         transform: translateY(20px) scale(.96);
-        transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+        transition: transform .3s cubic-bezier(.34,1.56,.64,1);
         display: flex; flex-direction: column;
       }
       .nc-bonus-modal.nc-on .nc-bonus-card { transform: translateY(0) scale(1); }
       .nc-bonus-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
       .nc-bonus-title {
         font-size: 1.5rem; font-weight: 800;
-        background: linear-gradient(100deg, #fff, #f59e0b);
-        -webkit-background-clip: text; background-clip: text;
-        color: transparent; margin: 0 0 4px;
+        color: #f59e0b; margin: 0 0 4px;
       }
       .nc-bonus-sub { font-size: .82rem; color: #8b95a5; }
       .nc-bonus-close {
         width: 36px; height: 36px; border-radius: 10px;
-        background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.08);
         color: #8b95a5; font-size: 20px; cursor: pointer;
         font-family: inherit; transition: all .2s;
       }
@@ -336,11 +290,11 @@
         flex: 1; padding: 10px 12px; border-radius: 8px; border: none;
         background: transparent; color: #8b95a5; font-size: .82rem;
         font-weight: 800; cursor: pointer; font-family: inherit;
-        transition: all .2s;
+        transition: color .15s, background .15s;
       }
       .nc-bonus-tab:hover { color: #e7edf5; }
       .nc-bonus-tab.nc-on {
-        background: linear-gradient(135deg, rgba(245,158,11,.2), rgba(236,72,153,.15));
+        background: rgba(245,158,11,.15);
         color: #f59e0b;
       }
       .nc-bonus-tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
@@ -363,7 +317,6 @@
         font-size: 1.15rem; font-weight: 800; color: #f59e0b;
         font-family: ui-monospace, monospace;
       }
-      .nc-bonus-stat-value svg { vertical-align: middle; }
 
       /* List */
       .nc-bonus-list {
@@ -377,18 +330,20 @@
         display: flex; align-items: center; gap: 14px;
         padding: 14px 16px; background: rgba(255,255,255,.03);
         border: 1px solid rgba(255,255,255,.06); border-radius: 12px;
-        transition: all .2s;
+        transition: background .2s, transform .2s;
+        will-change: transform;
       }
       .nc-bonus-item:hover {
-        background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.25);
+        background: rgba(245,158,11,.06);
+        border-color: rgba(245,158,11,.25);
         transform: translateX(4px);
       }
       .nc-bonus-item-icon {
         width: 42px; height: 42px; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-        background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(236,72,153,.15));
-        border: 1px solid rgba(245,158,11,.25);
+        flex-shrink: 0; font-size: 20px;
+        background: rgba(245,158,11,.1);
+        border: 1px solid rgba(245,158,11,.2);
       }
       .nc-bonus-item-body { flex: 1; min-width: 0; }
       .nc-bonus-item-label { font-weight: 700; font-size: .9rem; color: #fff; margin-bottom: 3px; }
@@ -396,12 +351,12 @@
       .nc-bonus-item-amount {
         font-family: ui-monospace, monospace; font-size: 1rem;
         font-weight: 800; color: #10b981;
-        text-shadow: 0 0 20px rgba(16,185,129,.4); flex-shrink: 0;
+        flex-shrink: 0;
       }
       .nc-bonus-empty { text-align: center; padding: 60px 20px; color: #7c9cbb; }
       .nc-bonus-empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: .5; }
 
-      /* ===== EARN TAB — Tasks list ===== */
+      /* ===== EARN TAB ===== */
       .nc-earn-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 400px; padding-right: 4px; }
       .nc-earn-list::-webkit-scrollbar { width: 6px; }
       .nc-earn-list::-webkit-scrollbar-thumb { background: rgba(245,158,11,.3); border-radius: 3px; }
@@ -409,17 +364,15 @@
         display: flex; align-items: center; gap: 14px;
         padding: 14px 16px; background: rgba(255,255,255,.03);
         border: 1px solid rgba(255,255,255,.06); border-radius: 12px;
-        transition: all .2s;
+        transition: background .15s;
       }
-      .nc-earn-item:hover {
-        background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.25);
-      }
+      .nc-earn-item:hover { background: rgba(245,158,11,.06); }
       .nc-earn-item-icon {
         width: 42px; height: 42px; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-        background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(236,72,153,.15));
-        border: 1px solid rgba(245,158,11,.25);
+        flex-shrink: 0; font-size: 20px;
+        background: rgba(245,158,11,.1);
+        border: 1px solid rgba(245,158,11,.2);
       }
       .nc-earn-item-body { flex: 1; min-width: 0; }
       .nc-earn-item-label { font-weight: 700; font-size: .9rem; color: #fff; margin-bottom: 3px; }
@@ -441,8 +394,7 @@
         border-radius: 20px;
         background: linear-gradient(135deg, #8b5cf6, #ec4899);
         display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 20px 40px -10px rgba(139,92,246,.6);
-        animation: ncRewardsPulse 3s ease-in-out infinite;
+        font-size: 32px;
       }
       .nc-referral-title {
         font-size: 1.2rem; font-weight: 800; color: #fff;
@@ -474,17 +426,15 @@
         background: linear-gradient(135deg, #f59e0b, #ec4899);
         color: #fff; font-weight: 800; font-size: .78rem;
         cursor: pointer; font-family: inherit;
-        transition: all .2s;
         flex-shrink: 0;
       }
-      .nc-referral-copy-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -6px rgba(245,158,11,.7); }
       .nc-referral-share-btn {
-        width: 100%; padding: 12px; border-radius: 12px; border: none;
-        background: rgba(139,92,246,.15); border: 1px solid rgba(139,92,246,.3);
+        width: 100%; padding: 12px; border-radius: 12px;
+        background: rgba(139,92,246,.15);
+        border: 1px solid rgba(139,92,246,.3);
         color: #c4b5fd; font-weight: 800; font-size: .85rem;
         cursor: pointer; font-family: inherit;
         display: flex; align-items: center; justify-content: center; gap: 8px;
-        transition: all .2s;
         margin-bottom: 16px;
       }
       .nc-referral-share-btn:hover { background: rgba(139,92,246,.25); }
@@ -512,6 +462,15 @@
         .nc-rewards-actions { flex-direction: column; }
         .nc-rewards-btn { width: 100%; }
       }
+
+      /* ⚡ Reduce motion для слабых ПК */
+      @media (prefers-reduced-motion: reduce) {
+        .nc-badge-icon svg,
+        .nc-rewards-progress-fill {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -531,11 +490,11 @@
     var badge = document.createElement('div');
     badge.id = 'ncBadge';
     badge.className = 'nc-badge';
-    badge.title = 'View your rewards and bonus history';
+    badge.title = 'View your rewards';
     badge.innerHTML =
       '<span class="nc-badge-icon">' + getCoinSVG(20) + '</span>' +
       '<span class="nc-badge-amount">' + total + ' NC</span>' +
-      '<span class="nc-badge-level" style="color:' + level.color + '">' +
+      '<span class="nc-badge-level" style="color:' + level.text + '">' +
         getLevelSVG(level.name, 14) + ' ' + level.name +
       '</span>';
 
@@ -547,14 +506,6 @@
     }
 
     badge.onclick = openBonusModal;
-
-    // 🎨 Пульсация если клиент ни разу не открывал
-    setTimeout(function () {
-      var opened = localStorage.getItem('nc_bonus_opened_' + (window.currentUser && window.currentUser.id));
-      if (!opened) {
-        badge.style.animation = 'ncBadgeAttention 2s ease-in-out infinite';
-      }
-    }, 500);
   }
 
   function updateBadge() {
@@ -569,41 +520,52 @@
     if (iconEl) iconEl.innerHTML = getCoinSVG(20);
     if (amtEl) amtEl.textContent = total + ' NC';
     if (lvlEl) {
-      lvlEl.style.color = level.color;
+      lvlEl.style.color = level.text;
       lvlEl.innerHTML = getLevelSVG(level.name, 14) + ' ' + level.name;
     }
   }
 
   // ============================================================
-  // 🎯 REWARDS CARD — универсальная для banking + exchange
+  // 🔴 REWARDS CARD — ГЛАВНЫЙ ФИКС
   // ============================================================
   function injectRewardsCard() {
-    // 🛡️ Уже есть
     if (document.getElementById('ncRewardsCard')) return;
 
-    // 🛡️ ОПРЕДЕЛЯЕМ АКТИВНЫЙ DASHBOARD
+    // 🔴 КРИТИЧНЫЙ ФИКС: выбираем dashboard по ВИДИМОСТИ, а не по accountType
     var dash   = document.getElementById('dash');
     var exDash = document.getElementById('exchangeDash');
-    var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
-    var isExchange = accountType === 'exchange';
 
     var targetDash = null;
     var targetSelector = '';
 
-    if (isExchange && exDash) {
+    // Приоритет 1: ВИДИМЫЙ exchange dashboard
+    if (exDash && exDash.classList.contains('on') && exDash.querySelector('.ex-tx-section')) {
       targetDash = exDash;
       targetSelector = '.ex-tx-section';
-    } else if (dash) {
+      console.log('[bonus-ui] ✅ Target: exchangeDash (visible)');
+    }
+    // Приоритет 2: ВИДИМЫЙ banking dashboard
+    else if (dash && dash.classList.contains('on') && dash.querySelector('.nc3-bottom-row')) {
       targetDash = dash;
       targetSelector = '.nc3-bottom-row';
-    } else if (exDash) {
+      console.log('[bonus-ui] ✅ Target: dash (visible)');
+    }
+    // Приоритет 3: exchange существует (но не видим — например, switching)
+    else if (exDash && exDash.querySelector('.ex-tx-section')) {
       targetDash = exDash;
       targetSelector = '.ex-tx-section';
+      console.log('[bonus-ui] ✅ Target: exchangeDash (exists)');
+    }
+    // Приоритет 4: banking существует
+    else if (dash) {
+      targetDash = dash;
+      targetSelector = '.nc3-bottom-row';
+      console.log('[bonus-ui] ✅ Target: dash (exists)');
     }
 
-    // 🛡️ Fallback: retry
+    // Fallback
     if (!targetDash) {
-      console.warn('[bonus-ui] ⏳ No dashboard yet, retry in 2s...');
+      console.warn('[bonus-ui] ⏳ No dashboard yet, retry in 2s');
       setTimeout(injectRewardsCard, 2000);
       return;
     }
@@ -611,12 +573,25 @@
     var total = getTotalNC();
     var level = getLevel(total);
     var progress = 0;
+    var progressText = '';
+
     if (level.next !== Infinity) {
       var range = level.next - level.min;
       var inLevel = total - level.min;
       progress = Math.min(100, (inLevel / range) * 100);
+      progressText = total + ' / ' + level.next + ' NC';
     } else {
       progress = 100;
+      progressText = 'MAX';
+    }
+
+    // 🎁 Следующий уровень
+    var nextLevelName = '';
+    for (var i = 0; i < LEVELS.length; i++) {
+      if (LEVELS[i].name === level.name && i < LEVELS.length - 1) {
+        nextLevelName = LEVELS[i + 1].name;
+        break;
+      }
     }
 
     var card = document.createElement('div');
@@ -628,26 +603,26 @@
           '<div class="nc-rewards-kicker">Loyalty & Rewards</div>' +
           '<h2 class="nc-rewards-title">Nordic Coins</h2>' +
         '</div>' +
-        '<div class="nc-rewards-icon" style="padding:12px">' + getCoinSVG(32) + '</div>' +
+        '<div class="nc-rewards-icon">' + getCoinSVG(32) + '</div>' +
       '</div>' +
       '<div class="nc-rewards-balance">' +
         '<span class="nc-rewards-count">' + total + '</span>' +
         '<span class="nc-rewards-unit">NC</span>' +
-        '<span class="nc-rewards-level" style="color:' + level.color + '">' +
+        '<span class="nc-rewards-level" style="color:' + level.text + '">' +
           getLevelSVG(level.name, 16) + ' ' + level.name +
         '</span>' +
       '</div>' +
       (level.next !== Infinity
         ? '<div class="nc-rewards-progress">' +
             '<div class="nc-rewards-progress-label">' +
-              '<span>Progress to next level</span>' +
-              '<span>' + total + ' / ' + level.next + ' NC</span>' +
+              '<span>' + (nextLevelName ? 'Progress to ' + nextLevelName : 'Progress') + '</span>' +
+              '<span>' + progressText + '</span>' +
             '</div>' +
             '<div class="nc-rewards-progress-bar">' +
               '<div class="nc-rewards-progress-fill" style="width:' + progress + '%"></div>' +
             '</div>' +
           '</div>'
-        : '<div class="nc-rewards-progress-label" style="justify-content:center;color:' + level.color + ';font-weight:800;">🎉 You reached the highest level!</div>'
+        : '<div class="nc-rewards-progress-label" style="justify-content:center;color:' + level.text + ';font-weight:800;">🎉 Highest level reached!</div>'
       ) +
       '<div class="nc-rewards-actions">' +
         '<button class="nc-rewards-btn nc-rewards-btn-primary" onclick="window.__ncOpenBonusModal && window.__ncOpenBonusModal()">' +
@@ -657,23 +632,19 @@
           '👥 Refer a friend' +
         '</button>' +
         '<button class="nc-rewards-btn nc-rewards-btn-ghost" onclick="window.__ncReportBug && window.__ncReportBug()">' +
-          '🐞 Report bug (+50 NC)' +
+          '🐞 Report bug' +
         '</button>' +
       '</div>';
 
-    // 🛡️ ВСТАВЛЯЕМ в нужный dashboard
+    // Вставляем
     var lastSection = targetDash.querySelector(targetSelector);
 
     if (lastSection && lastSection.parentNode) {
       lastSection.parentNode.insertBefore(card, lastSection.nextSibling);
-      console.log('[bonus-ui] ✅ Card injected into',
-        isExchange ? 'exchangeDash' : 'dash',
-        '| after', targetSelector);
+      console.log('[bonus-ui] ✅ Card injected after', targetSelector);
     } else {
       targetDash.appendChild(card);
-      console.log('[bonus-ui] ✅ Card appended to',
-        isExchange ? 'exchangeDash' : 'dash',
-        '| no section found');
+      console.log('[bonus-ui] ✅ Card appended');
     }
   }
 
@@ -694,7 +665,7 @@
     if (iconEl) iconEl.innerHTML = getCoinSVG(32);
     if (countEl) countEl.textContent = total;
     if (levelEl) {
-      levelEl.style.color = level.color;
+      levelEl.style.color = level.text;
       levelEl.innerHTML = getLevelSVG(level.name, 16) + ' ' + level.name;
     }
     if (level.next !== Infinity) {
@@ -707,7 +678,7 @@
   }
 
   // ============================================================
-  // 🎯 BONUS MODAL — с табами
+  // 🎯 BONUS MODAL
   // ============================================================
   var _activeTab = 'history';
 
@@ -719,14 +690,9 @@
 
     injectCSS();
 
-    // Помечаем что клиент открыл
     if (window.currentUser && window.currentUser.id) {
       localStorage.setItem('nc_bonus_opened_' + window.currentUser.id, '1');
     }
-
-    // Убираем пульсацию badge
-    var badge = document.getElementById('ncBadge');
-    if (badge) badge.style.animation = '';
 
     var history = (typeof window.NC_BONUS === 'object') ? window.NC_BONUS.history() : [];
     var total = history.reduce(function (s, e) { return s + (Number(e.amount) || 0); }, 0);
@@ -748,8 +714,6 @@
           '</div>' +
           '<button class="nc-bonus-close" onclick="window.__ncCloseBonusModal()">×</button>' +
         '</div>' +
-
-        // Stats
         '<div class="nc-bonus-stats">' +
           '<div class="nc-bonus-stat">' +
             '<div class="nc-bonus-stat-label">Total earned</div>' +
@@ -761,20 +725,16 @@
           '</div>' +
           '<div class="nc-bonus-stat">' +
             '<div class="nc-bonus-stat-label">Level</div>' +
-            '<div class="nc-bonus-stat-value" style="color:' + level.color + '">' +
+            '<div class="nc-bonus-stat-value" style="color:' + level.text + '">' +
               getLevelSVG(level.name, 16) + ' ' + level.name +
             '</div>' +
           '</div>' +
         '</div>' +
-
-        // Tabs
         '<div class="nc-bonus-tabs">' +
           '<button class="nc-bonus-tab ' + (_activeTab === 'history' ? 'nc-on' : '') + '" onclick="window.__ncBonusTab(\'history\')">📜 History</button>' +
           '<button class="nc-bonus-tab ' + (_activeTab === 'earn' ? 'nc-on' : '') + '" onclick="window.__ncBonusTab(\'earn\')">🎯 Earn NC</button>' +
           '<button class="nc-bonus-tab ' + (_activeTab === 'referral' ? 'nc-on' : '') + '" onclick="window.__ncBonusTab(\'referral\')">👥 Refer</button>' +
         '</div>' +
-
-        // Tab contents
         '<div class="nc-bonus-tab-content ' + (_activeTab === 'history' ? 'nc-on' : '') + '" data-tab="history">' +
           buildHistoryHTML(history) +
         '</div>' +
@@ -794,7 +754,7 @@
   }
 
   // ============================================================
-  // 🎯 TAB CONTENT BUILDERS
+  // 🎯 TAB CONTENT
   // ============================================================
   function buildHistoryHTML(history) {
     if (!history || history.length === 0) {
@@ -811,16 +771,16 @@
     history.forEach(function (e) {
       var d = new Date(e.ts);
       var dateStr = d.toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric'
+        day: '2-digit', month: 'short'
       }) + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       html +=
         '<div class="nc-bonus-item">' +
-          '<div class="nc-bonus-item-icon">' + getBonusIcon(e.type) + '</div>' +
+          '<div class="nc-bonus-item-icon">' + getBonusEmoji(e.type) + '</div>' +
           '<div class="nc-bonus-item-body">' +
             '<div class="nc-bonus-item-label">' + (e.label || e.type) + '</div>' +
             '<div class="nc-bonus-item-time">' + dateStr + '</div>' +
           '</div>' +
-          '<div class="nc-bonus-item-amount">+' + (e.amount || 0) + ' NC</div>' +
+          '<div class="nc-bonus-item-amount">+' + (e.amount || 0) + '</div>' +
         '</div>';
     });
     html += '</div>';
@@ -828,22 +788,25 @@
   }
 
   function buildEarnHTML() {
+    var uid_ = (window.currentUser && window.currentUser.id) || '';
     var tasks = [
-      { icon: '🎁', label: 'Welcome bonus',     desc: 'On your first sign-in', bonus: '+10 NC',  done: !!localStorage.getItem('nc_welcome_bonus_' + (window.currentUser && window.currentUser.id)) },
-      { icon: '💰', label: 'First deposit',     desc: 'Make your first deposit', bonus: '+50 NC',  done: !!localStorage.getItem('nc_bonus_ot_firstDeposit_' + (window.currentUser && window.currentUser.id)) },
-      { icon: '💎', label: 'VIP deposit',       desc: 'Deposit $1000 or more', bonus: '+500 NC', done: false },
-      { icon: '📈', label: 'First trade',       desc: 'Execute your first trade', bonus: '+100 NC', done: !!localStorage.getItem('nc_bonus_ot_firstTrade_' + (window.currentUser && window.currentUser.id)) },
-      { icon: '🪪', label: 'KYC verification',  desc: 'Complete identity verification', bonus: '+200 NC', done: !!(window.st && window.st.verification && window.st.verification.status === 'approved') },
-      { icon: '🔥', label: '7-day loyalty',     desc: 'Sign in 7 days in a row', bonus: '+100 NC', done: !!localStorage.getItem('nc_loyalty_ts_' + (window.currentUser && window.currentUser.id)) },
-      { icon: '👥', label: 'Refer a friend',    desc: 'Invite someone to NordicCrypto', bonus: '+250 NC', done: !!localStorage.getItem('nc_referral_used_' + (window.currentUser && window.currentUser.id)) },
-      { icon: '🐞', label: 'Report a bug',      desc: 'Help us fix an issue', bonus: '+50 NC',  done: false }
+      { icon: '🎁', label: 'Welcome bonus',     desc: 'On first sign-in',         bonus: '+10 NC',  done: !!localStorage.getItem('nc_welcome_bonus_' + uid_) },
+      { icon: '📅', label: 'Daily login',       desc: 'Sign in every day',        bonus: '+5 NC',   done: false },
+      { icon: '💰', label: 'First deposit',     desc: 'Make your first deposit',  bonus: '+50 NC',  done: !!localStorage.getItem('nc_bonus_ot_firstDeposit_' + uid_) },
+      { icon: '💎', label: 'VIP deposit',       desc: 'Deposit $1000 or more',    bonus: '+500 NC', done: false },
+      { icon: '📈', label: 'First trade',       desc: 'Execute your first trade', bonus: '+100 NC', done: !!localStorage.getItem('nc_bonus_ot_firstTrade_' + uid_) },
+      { icon: '🪪', label: 'KYC verification',  desc: 'Complete ID verification', bonus: '+200 NC', done: !!(window.st && window.st.verification && window.st.verification.status === 'approved') },
+      { icon: '🔥', label: '7-day loyalty',     desc: 'Sign in 7 days in a row',  bonus: '+100 NC', done: !!localStorage.getItem('nc_loyalty_ts_' + uid_) },
+      { icon: '👤', label: 'Complete profile',  desc: 'Add name & phone',         bonus: '+25 NC',  done: false },
+      { icon: '👥', label: 'Refer a friend',    desc: 'Invite someone',           bonus: '+250 NC', done: !!localStorage.getItem('nc_referral_used_' + uid_) },
+      { icon: '🐞', label: 'Report a bug',      desc: 'Help us fix an issue',     bonus: '+50 NC',  done: false }
     ];
 
     var html = '<div class="nc-earn-list">';
     tasks.forEach(function (t) {
       html +=
         '<div class="nc-earn-item">' +
-          '<div class="nc-earn-item-icon" style="font-size:20px">' + t.icon + '</div>' +
+          '<div class="nc-earn-item-icon">' + t.icon + '</div>' +
           '<div class="nc-earn-item-body">' +
             '<div class="nc-earn-item-label">' + t.label + '</div>' +
             '<div class="nc-earn-item-desc">' + t.desc + '</div>' +
@@ -863,7 +826,7 @@
     var refCount = Number(localStorage.getItem('nc_referral_count_' + userId) || 0);
 
     return '<div class="nc-referral-content">' +
-      '<div class="nc-referral-big-icon" style="font-size:32px">👥</div>' +
+      '<div class="nc-referral-big-icon">👥</div>' +
       '<div class="nc-referral-title">Invite friends, earn NC</div>' +
       '<div class="nc-referral-desc">Share your link — when a friend signs up, you both get rewarded.</div>' +
       '<div class="nc-referral-bonus-big">+250 NC</div>' +
@@ -888,7 +851,7 @@
   }
 
   // ============================================================
-  // 🎯 TABS SWITCHER
+  // 🎯 TABS + REFERRAL
   // ============================================================
   window.__ncBonusTab = function (tabName) {
     var tabs = document.querySelectorAll('.nc-bonus-tab');
@@ -904,9 +867,6 @@
     if (activeContent) activeContent.classList.add('nc-on');
   };
 
-  // ============================================================
-  // 🎯 REFERRAL ACTIONS
-  // ============================================================
   window.__ncCopyReferralLink = function () {
     var input = document.getElementById('ncRefLink');
     if (!input) return;
@@ -928,30 +888,24 @@
     var input = document.getElementById('ncRefLink');
     if (!input) return;
     var text = 'Join NordicCrypto and get 250 NC bonus!';
-
     if (navigator.share) {
-      navigator.share({
-        title: 'NordicCrypto',
-        text: text,
-        url: input.value
-      }).catch(function () {});
+      navigator.share({ title: 'NordicCrypto', text: text, url: input.value }).catch(function () {});
     } else {
       window.__ncCopyReferralLink();
     }
   };
 
   window.__ncOpenBonusModal = openBonusModal;
-
   window.__ncCloseBonusModal = function () {
     var m = document.querySelector('.nc-bonus-modal');
     if (m) {
       m.classList.remove('nc-on');
-      setTimeout(function () { m.remove(); }, 300);
+      setTimeout(function () { m.remove(); }, 250);
     }
   };
 
   // ============================================================
-  // 🎯 BONUS GRANTED — плавное обновление
+  // 🎯 BONUS GRANTED
   // ============================================================
   document.addEventListener('nc:bonus:granted', function (ev) {
     var d = ev.detail || {};
@@ -966,17 +920,10 @@
     if (typeof window.addNotification === 'function') {
       window.addNotification('+' + amount + ' NC — ' + label, getBonusEmoji(type));
     }
-
-    var badge = document.getElementById('ncBadge');
-    if (badge) {
-      badge.style.animation = 'none';
-      void badge.offsetWidth;
-      badge.style.animation = 'ncBadgePulse 0.6s ease';
-    }
   });
 
   // ============================================================
-  // 🎯 LOGOUT — cleanup
+  // 🎯 LOGOUT
   // ============================================================
   document.addEventListener('nc:auth:logout', function () {
     invalidateNCCache();
@@ -986,7 +933,6 @@
     if (c) c.remove();
     var m = document.querySelector('.nc-bonus-modal');
     if (m) m.remove();
-    console.log('[bonus-ui] cleaned up on logout');
   });
 
   // ============================================================
@@ -1001,8 +947,7 @@
       'Describe the bug you found:\n\n' +
       'Examples:\n' +
       '• "Deposit button doesn\'t work"\n' +
-      '• "Layout broken on mobile"\n' +
-      '• "Wrong balance shown"\n\n' +
+      '• "Layout broken on mobile"\n\n' +
       'You will receive +50 NC for a valid report.'
     );
     if (!text || text.length < 5) return;
@@ -1021,7 +966,7 @@
   };
 
   // ============================================================
-  // 🎯 FIRST DEPOSIT bonus (событие от deposit-flow)
+  // 🎯 FIRST DEPOSIT
   // ============================================================
   document.addEventListener('nc:deposit:confirmed', function () {
     if (typeof window.NC_BONUS === 'object' &&
@@ -1031,63 +976,49 @@
   });
 
   // ============================================================
-  // 🎯 INIT
+  // 🎯 INIT — 3 попытки, потом стоп (для слабых ПК)
   // ============================================================
   function init() {
     injectCSS();
     injectBadge();
     injectRewardsCard();
 
-    setTimeout(function () {
-      injectBadge();
-      if (!document.getElementById('ncRewardsCard')) injectRewardsCard();
-    }, 1500);
+    var attempts = 0;
+    var maxAttempts = 3;
 
-    setTimeout(function () {
-      injectBadge();
-      if (!document.getElementById('ncRewardsCard')) injectRewardsCard();
-    }, 4000);
+    function tryInjectCard() {
+      if (document.getElementById('ncRewardsCard')) return;
+      if (attempts >= maxAttempts) return;
+      attempts++;
+      console.log('[bonus-ui] Retry #' + attempts);
+      injectRewardsCard();
+      if (attempts < maxAttempts) setTimeout(tryInjectCard, 3000);
+    }
 
-    setTimeout(function () {
-      if (!document.getElementById('ncRewardsCard')) {
-        console.log('[bonus-ui] 🔄 Late retry inject rewards card');
-        injectRewardsCard();
-      }
-    }, 8000);
+    setTimeout(tryInjectCard, 3000);
 
     console.log('%c[NordicCrypto] 🎁 bonus-ui.js v' + BUI_VERSION + ' loaded',
       'color:#f59e0b;font-weight:bold;font-size:13px');
   }
 
   // ============================================================
-  // 🛡️ СЛУШАТЕЛИ переинжекта
+  // 🛡️ LISTENERS
   // ============================================================
   document.addEventListener('nc:account:typechange', function () {
     setTimeout(function () {
       var old = document.getElementById('ncRewardsCard');
       if (old) old.remove();
-      console.log('[bonus-ui] 🔄 Account type changed — reinjecting');
       injectRewardsCard();
-    }, 300);
+    }, 400);
   });
 
-  document.addEventListener('click', function (e) {
-    var mi = e.target.closest('.mi');
-    if (!mi) return;
-    setTimeout(function () {
-      if (!document.getElementById('ncRewardsCard')) {
-        injectRewardsCard();
-      }
-    }, 500);
-  }, true);
-
-  document.addEventListener('nc:dashboard:rendered', function () {
-    setTimeout(function () {
-      if (!document.getElementById('ncRewardsCard')) {
-        injectRewardsCard();
-      }
-    }, 200);
-  });
+  // Auto-refresh badge каждые 30 сек (для актуальности)
+  setInterval(function () {
+    if (document.getElementById('ncBadge')) {
+      invalidateNCCache();
+      updateBadge();
+    }
+  }, 30000);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
