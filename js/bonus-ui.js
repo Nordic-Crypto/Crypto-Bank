@@ -127,9 +127,11 @@
 }
 
 .nc-badge-level {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  font-size: .68rem;
+  opacity: .8;
+  padding: 2px 6px;
+  background: rgba(255,255,255,.08);
+  border-radius: 6px;
 }
 
 .nc-rewards-icon svg {
