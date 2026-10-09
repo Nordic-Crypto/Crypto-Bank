@@ -196,6 +196,7 @@ async function checkSession() {
 
   if (email) {
     hideLoginScreen();
+    // 🛡️ Перед showApp — убедимся что state загружен
     showApp();
     startInactivityTimer();
   }
