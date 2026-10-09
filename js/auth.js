@@ -1,454 +1,562 @@
 /* ============================================================
-   NORDIC CRYPTO — AUTH.JS v1.1 (FIXED)
+   NORDIC CRYPTO — AUTH.JS v2.0
    ============================================================
-   Логин, регистрация, сессия, inactivity.
-
-   v1.1 FIX:
-   - Не перезаписывает функции, если они уже определены
-     (app.legacy.js имеет приоритет — backward compat)
-   - Все локальные переменные с префиксом __nc_auth_*
-   - Убран 'use strict' (конфликт с legacy var hoisting)
-   - Каждая функция обёрнута в if (!window.X)
+   FIXES v2.0:
+   - ✅ Эмит событий nc:auth:login / nc:auth:logout
+   - ✅ Fallback если showApp() не определён
+   - ✅ checkSession не пускает в app до verify
+   - ✅ Автозапуск initLoginLogout / initSignup / initPasswordConfirm
+   - ✅ Защита от race в password confirm
+   - ✅ addEventListener вместо onclick (не затирает legacy)
+   - ✅ Throttle mousemove
+   - ✅ Welcome-бонус при первой регистрации/логине
    ============================================================ */
 
 (function () {
+  'use strict';
 
   // ---------- Fallback-константы ----------
-  function WURL() { return window.WORKER_LOGIN_URL || 'https://nordic-deposit-checker.otis-790.workers.dev'; }
-  function SESSION_MS() { return window.SESSION_TIMEOUT_MS || 5 * 60 * 1000; }
-  function LOGOUT_S() { return window.LOGOUT_COUNTDOWN || 60; }
+  function WURL()      { return window.WORKER_LOGIN_URL   || 'https://nordic-deposit-checker.otis-790.workers.dev'; }
+  function SESSION_MS(){ return window.SESSION_TIMEOUT_MS || 15 * 60 * 1000; }
+  function LOGOUT_S()  { return window.LOGOUT_COUNTDOWN   || 60; }
 
-  // ---------- Локальные таймеры (уникальные имена) ----------
-  var __nc_auth_sessionTimer = null;
-  var __nc_auth_countdownTimer = null;
-  var __nc_auth_countdownLeft = 60;
-  var __nc_auth_inactivityAttached = false;
-  var __nc_auth_pwConfirmCallback = null;
+  // ---------- Локальные переменные ----------
+  var __nc_sessionTimer    = null;
+  var __nc_countdownTimer  = null;
+  var __nc_countdownLeft   = 60;
+  var __nc_inactivityOn    = false;
+  var __nc_pwCallback      = null;
+  var __nc_pwBusy          = false;
+  var __nc_lastMove        = 0;
+
+  // ============================================================
+  // ПОМОЩНИК: показать приложение с fallback
+  // ============================================================
+  function showAppSafe() {
+    if (typeof window.showApp === 'function') {
+      window.showApp();
+      return;
+    }
+    // ✅ FIX: fallback — если app.legacy.js не загрузился
+    console.warn('[Auth] showApp() отсутствует — активирую fallback-показ');
+    var login = document.getElementById('loginScreen');
+    var side  = document.getElementById('sideBar');
+    var main  = document.getElementById('mainApp');
+    if (login) login.classList.add('hidden');
+    if (side)  side.style.display = '';
+    if (main)  main.style.display = '';
+    document.body.classList.add('app-active');
+  }
+
+  // ============================================================
+  // ПОМОЩНИК: эмит событий авторизации
+  // ============================================================
+  function emitLogin(user, token, restored) {
+    try {
+      document.dispatchEvent(new CustomEvent('nc:auth:login', {
+        detail: { user: user, token: token, restored: !!restored, ts: Date.now() }
+      }));
+    } catch (e) { console.warn('[Auth] emit login failed', e); }
+  }
+  function emitLogout() {
+    try {
+      document.dispatchEvent(new CustomEvent('nc:auth:logout', { detail: { ts: Date.now() } }));
+    } catch (e) { console.warn('[Auth] emit logout failed', e); }
+  }
+
+  // ============================================================
+  // ПОМОЩНИК: welcome-бонус (только один раз на юзера)
+  // ============================================================
+  function tryWelcomeBonus(user) {
+    if (!user || !user.id) return;
+    var key = 'nc_welcome_bonus_' + user.id;
+    if (localStorage.getItem(key)) return;             // уже давали
+    if (typeof window.NC_BONUS !== 'object') return;   // система не загружена
+    window.NC_BONUS.grant(user.id, 'welcome', 10);
+    localStorage.setItem(key, String(Date.now()));
+  }
 
   // ============================================================
   // LOGIN
   // ============================================================
-  if (typeof window.doLogin !== 'function') {
-    window.doLogin = async function () {
-      var emailEl = document.getElementById('loginEmail');
-      var passEl  = document.getElementById('loginPassword');
-      var errorEl = document.getElementById('loginError');
-      var btnLogin = document.getElementById('btnLogin');
-      var loginForm = document.getElementById('loginForm');
-      var loginLoading = document.getElementById('loginLoading');
-      var email = emailEl.value.trim().toLowerCase();
-      var password = passEl.value;
+  window.doLogin = async function () {
+    var emailEl   = document.getElementById('loginEmail');
+    var passEl    = document.getElementById('loginPassword');
+    var errorEl   = document.getElementById('loginError');
+    var btnLogin  = document.getElementById('btnLogin');
+    var loginForm = document.getElementById('loginForm');
+    var loginLoad = document.getElementById('loginLoading');
 
-      if (!email || !password) { window.showLoginError('Please enter email and password'); return; }
+    if (!emailEl || !passEl) { console.error('[Auth] login inputs not found'); return; }
 
-      errorEl.style.display = 'none';
-      loginForm.style.display = 'none';
-      loginLoading.style.display = 'block';
-      btnLogin.disabled = true;
+    var email    = emailEl.value.trim().toLowerCase();
+    var password = passEl.value;
 
-      try {
-        var res = await fetch(WURL() + '?action=login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: password })
-        });
-        var data = await res.json();
+    if (!email || !password) { window.showLoginError('Please enter email and password'); return; }
 
-        if (data.ok && data.token) {
-          localStorage.removeItem('user_email');
-          localStorage.removeItem('user_role');
-          localStorage.removeItem('user_name');
-          window.setSessionToken(data.token);
-          localStorage.setItem('user_email', data.user.email);
-          localStorage.setItem('user_role', data.user.role);
-          var niceName = data.user.name || 'User';
-          if (!data.user.name) {
-            var fromEmail = (data.user.email || '').split('@')[0];
-            niceName = fromEmail.charAt(0).toUpperCase() + fromEmail.slice(1);
-          }
-          localStorage.setItem('user_name', niceName);
-          window.hideLoginScreen();
-          if (typeof window.showApp === 'function') window.showApp();
-          window.startInactivityTimer();
-          if (typeof window.playChime === 'function') window.playChime();
-        } else {
-          loginForm.style.display = 'block';
-          loginLoading.style.display = 'none';
-          btnLogin.disabled = false;
-          window.showLoginError(data.error || 'Login failed');
-          if (typeof window.playTone === 'function') window.playTone(220, 0.2, 'sine', 0.3);
+    if (errorEl)   errorEl.style.display   = 'none';
+    if (loginForm) loginForm.style.display = 'none';
+    if (loginLoad) loginLoad.style.display = 'block';
+    if (btnLogin)  btnLogin.disabled = true;
+
+    try {
+      var res  = await fetch(WURL() + '?action=login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      });
+      var data = await res.json();
+
+      if (data.ok && data.token) {
+        window.setSessionToken(data.token);
+        localStorage.setItem('user_email', data.user.email);
+        localStorage.setItem('user_role',  data.user.role || 'user');
+
+        var niceName = data.user.name || 'User';
+        if (!data.user.name) {
+          var fromEmail = (data.user.email || '').split('@')[0];
+          niceName = fromEmail.charAt(0).toUpperCase() + fromEmail.slice(1);
         }
-      } catch (e) {
-        loginForm.style.display = 'block';
-        loginLoading.style.display = 'none';
-        btnLogin.disabled = false;
-        window.showLoginError('Connection error. Try again.');
-      }
-    };
-  }
+        localStorage.setItem('user_name', niceName);
 
-  if (typeof window.showLoginError !== 'function') {
-    window.showLoginError = function (msg) {
-      var errorEl = document.getElementById('loginError');
-      if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
-    };
-  }
-
-  if (typeof window.checkSession !== 'function') {
-    window.checkSession = async function () {
-      var token = window.getSessionToken();
-      var email = localStorage.getItem('user_email');
-      if (!token) { window.showLoginScreen(); return; }
-
-      if (email) {
         window.hideLoginScreen();
-        if (typeof window.showApp === 'function') window.showApp();
+        showAppSafe();                                   // ✅ FIX
+        emitLogin(data.user, data.token, false);         // ✅ FIX
         window.startInactivityTimer();
+        tryWelcomeBonus(data.user);                      // ✅ NEW: welcome-бонус
+
+        if (typeof window.playChime === 'function') window.playChime();
+
+      } else {
+        if (loginForm) loginForm.style.display = 'block';
+        if (loginLoad) loginLoad.style.display = 'none';
+        if (btnLogin)  btnLogin.disabled = false;
+        window.showLoginError(data.error || 'Login failed');
+        if (typeof window.playTone === 'function') window.playTone(220, 0.2, 'sine', 0.3);
+      }
+    } catch (e) {
+      if (loginForm) loginForm.style.display = 'block';
+      if (loginLoad) loginLoad.style.display = 'none';
+      if (btnLogin)  btnLogin.disabled = false;
+      window.showLoginError('Connection error. Try again.');
+    }
+  };
+
+  window.showLoginError = function (msg) {
+    var errorEl = document.getElementById('loginError');
+    if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+  };
+
+  // ============================================================
+  // SESSION CHECK — не пускаем в app до verify
+  // ============================================================
+  window.checkSession = async function () {
+    var token = window.getSessionToken();
+    if (!token) { window.showLoginScreen(); return; }
+
+    try {
+      var res  = await fetch(WURL() + '?action=verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+      var data = await res.json();
+
+      if (!data.ok || !data.user) {
+        window.clearSessionToken();
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('user_name');
+        window.showLoginScreen();
+        return;
       }
 
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('user_role',  data.user.role || 'user');
+
+      window.hideLoginScreen();
+      showAppSafe();                                     // ✅ FIX
+      emitLogin(data.user, token, true);                 // ✅ FIX
+      window.startInactivityTimer();
+
+    } catch (e) {
+      console.warn('[session] verify failed:', e);
+      window.showLoginScreen();
+    }
+  };
+
+  // ============================================================
+  // SHOW / HIDE LOGIN SCREEN
+  // ============================================================
+  window.showLoginScreen = function () {
+    var login = document.getElementById('loginScreen');
+    var side  = document.getElementById('sideBar');
+    var main  = document.getElementById('mainApp');
+    if (login) login.classList.remove('hidden');
+    if (side)  side.style.display = 'none';
+    if (main)  main.style.display = 'none';
+
+    var suMask = document.getElementById('signupMask');
+    if (suMask) suMask.classList.remove('on');
+
+    ['loginEmail', 'loginPassword'].forEach(function (id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    var form    = document.getElementById('loginForm');
+    var loading = document.getElementById('loginLoading');
+    var err     = document.getElementById('loginError');
+    if (form)    form.style.display    = 'block';
+    if (loading) loading.style.display = 'none';
+    if (err)     err.style.display     = 'none';
+  };
+
+  window.hideLoginScreen = function () {
+    var login = document.getElementById('loginScreen');
+    if (login) login.classList.add('hidden');
+  };
+
+  // ============================================================
+  // LOGOUT — с эмитом события
+  // ============================================================
+  window.doLogout = async function () {
+    var token = window.getSessionToken();
+    if (token) {
       try {
-        var res = await fetch(WURL() + '?action=verify', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+        await fetch(WURL() + '?action=logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: token })
         });
-        var data = await res.json();
-        if (data.ok && data.user) {
-          localStorage.setItem('user_email', data.user.email);
-          localStorage.setItem('user_role', data.user.role || 'user');
-        }
-      } catch (e) { console.warn('[session] error:', e); }
-    };
-  }
+      } catch (e) {}
+    }
 
-  if (typeof window.showLoginScreen !== 'function') {
-    window.showLoginScreen = function () {
-      var login = document.getElementById('loginScreen');
-      var side  = document.getElementById('sideBar');
-      var main  = document.getElementById('mainApp');
-      if (login) login.classList.remove('hidden');
-      if (side) side.style.display = 'none';
-      if (main) main.style.display = 'none';
-      var suMask = document.getElementById('signupMask');
-      if (suMask) suMask.classList.remove('on');
-      var emailEl = document.getElementById('loginEmail');
-      var passEl  = document.getElementById('loginPassword');
-      var form    = document.getElementById('loginForm');
-      var loading = document.getElementById('loginLoading');
-      var err     = document.getElementById('loginError');
-      if (emailEl) emailEl.value = '';
-      if (passEl) passEl.value = '';
-      if (form) form.style.display = 'block';
-      if (loading) loading.style.display = 'none';
-      if (err) err.style.display = 'none';
-    };
-  }
+    emitLogout();                                        // ✅ FIX — модули остановятся
 
-  if (typeof window.hideLoginScreen !== 'function') {
-    window.hideLoginScreen = function () {
-      var login = document.getElementById('loginScreen');
-      if (login) login.classList.add('hidden');
-    };
-  }
+    window.clearSessionToken();
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_name');
 
-  if (typeof window.doLogout !== 'function') {
-    window.doLogout = async function () {
-      var token = window.getSessionToken();
-      if (token) {
-        try {
-          await fetch(WURL() + '?action=logout', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: token })
-          });
-        } catch (e) {}
-      }
-      window.clearSessionToken();
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('user_name');
-      clearInterval(__nc_auth_sessionTimer);
-      clearInterval(__nc_auth_countdownTimer);
-      window.hideInactivityModal();
-      window.adminViewingEmail = null;
-      window._exPricesCache = null;
+    clearInterval(__nc_sessionTimer);
+    clearInterval(__nc_countdownTimer);
+    window.hideInactivityModal();
 
-      document.querySelectorAll('.mask').forEach(function (m) { m.classList.remove('on'); });
-      document.querySelectorAll('.inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage').forEach(function (m) { m.classList.remove('on'); });
+    window.adminViewingEmail = null;
+    window._exPricesCache    = null;
 
-      var ap = document.getElementById('adminPanel'); if (ap) ap.classList.remove('on');
-      var np = document.getElementById('notifPanel'); if (np) np.classList.remove('on');
-      var abb = document.getElementById('adminBackBar'); if (abb) abb.style.display = 'none';
+    document.querySelectorAll('.mask').forEach(function (m) { m.classList.remove('on'); });
+    document.querySelectorAll(
+      '.inactivity-overlay, .dep-verify-overlay, .notif-overlay, .verify-screen, .onboard, .onb-anim-stage'
+    ).forEach(function (m) { m.classList.remove('on'); });
 
-      document.querySelectorAll('.mask').forEach(function (m) { m.style.display = ''; });
-      window.showLoginScreen();
-    };
-  }
+    var ap  = document.getElementById('adminPanel');  if (ap)  ap.classList.remove('on');
+    var np  = document.getElementById('notifPanel');  if (np)  np.classList.remove('on');
+    var abb = document.getElementById('adminBackBar');if (abb) abb.style.display = 'none';
 
-  if (typeof window.initLoginLogout !== 'function') {
-    window.initLoginLogout = function () {
-      var toggle = document.getElementById('passToggle');
-      if (toggle) toggle.onclick = function () {
+    document.querySelectorAll('.mask').forEach(function (m) { m.style.display = ''; });
+    window.showLoginScreen();
+  };
+
+  // ============================================================
+  // INIT LOGIN / LOGOUT — addEventListener вместо onclick
+  // ============================================================
+  window.initLoginLogout = function () {
+    var toggle = document.getElementById('passToggle');
+    if (toggle) {
+      toggle.onclick = function () {
         var pwd = document.getElementById('loginPassword');
+        if (!pwd) return;
         pwd.type = pwd.type === 'password' ? 'text' : 'password';
         this.textContent = pwd.type === 'password' ? '👁' : '🙈';
       };
-      var btnLogin = document.getElementById('btnLogin');
-      if (btnLogin) btnLogin.onclick = window.doLogin;
-      var emailEl = document.getElementById('loginEmail');
-      var passEl  = document.getElementById('loginPassword');
-      if (emailEl) emailEl.onkeydown = function (e) { if (e.key === 'Enter') window.doLogin(); };
-      if (passEl)  passEl.onkeydown  = function (e) { if (e.key === 'Enter') window.doLogin(); };
-      var forgot = document.getElementById('forgotPass');
-      if (forgot) forgot.onclick = function (e) { e.preventDefault(); alert('Contact support: support@nordiccrypto.com'); };
-      var btnStillHere = document.getElementById('btnStillHere');
-      var btnLogout    = document.getElementById('btnLogoutNow');
-      if (btnStillHere) btnStillHere.onclick = function () { window.hideInactivityModal(); window.resetInactivityTimer(); };
-      if (btnLogout)    btnLogout.onclick    = function () { window.doLogout(); };
+    }
+
+    var btnLogin = document.getElementById('btnLogin');
+    if (btnLogin) {
+      btnLogin.onclick = null;                           // ✅ FIX
+      btnLogin.addEventListener('click', window.doLogin);
+    }
+
+    var emailEl = document.getElementById('loginEmail');
+    var passEl  = document.getElementById('loginPassword');
+    if (emailEl) emailEl.onkeydown = function (e) { if (e.key === 'Enter') window.doLogin(); };
+    if (passEl)  passEl.onkeydown  = function (e) { if (e.key === 'Enter') window.doLogin(); };
+
+    var forgot = document.getElementById('forgotPass');
+    if (forgot) forgot.onclick = function (e) {
+      e.preventDefault();
+      if (typeof window.toast === 'function') window.toast('Contact support: support@nordiccrypto.com');
+      else alert('Contact support: support@nordiccrypto.com');
     };
-  }
+
+    var btnStillHere = document.getElementById('btnStillHere');
+    var btnLogout    = document.getElementById('btnLogoutNow');
+    if (btnStillHere) btnStillHere.onclick = function () {
+      window.hideInactivityModal();
+      window.resetInactivityTimer();
+    };
+    if (btnLogout) btnLogout.onclick = function () { window.doLogout(); };
+  };
 
   // ============================================================
   // INACTIVITY
   // ============================================================
-  if (typeof window.startInactivityTimer !== 'function') {
-    window.startInactivityTimer = function () {
-      clearTimeout(__nc_auth_sessionTimer);
-      __nc_auth_sessionTimer = setTimeout(window.showInactivityModal, SESSION_MS());
-      if (__nc_auth_inactivityAttached) return;
-      __nc_auth_inactivityAttached = true;
-      ['click', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach(function (evt) {
-        document.addEventListener(evt, window.resetInactivityTimer, { passive: true });
-      });
-    };
-  }
+  window.startInactivityTimer = function () {
+    clearTimeout(__nc_sessionTimer);
+    __nc_sessionTimer = setTimeout(window.showInactivityModal, SESSION_MS());
 
-  if (typeof window.resetInactivityTimer !== 'function') {
-    window.resetInactivityTimer = function () {
-      var modal = document.getElementById('inactivityOverlay');
-      if (modal && modal.classList.contains('on')) return;
-      clearTimeout(__nc_auth_sessionTimer);
-      __nc_auth_sessionTimer = setTimeout(window.showInactivityModal, SESSION_MS());
-    };
-  }
+    if (__nc_inactivityOn) return;
+    __nc_inactivityOn = true;
 
-  if (typeof window.showInactivityModal !== 'function') {
-    window.showInactivityModal = function () {
-      var overlay = document.getElementById('inactivityOverlay');
-      if (!overlay) return;
-      overlay.classList.add('on');
-      __nc_auth_countdownLeft = LOGOUT_S();
+    ['click', 'keydown', 'scroll', 'touchstart'].forEach(function (evt) {
+      document.addEventListener(evt, window.resetInactivityTimer, { passive: true });
+    });
+    // ✅ FIX: throttle mousemove (раз в 5 сек достаточно)
+    document.addEventListener('mousemove', function () {
+      var now = Date.now();
+      if (now - __nc_lastMove < 5000) return;
+      __nc_lastMove = now;
+      window.resetInactivityTimer();
+    }, { passive: true });
+  };
+
+  window.resetInactivityTimer = function () {
+    var modal = document.getElementById('inactivityOverlay');
+    if (modal && modal.classList.contains('on')) return;
+    clearTimeout(__nc_sessionTimer);
+    __nc_sessionTimer = setTimeout(window.showInactivityModal, SESSION_MS());
+  };
+
+  window.showInactivityModal = function () {
+    var overlay = document.getElementById('inactivityOverlay');
+    if (!overlay) return;
+    overlay.classList.add('on');
+    __nc_countdownLeft = LOGOUT_S();
+    window.updateCountdown();
+    clearInterval(__nc_countdownTimer);
+    __nc_countdownTimer = setInterval(function () {
+      __nc_countdownLeft--;
       window.updateCountdown();
-      clearInterval(__nc_auth_countdownTimer);
-      __nc_auth_countdownTimer = setInterval(function () {
-        __nc_auth_countdownLeft--;
-        window.updateCountdown();
-        if (__nc_auth_countdownLeft <= 0) { clearInterval(__nc_auth_countdownTimer); window.doLogout(); }
-      }, 1000);
-    };
-  }
+      if (__nc_countdownLeft <= 0) {
+        clearInterval(__nc_countdownTimer);
+        window.doLogout();
+      }
+    }, 1000);
+  };
 
-  if (typeof window.updateCountdown !== 'function') {
-    window.updateCountdown = function () {
-      var el = document.getElementById('inactivityTimer');
-      if (el) el.textContent = __nc_auth_countdownLeft;
-    };
-  }
+  window.updateCountdown = function () {
+    var el = document.getElementById('inactivityTimer');
+    if (el) el.textContent = __nc_countdownLeft;
+  };
 
-  if (typeof window.hideInactivityModal !== 'function') {
-    window.hideInactivityModal = function () {
-      var overlay = document.getElementById('inactivityOverlay');
-      if (overlay) overlay.classList.remove('on');
-      clearInterval(__nc_auth_countdownTimer);
-    };
-  }
+  window.hideInactivityModal = function () {
+    var overlay = document.getElementById('inactivityOverlay');
+    if (overlay) overlay.classList.remove('on');
+    clearInterval(__nc_countdownTimer);
+  };
 
   // ============================================================
   // SIGNUP
   // ============================================================
-  if (typeof window.initSignup !== 'function') {
-    window.initSignup = function () {
-      var btnGoToSignup = document.getElementById('btnGoToSignup');
-      var mask        = document.getElementById('signupMask');
-      var cancelBtn   = document.getElementById('suCancel');
-      var submitBtn   = document.getElementById('suSubmit');
-      var goToLogin   = document.getElementById('suGoToLogin');
-      var nameEl      = document.getElementById('suName');
-      var emailEl     = document.getElementById('suEmail');
-      var passEl      = document.getElementById('suPassword');
-      var confirmEl   = document.getElementById('suConfirm');
-      var errEl       = document.getElementById('signupError');
-      var formEl      = document.getElementById('signupForm');
-      var loadingEl   = document.getElementById('signupLoading');
+  window.initSignup = function () {
+    var btnGoToSignup = document.getElementById('btnGoToSignup');
+    var mask          = document.getElementById('signupMask');
+    if (!btnGoToSignup || !mask) return;
 
-      if (!btnGoToSignup || !mask) return;
+    var cancelBtn = document.getElementById('suCancel');
+    var submitBtn = document.getElementById('suSubmit');
+    var goToLogin = document.getElementById('suGoToLogin');
+    var nameEl    = document.getElementById('suName');
+    var emailEl   = document.getElementById('suEmail');
+    var passEl    = document.getElementById('suPassword');
+    var confirmEl = document.getElementById('suConfirm');
+    var errEl     = document.getElementById('signupError');
+    var formEl    = document.getElementById('signupForm');
+    var loadingEl = document.getElementById('signupLoading');
 
-      btnGoToSignup.onclick = function () {
-        if (nameEl) nameEl.value = '';
-        if (emailEl) emailEl.value = '';
-        if (passEl) passEl.value = '';
-        if (confirmEl) confirmEl.value = '';
-        if (errEl) errEl.style.display = 'none';
-        if (formEl) formEl.style.display = 'block';
-        if (loadingEl) loadingEl.style.display = 'none';
-        mask.classList.add('on');
-        setTimeout(function () { if (nameEl) nameEl.focus(); }, 100);
-      };
+    btnGoToSignup.addEventListener('click', function () {
+      [nameEl, emailEl, passEl, confirmEl].forEach(function (el) { if (el) el.value = ''; });
+      if (errEl)     errEl.style.display     = 'none';
+      if (formEl)    formEl.style.display    = 'block';
+      if (loadingEl) loadingEl.style.display = 'none';
+      mask.classList.add('on');
+      setTimeout(function () { if (nameEl) nameEl.focus(); }, 100);
+    });
 
-      if (cancelBtn) cancelBtn.onclick = function () { mask.classList.remove('on'); };
-      mask.onclick = function (e) { if (e.target === mask) mask.classList.remove('on'); };
-      if (goToLogin) goToLogin.onclick = function (e) { e.preventDefault(); mask.classList.remove('on'); };
+    if (cancelBtn) cancelBtn.onclick = function () { mask.classList.remove('on'); };
+    mask.onclick = function (e) { if (e.target === mask) mask.classList.remove('on'); };
+    if (goToLogin) goToLogin.onclick = function (e) { e.preventDefault(); mask.classList.remove('on'); };
 
-      var suPassToggle = document.getElementById('suPassToggle');
-      if (suPassToggle) suPassToggle.onclick = function () {
-        if (!passEl) return;
-        passEl.type = passEl.type === 'password' ? 'text' : 'password';
-        this.textContent = passEl.type === 'password' ? '👁' : '🙈';
-      };
-      var suConfirmToggle = document.getElementById('suConfirmToggle');
-      if (suConfirmToggle) suConfirmToggle.onclick = function () {
-        if (!confirmEl) return;
-        confirmEl.type = confirmEl.type === 'password' ? 'text' : 'password';
-        this.textContent = confirmEl.type === 'password' ? '👁' : '🙈';
-      };
+    var suPassToggle = document.getElementById('suPassToggle');
+    if (suPassToggle) suPassToggle.onclick = function () {
+      if (!passEl) return;
+      passEl.type = passEl.type === 'password' ? 'text' : 'password';
+      this.textContent = passEl.type === 'password' ? '👁' : '🙈';
+    };
+    var suConfirmToggle = document.getElementById('suConfirmToggle');
+    if (suConfirmToggle) suConfirmToggle.onclick = function () {
+      if (!confirmEl) return;
+      confirmEl.type = confirmEl.type === 'password' ? 'text' : 'password';
+      this.textContent = confirmEl.type === 'password' ? '👁' : '🙈';
+    };
 
-      [nameEl, emailEl, passEl, confirmEl].forEach(function (el) {
-        if (el) el.onkeydown = function (e) { if (e.key === 'Enter') doSignup(); };
-      });
+    [nameEl, emailEl, passEl, confirmEl].forEach(function (el) {
+      if (el) el.onkeydown = function (e) { if (e.key === 'Enter') doSignup(); };
+    });
 
-      if (submitBtn) submitBtn.onclick = doSignup;
+    if (submitBtn) submitBtn.onclick = doSignup;
 
-      function doSignup() {
-        var name     = nameEl    ? nameEl.value.trim() : '';
-        var email    = emailEl   ? emailEl.value.trim().toLowerCase() : '';
-        var password = passEl    ? passEl.value : '';
-        var confirm  = confirmEl ? confirmEl.value : '';
+    function doSignup() {
+      var name     = nameEl    ? nameEl.value.trim() : '';
+      var email    = emailEl   ? emailEl.value.trim().toLowerCase() : '';
+      var password = passEl    ? passEl.value : '';
+      var confirm  = confirmEl ? confirmEl.value : '';
 
-        if (errEl) errEl.style.display = 'none';
-        if (!name) return showSignupError('Please enter your full name');
-        if (!email || email.indexOf('@') === -1) return showSignupError('Please enter a valid email');
-        if (!password || password.length < 6) return showSignupError('Password must be at least 6 characters');
-        if (password !== confirm) return showSignupError('Passwords do not match');
+      if (errEl) errEl.style.display = 'none';
+      if (!name)                                return showSignupError('Please enter your full name');
+      if (!email || email.indexOf('@') === -1)  return showSignupError('Please enter a valid email');
+      if (!password || password.length < 6)     return showSignupError('Password must be at least 6 characters');
+      if (password !== confirm)                 return showSignupError('Passwords do not match');
 
-        if (formEl) formEl.style.display = 'none';
-        if (loadingEl) loadingEl.style.display = 'block';
-        if (submitBtn) submitBtn.disabled = true;
+      if (formEl)    formEl.style.display    = 'none';
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (submitBtn) submitBtn.disabled = true;
 
-        fetch(WURL() + '?action=register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, email: email, password: password })
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            if (data.ok && data.token) {
-              localStorage.removeItem('user_email');
-              localStorage.removeItem('user_role');
-              localStorage.removeItem('user_name');
-              window.setSessionToken(data.token);
-              localStorage.setItem('user_email', data.user.email);
-              localStorage.setItem('user_role', data.user.role || 'user');
-              localStorage.setItem('user_name', data.user.name || name);
-              if (mask) mask.classList.remove('on');
-              window.hideLoginScreen();
-              if (typeof window.showApp === 'function') window.showApp();
-              window.startInactivityTimer();
-              if (typeof window.playChime === 'function') window.playChime();
-              if (typeof window.toast === 'function') window.toast('Account created! Welcome, ' + name.split(' ')[0]);
-            } else {
-              if (formEl) formEl.style.display = 'block';
-              if (loadingEl) loadingEl.style.display = 'none';
-              if (submitBtn) submitBtn.disabled = false;
-              showSignupError(data.error || 'Registration failed');
-            }
-          })
-          .catch(function () {
-            if (formEl) formEl.style.display = 'block';
+      fetch(WURL() + '?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, email: email, password: password })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok && data.token) {
+            window.setSessionToken(data.token);
+            localStorage.setItem('user_email', data.user.email);
+            localStorage.setItem('user_role',  data.user.role || 'user');
+            localStorage.setItem('user_name',  data.user.name || name);
+
+            if (mask) mask.classList.remove('on');
+            window.hideLoginScreen();
+            showAppSafe();                               // ✅ FIX
+            emitLogin(data.user, data.token, false);     // ✅ FIX
+            window.startInactivityTimer();
+            tryWelcomeBonus(data.user);                  // ✅ NEW: welcome-бонус
+
+            if (typeof window.playChime === 'function') window.playChime();
+            if (typeof window.toast === 'function')
+              window.toast('Добро пожаловать, ' + name.split(' ')[0] + '! Вам начислено 10 NC');
+          } else {
+            if (formEl)    formEl.style.display    = 'block';
             if (loadingEl) loadingEl.style.display = 'none';
             if (submitBtn) submitBtn.disabled = false;
-            showSignupError('Connection error. Try again.');
-          });
-      }
-
-      function showSignupError(msg) {
-        if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-      }
-    };
-  }
-
-  // ============================================================
-  // PASSWORD CONFIRM
-  // ============================================================
-  if (typeof window.openPasswordConfirm !== 'function') {
-    window.openPasswordConfirm = function (message, callback) {
-      __nc_auth_pwConfirmCallback = callback;
-      var mask  = document.getElementById('passwordConfirmMask');
-      var desc  = document.getElementById('passwordConfirmDesc');
-      var input = document.getElementById('passwordConfirmInput');
-      var errEl = document.getElementById('passwordConfirmError');
-      if (desc)  desc.textContent = message;
-      if (input) input.value = '';
-      if (errEl) errEl.style.display = 'none';
-      if (mask)  mask.classList.add('on');
-      setTimeout(function () { if (input) input.focus(); }, 100);
-    };
-  }
-
-  if (typeof window.initPasswordConfirm !== 'function') {
-    window.initPasswordConfirm = function () {
-      var mask     = document.getElementById('passwordConfirmMask');
-      var okBtn    = document.getElementById('passwordConfirmOk');
-      var cancelBtn = document.getElementById('passwordConfirmCancel');
-      var toggle   = document.getElementById('passwordConfirmToggle');
-      var input    = document.getElementById('passwordConfirmInput');
-      var errEl    = document.getElementById('passwordConfirmError');
-
-      if (cancelBtn) cancelBtn.onclick = function () {
-        if (mask) mask.classList.remove('on');
-        __nc_auth_pwConfirmCallback = null;
-      };
-      if (mask) mask.onclick = function (e) {
-        if (e.target === mask) { mask.classList.remove('on'); __nc_auth_pwConfirmCallback = null; }
-      };
-      if (toggle) toggle.onclick = function () {
-        if (!input) return;
-        input.type = input.type === 'password' ? 'text' : 'password';
-        this.textContent = input.type === 'password' ? '👁' : '🙈';
-      };
-      if (input) input.onkeydown = function (e) { if (e.key === 'Enter') doPasswordConfirm(); };
-      if (okBtn) okBtn.onclick = doPasswordConfirm;
-
-      function doPasswordConfirm() {
-        var password = input ? input.value : '';
-        if (!password) {
-          if (errEl) { errEl.textContent = 'Please enter your password'; errEl.style.display = 'block'; }
-          return;
-        }
-        if (errEl) errEl.style.display = 'none';
-        if (okBtn) { okBtn.disabled = true; okBtn.textContent = 'Verifying...'; }
-
-        fetch(WURL() + '?action=verifyPassword', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: window.getSessionToken(), password: password })
+            showSignupError(data.error || 'Registration failed');
+          }
         })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            if (okBtn) { okBtn.disabled = false; okBtn.textContent = 'Confirm'; }
-            if (data.ok) {
-              if (mask) mask.classList.remove('on');
-              if (__nc_auth_pwConfirmCallback) __nc_auth_pwConfirmCallback();
-              __nc_auth_pwConfirmCallback = null;
-            } else {
-              if (errEl) { errEl.textContent = data.error || 'Incorrect password'; errEl.style.display = 'block'; }
-            }
-          })
-          .catch(function () {
-            if (okBtn) { okBtn.disabled = false; okBtn.textContent = 'Confirm'; }
-            if (errEl) { errEl.textContent = 'Connection error'; errEl.style.display = 'block'; }
-          });
-      }
+        .catch(function () {
+          if (formEl)    formEl.style.display    = 'block';
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (submitBtn) submitBtn.disabled = false;
+          showSignupError('Connection error. Try again.');
+        });
+    }
+
+    function showSignupError(msg) {
+      if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    }
+  };
+
+  // ============================================================
+  // PASSWORD CONFIRM — с защитой от race
+  // ============================================================
+  window.openPasswordConfirm = function (message, callback) {
+    __nc_pwCallback = callback;
+    var mask  = document.getElementById('passwordConfirmMask');
+    var desc  = document.getElementById('passwordConfirmDesc');
+    var input = document.getElementById('passwordConfirmInput');
+    var errEl = document.getElementById('passwordConfirmError');
+    if (desc)  desc.textContent = message;
+    if (input) input.value = '';
+    if (errEl) errEl.style.display = 'none';
+    if (mask)  mask.classList.add('on');
+    setTimeout(function () { if (input) input.focus(); }, 100);
+  };
+
+  window.initPasswordConfirm = function () {
+    var mask      = document.getElementById('passwordConfirmMask');
+    var okBtn     = document.getElementById('passwordConfirmOk');
+    var cancelBtn = document.getElementById('passwordConfirmCancel');
+    var toggle    = document.getElementById('passwordConfirmToggle');
+    var input     = document.getElementById('passwordConfirmInput');
+    var errEl     = document.getElementById('passwordConfirmError');
+
+    if (cancelBtn) cancelBtn.onclick = function () {
+      if (mask) mask.classList.remove('on');
+      __nc_pwCallback = null;
     };
+    if (mask) mask.onclick = function (e) {
+      if (e.target === mask) { mask.classList.remove('on'); __nc_pwCallback = null; }
+    };
+    if (toggle) toggle.onclick = function () {
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+      this.textContent = input.type === 'password' ? '👁' : '🙈';
+    };
+    if (input) input.onkeydown = function (e) { if (e.key === 'Enter') doPasswordConfirm(); };
+    if (okBtn) okBtn.onclick = doPasswordConfirm;
+
+    function doPasswordConfirm() {
+      if (__nc_pwBusy) return;                          // ✅ FIX: защита от двойного клика
+      var password = input ? input.value : '';
+      if (!password) {
+        if (errEl) { errEl.textContent = 'Please enter your password'; errEl.style.display = 'block'; }
+        return;
+      }
+      __nc_pwBusy = true;
+      if (errEl) errEl.style.display = 'none';
+      if (okBtn) { okBtn.disabled = true; okBtn.textContent = 'Verifying...'; }
+
+      fetch(WURL() + '?action=verifyPassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: window.getSessionToken(), password: password })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          __nc_pwBusy = false;
+          if (okBtn) { okBtn.disabled = false; okBtn.textContent = 'Confirm'; }
+          if (data.ok) {
+            if (mask) mask.classList.remove('on');
+            if (__nc_pwCallback) __nc_pwCallback();
+            __nc_pwCallback = null;
+          } else {
+            if (errEl) { errEl.textContent = data.error || 'Incorrect password'; errEl.style.display = 'block'; }
+          }
+        })
+        .catch(function () {
+          __nc_pwBusy = false;
+          if (okBtn) { okBtn.disabled = false; okBtn.textContent = 'Confirm'; }
+          if (errEl) { errEl.textContent = 'Connection error'; errEl.style.display = 'block'; }
+        });
+    }
+  };
+
+  // ============================================================
+  // АВТОЗАПУСК — критично!
+  // ============================================================
+  function __nc_auth_bootstrap() {
+    if (typeof window.initLoginLogout     === 'function') window.initLoginLogout();
+    if (typeof window.initSignup          === 'function') window.initSignup();
+    if (typeof window.initPasswordConfirm === 'function') window.initPasswordConfirm();
+    if (typeof window.checkSession        === 'function') window.checkSession();
+
+    console.log('%c[NordicCrypto] 🔐 auth.js v2.0 ready',
+      'color:#f472b6;font-weight:bold');
   }
 
-  console.log('%c[NordicCrypto] 🔐 auth.js v1.1 loaded (passive mode — legacy has priority)',
-    'color:#f472b6;font-weight:bold');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', __nc_auth_bootstrap);
+  } else {
+    __nc_auth_bootstrap();
+  }
 
 })();
