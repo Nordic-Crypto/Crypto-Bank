@@ -1,19 +1,20 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.5 — LOADER
+   NORDIC CRYPTO — APP.JS v4.6 — LOADER
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.5.0';
+  var APP_VERSION = '4.6.0';
   var MODULES = [
     'js/core.js',
     'js/auth.js',
     'app.legacy.js?v=' + APP_VERSION,
     'js/legacy-fix.js',
     'js/withdraw-flow.js',
-    'js/withdraw-confirmations.js',   // ← НОВОЕ: 2/3, тексты, live-обновление
-    'js/fixes.js',                    // ← фиксы + sync (загружается после WC)
+    'js/withdraw-confirmations.js',
+    'js/fixes.js',
+    'js/chat-fix.js',
     'js/trade-terminal.js'
   ];
 
