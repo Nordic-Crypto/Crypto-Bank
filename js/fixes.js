@@ -86,17 +86,42 @@
       }
     }
 
-    if (changed) {
-      if (!sessionStorage.getItem(MIGRATION_FLAG_KEY)) {
-        sessionStorage.setItem(MIGRATION_FLAG_KEY, '1');
-        try { if (typeof window.saveToServer === 'function') window.saveToServer(); } catch (e) {}
+          if (changed) {
+        // Обновляем txs, привязанные к withdrawals
+        var txs = window.st.txs || [];
+        txs.forEach(function (t) {
+          if (!t.isWithdrawal || !t.wdId) return;
+          var wd = localWds.find(function (w) { return w.id === t.wdId; });
+          if (!wd) return;
+          var newStatus = wd.status === 'pending' ? 'Under Review'
+                        : wd.status === 'approved' ? 'Completed'
+                        : wd.status === 'rejected' ? 'Rejected'
+                        : wd.status;
+          if (t.status !== newStatus) {
+            t.status = newStatus;
+            t.reason = wd.reason || '';
+          }
+        });
+
+        saveSeenStatuses();
+
+        try {
+          if (typeof window.renderTx === 'function') window.renderTx();
+          if (typeof window.renderRecentTx === 'function') window.renderRecentTx();
+          if (typeof window.render === 'function') window.render();
+        } catch (e) {}
+
+        // 🎁 ОБНОВЛЯЕМ UI CONFIRMATIONS В МОДАЛКЕ (если открыта)
+        localWds.forEach(function (wd) {
+          var prev = _seenWdStatuses[wd.id];
+          var now = wd.status;
+          if (prev !== undefined && prev !== now && (now === 'approved' || now === 'rejected')) {
+            if (typeof window.__ncUpdateWithdrawConfirmations === 'function') {
+              window.__ncUpdateWithdrawConfirmations(wd);
+            }
+          }
+        });
       }
-      try {
-        if (typeof window.renderTx === 'function') window.renderTx();
-        if (typeof window.renderRecentTx === 'function') window.renderRecentTx();
-      } catch (e) {}
-    }
-  };
 
   setTimeout(function () {
     try { window.updateTxStatuses(); } catch (e) {}
@@ -373,6 +398,10 @@
   }
 
   function notifyWithdrawChange(wd) {
+     // 🎁 Обновляем confirmations в открытой модалке
+    if (typeof window.__ncUpdateWithdrawConfirmations === 'function') {
+      window.__ncUpdateWithdrawConfirmations(wd);
+    }
     var isApproved = wd.status === 'approved';
     var icon = isApproved ? '✅' : '❌';
     var text = isApproved
