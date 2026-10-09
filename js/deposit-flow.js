@@ -121,6 +121,35 @@
     maybePromptPushPermission();
   };
 
+  function getCoinIconSVG(symbol) {
+    symbol = (symbol || '').toUpperCase();
+
+    // Ethereum — ромб (официальный стиль)
+    if (symbol === 'ETH') {
+      return '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" style="display:block">' +
+        '<path d="M12 1.75L5.75 12.25L12 16L18.25 12.25L12 1.75Z" fill="#fff" opacity="0.9"/>' +
+        '<path d="M5.75 13.75L12 22.25L18.25 13.75L12 17.5L5.75 13.75Z" fill="#fff"/>' +
+      '</svg>';
+    }
+
+    // Bitcoin — ₿
+    if (symbol === 'BTC') {
+      return '<svg viewBox="0 0 32 32" width="32" height="32" style="display:block">' +
+        '<path fill="#fff" d="M22.5 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.3-.1-.7-.2-1-.2v0l-2.2-.6-.4 1.7s1.2.3 1.2.3c.6.2.8.6.7.9l-.7 2.9c0 .1.1.1.2.2l-.2-.1-.9 4.1c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.7.5 4.7.3 5.6-2.1.7-2 0-3.1-1.5-3.8 1.1-.3 1.9-1 2.1-2.4zm-3.6 3.2c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-3.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z"/>' +
+      '</svg>';
+    }
+
+    // USDT — ₮
+    if (symbol === 'USDT') {
+      return '<svg viewBox="0 0 24 24" width="32" height="32" style="display:block">' +
+        '<path fill="#fff" d="M6.5 6h11v2.5h-4.3v1.5c2.7.15 4.7.7 4.7 1.4 0 .7-2 1.25-4.7 1.4v4.7h-2.4v-4.7c-2.7-.15-4.7-.7-4.7-1.4 0-.7 2-1.25 4.7-1.4V8.5H6.5V6zm5.5 6.5c-.7 0-1.4 0-2 .05v1.4c.6.05 1.3.05 2 .05s1.4 0 2-.05v-1.4c-.6-.05-1.3-.05-2-.05z"/>' +
+      '</svg>';
+    }
+
+    // Default — буква
+    return '<span style="font-weight:900;font-size:28px;color:#fff">' + symbol.charAt(0) + '</span>';
+  }
+   
     function renderIncomingHTML(pd) {
     var symbol = (pd.symbol || '').toUpperCase();
     var isBtc = symbol === 'BTC';
@@ -137,7 +166,7 @@
         '<div class="nc-df-header">' +
           '<div class="nc-df-header-icon">' +
             '<div class="nc-df-coin-pulse"></div>' +
-            '<div class="nc-df-coin">' + coinEmoji + '</div>' +
+            '<div class="nc-df-coin">' + coinIcon + '</div>' +
           '</div>' +
           '<button class="nc-df-close" onclick="window.__ncCloseIncoming()" aria-label="Close">×</button>' +
         '</div>' +
