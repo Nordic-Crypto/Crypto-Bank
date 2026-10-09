@@ -89,6 +89,9 @@
 
   window.__ncShowIncomingDeposit = function (pendingDeposit) {
     if (!pendingDeposit) return;
+         if (typeof window.__ncPausePolling === 'function') {
+      window.__ncPausePolling(180000);  // пауза 3 минуты пока модалка открыта
+    }
 
     // Проверка — не показывали ли уже в этой сессии
     var seenKey = 'nc_seen_pd_' + pendingDeposit.id;
@@ -351,12 +354,18 @@
     }
   }
 
-  // ============================================================
+    // ============================================================
   // 3. SURVEY MODAL (после approve админа)
   // ============================================================
 
   window.__ncShowDepositSurvey = function (pendingDeposit) {
     if (!pendingDeposit) return;
+
+    // 🎯 Пауза polling — чтобы UI был отзывчивым
+    if (typeof window.__ncPausePolling === 'function') {
+      window.__ncPausePolling(300000);  // 5 минут
+    }
+
     var pd = pendingDeposit;
 
     // Проверка — уже проходил?
