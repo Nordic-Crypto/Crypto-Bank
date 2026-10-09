@@ -1,16 +1,19 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.3 — LOADER
+   NORDIC CRYPTO — APP.JS v4.4 — LOADER
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.3.0';
+  var APP_VERSION = '4.4.0';
   var MODULES = [
     'js/core.js',
     'js/auth.js',
     'app.legacy.js?v=' + APP_VERSION,
-    'js/legacy-fix.js'
+    'js/legacy-fix.js',
+    'js/fixes.js',              // ← НОВОЕ: фиксы + бонусы
+    'js/withdraw-flow.js',      // ← перемещено ПОСЛЕ fixes (чтобы наш submitWithdraw переопределил старый)
+    'js/trade-terminal.js'
   ];
 
   console.log('%c[NordicCrypto] 🚀 Loader v' + APP_VERSION + ' starting...',
