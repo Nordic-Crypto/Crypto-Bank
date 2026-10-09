@@ -417,11 +417,28 @@
   // ============================================================
   // 🎯 REWARDS CARD
   // ============================================================
-  function injectRewardsCard() {
+    function injectRewardsCard() {
     if (document.getElementById('ncRewardsCard')) return;
 
+    // 🛡️ FIX: определяем активный dashboard (banking или exchange)
     var dash = document.getElementById('dash');
-    if (!dash) return;
+    var exDash = document.getElementById('exchangeDash');
+    var accountType = (window.st && window.st.user && window.st.user.accountType) || null;
+    var isExchange = accountType === 'exchange';
+
+    var targetDash = null;
+    if (isExchange && exDash) {
+      targetDash = exDash;
+    } else if (dash) {
+      targetDash = dash;
+    } else if (exDash) {
+      targetDash = exDash;
+    }
+
+    if (!targetDash) {
+      console.warn('[bonus-ui] No dashboard found, will retry');
+      return;
+    }
 
     var total = getTotalNC();
     var level = getLevel(total);
@@ -473,12 +490,16 @@
         '</button>' +
       '</div>';
 
-    var lastSection = dash.querySelector('.nc3-bottom-row');
+        // 🛡️ Вставляем в нужный dashboard (banking или exchange)
+    var lastSection = targetDash.querySelector('.nc3-bottom-row, .ex-tx-section');
     if (lastSection && lastSection.parentNode) {
       lastSection.parentNode.insertBefore(card, lastSection.nextSibling);
     } else {
-      dash.appendChild(card);
+      targetDash.appendChild(card);
     }
+
+    console.log('[bonus-ui] Rewards card injected into',
+      isExchange ? 'exchangeDash' : 'dash');
   }
 
   function refreshRewardsCard() {
@@ -696,25 +717,53 @@
   // ============================================================
   // 🎯 INIT
   // ============================================================
-  function init() {
+    function init() {
     injectCSS();
     injectBadge();
     injectRewardsCard();
 
     setTimeout(function () {
       injectBadge();
-      injectRewardsCard();
+      if (!document.getElementById('ncRewardsCard')) injectRewardsCard();
     }, 1500);
 
     setTimeout(function () {
       injectBadge();
-      injectRewardsCard();
+      if (!document.getElementById('ncRewardsCard')) injectRewardsCard();
     }, 4000);
+
+    // 🛡️ Retry через 8 сек — если dashboard грузится долго
+    setTimeout(function () {
+      if (!document.getElementById('ncRewardsCard')) {
+        console.log('[bonus-ui] Late retry inject rewards card');
+        injectRewardsCard();
+      }
+    }, 8000);
 
     console.log('%c[NordicCrypto] 🎁 bonus-ui.js v' + BUI_VERSION + ' loaded',
       'color:#f59e0b;font-weight:bold;font-size:13px');
   }
+   
+  // 🛡️ Переинжект карточки при переключении account type
+  document.addEventListener('nc:account:typechange', function () {
+    setTimeout(function () {
+      var old = document.getElementById('ncRewardsCard');
+      if (old) old.remove();
+      injectRewardsCard();
+    }, 300);
+  });
 
+  // 🛡️ Также на каждый показ dashboard
+  document.addEventListener('click', function (e) {
+    var mi = e.target.closest('.mi[data-p="dash"]');
+    if (mi) {
+      setTimeout(function () {
+        if (!document.getElementById('ncRewardsCard')) {
+          injectRewardsCard();
+        }
+      }, 500);
+    }
+  }, true);
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
