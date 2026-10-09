@@ -279,10 +279,9 @@
     }
   }
 
-  // Запускаем polling — не блокирует UI
-   // Отключено: polling-hub.js управляет polling'ом
+    // Отключено: polling-hub.js управляет polling'ом
   // setInterval(pollChat, 1000);
-  setTimeout(pollChat, 500);  // одноразовая загрузка при старте
+  setTimeout(window.__ncChatPoll, 500);  // одноразовая загрузка при старте
 
   // ============================================================
   // 5. Typing indicator (debounced)
