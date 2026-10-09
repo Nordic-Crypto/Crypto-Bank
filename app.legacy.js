@@ -5009,25 +5009,20 @@ toast('✓ Submitted for admin review', false);
    
 /* ---------- AUTO DEPOSIT CHECK ---------- */
 (function(){
-  var CHECK_INTERVAL = 15000;
+  var CHECK_INTERVAL = 20000;
   var _busy = false;
 
   async function checkDeposits() {
     if (localStorage.getItem('user_role') === 'admin') return;
     if (window.adminViewingEmail) return;
     if (_busy) return;
-       async function checkDeposits() {
-    if (localStorage.getItem('user_role') === 'admin') return;
-    if (window.adminViewingEmail) return;
-    if (_busy) return;
 
-    // 🛡️ ПАТЧ 1: не дёргаем polling когда открыта модалка / paused
-    if (window.__ncPollingPaused) return;
+    // 🛡️ Не дёргаем polling если открыта модалка или polling на паузе
+    if (typeof window.__ncPollingPaused !== 'undefined' && window.__ncPollingPaused) return;
     if (document.querySelector('.nc-df-modal, .dep-verify-overlay.on, .wd-modal[style*="flex"], .trade-mask.on, #mask.on, #settingsMask.on, #changePassMask.on, .nc-sim-overlay')) return;
 
-    
-   _busy = true;
-     var email = (localStorage.getItem('user_email') || '').toLowerCase();
+    _busy = true;
+    var email = (localStorage.getItem('user_email') || '').toLowerCase();
     if (!email) { _busy = false; return; }
 
     var vStatus = (st.verification && st.verification.status) || null;
