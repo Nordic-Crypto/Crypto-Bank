@@ -11,7 +11,7 @@
   var MODULES = [
     'js/core.js',
     'js/auth.js',
-    'js/app.legacy.js?v=' + APP_VERSION,   // ← ИСПРАВЛЕНО: был корень, стал js/
+   'app.legacy.js?v=' + APP_VERSION,  // ← ИСПРАВЛЕНО: был корень, стал js/
     'js/legacy-fix.js',
     'js/session-fix.js',                    // ← перенесён ВЫШЕ, чтобы переопределить logout ДО остальных
     'js/deposit-flow.js',
