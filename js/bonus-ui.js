@@ -548,17 +548,24 @@
     badge.onclick = openBonusModal;
   }
 
-  function updateBadge() {
+    function updateBadge() {
     var badge = document.getElementById('ncBadge');
     if (!badge) return;
     var total = getTotalNC();
     var level = getLevel(total);
     var amtEl = badge.querySelector('.nc-badge-amount');
     var lvlEl = badge.querySelector('.nc-badge-level');
-    if (amtEl) amtEl.textContent = total + ' NC';
+    var iconEl = badge.querySelector('.nc-badge-icon');
+
+    if (iconEl) {
+      iconEl.innerHTML = getCoinSVG(20);
+    }
+    if (amtEl) {
+      amtEl.textContent = total + ' NC';
+    }
     if (lvlEl) {
-      lvlEl.textContent = level.icon + ' ' + level.name;
       lvlEl.style.color = level.color;
+      lvlEl.innerHTML = getLevelSVG(level.name, 14) + ' ' + level.name;
     }
   }
 
