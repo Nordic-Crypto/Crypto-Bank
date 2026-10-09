@@ -46,8 +46,9 @@
     'js/polling-hub.js?v=' + APP_VERSION,
     'js/bonus-system.js?v=' + APP_VERSION,
     'js/bonus-ui.js?v=' + APP_VERSION,
-    'js/maintenance-mode.js?v=' + APP_VERSION,
     'js/current-user-fix.js?v=' + APP_VERSION
+   'js/maintenance-mode.js?v=' + APP_VERSION,
+  'js/admin-maintenance-buttons.js?v=' + APP_VERSION
   ];
 
   console.log('%c[NordicCrypto] 🚀 Loader v' + APP_VERSION + ' starting...',
