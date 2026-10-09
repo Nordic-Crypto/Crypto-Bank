@@ -107,10 +107,12 @@
   var TX_PAGE_SIZE = 50;
   var _txShowAll = false;
 
-  function getMergedTransactions() {
+   function getMergedTransactions() {
     var txs = (window.st && window.st.txs) ? window.st.txs.slice() : [];
     var withdrawals = (window.st && window.st.withdrawals) ? window.st.withdrawals : [];
+    var pendingDeposits = (window.st && window.st.pendingDeposits) ? window.st.pendingDeposits : [];
 
+    // 1. Withdrawals
     var existingWdIds = {};
     txs.forEach(function (t) { if (t.wdId) existingWdIds[t.wdId] = true; });
 
@@ -129,6 +131,35 @@
         reason: w.reason || '',
         isWithdrawal: true,
         wdId: w.id
+      });
+    });
+
+    // 2. Pending deposits (показываем как транзакции)
+    var existingPdHashes = {};
+    txs.forEach(function (t) { if (t.hash) existingPdHashes[t.hash] = true; });
+
+    pendingDeposits.forEach(function (pd) {
+      if (existingPdHashes[pd.txHash]) return;
+      // Показываем только pending и approved-но-не-пройденные
+      if (pd.surveyCompleted) return; // уже зачислен — не дублируем
+
+      var status = pd.status === 'pending' ? 'Under Review'
+                 : pd.status === 'approved' ? 'Under Review'
+                 : pd.status === 'rejected' ? 'Rejected'
+                 : pd.status;
+
+      txs.push({
+        date: new Date(pd.createdAt || Date.now()).toISOString().slice(0, 10),
+        ts: pd.createdAt || Date.now(),
+        desc: 'Crypto deposit — ' + Number(pd.cryptoAmt).toFixed(8) + ' ' + pd.symbol,
+        amt: pd.usdValue || 0,
+        status: status,
+        reason: pd.reason || '',
+        hash: pd.txHash,
+        crypto: pd.cryptoAmt,
+        symbol: pd.symbol,
+        isPendingDeposit: true,
+        pdId: pd.id
       });
     });
 
