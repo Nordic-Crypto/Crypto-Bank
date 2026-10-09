@@ -99,7 +99,62 @@
     } catch (e) {}
     hideScreen();
   }
-
+  // ============================================================
+  // 🎨 CSS INJECTION
+  // ============================================================
+  function injectCSS() {
+    if (document.getElementById('ncMmCSS')) return;
+    var style = document.createElement('style');
+    style.id = 'ncMmCSS';
+    style.textContent = `
+      #ncMaintenanceScreen{position:fixed;inset:0;z-index:999999;background:#05080d;color:#eef4ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .4s ease;overflow-y:auto;padding:24px}
+      #ncMaintenanceScreen.nc-on{opacity:1}
+      .nc-mm-bg{position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(139,92,246,.18),transparent 50%),radial-gradient(circle at 80% 80%,rgba(0,212,255,.15),transparent 50%);pointer-events:none}
+      .nc-mm-content{position:relative;max-width:560px;width:100%;text-align:center;padding:20px 0}
+      .nc-mm-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
+      .nc-mm-brand-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#8b5cf6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:20px}
+      .nc-mm-brand-text{font-size:20px;font-weight:800;letter-spacing:-.5px}
+      .nc-mm-brand-text span{background:linear-gradient(135deg,#8b5cf6,#00d4ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+      .nc-mm-status{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);border-radius:999px;font-size:12px;font-weight:600;color:#c4b5fd;text-transform:uppercase;letter-spacing:.5px;margin-bottom:20px}
+      .nc-mm-status-dot{width:6px;height:6px;border-radius:50%;background:#8b5cf6;box-shadow:0 0 12px #8b5cf6;animation:ncMmPulse 1.5s ease-in-out infinite}
+      @keyframes ncMmPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+      .nc-mm-title{font-size:clamp(28px,5vw,42px);font-weight:800;margin:0 0 12px;letter-spacing:-1px;line-height:1.1}
+      .nc-mm-sub{font-size:15px;color:#8b95a5;margin:0 0 32px;line-height:1.6}
+      .nc-mm-illustration{margin:0 auto 32px;width:180px;height:180px;position:relative}
+      .nc-mm-orbit{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+      .nc-mm-orbit-ring{position:absolute;inset:0;border:1px dashed rgba(139,92,246,.35);border-radius:50%;animation:ncMmSpin 12s linear infinite}
+      .nc-mm-orbit-ring-2{inset:20px;border-color:rgba(0,212,255,.25);animation-duration:8s;animation-direction:reverse}
+      @keyframes ncMmSpin{to{transform:rotate(360deg)}}
+      .nc-mm-orbit-core{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,#8b5cf6,#00d4ff);display:flex;align-items:center;justify-content:center;box-shadow:0 20px 60px rgba(139,92,246,.5);animation:ncMmFloat 3s ease-in-out infinite}
+      @keyframes ncMmFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+      .nc-mm-progress-wrap{margin:0 0 28px}
+      .nc-mm-progress-bar{height:6px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin-bottom:10px}
+      .nc-mm-progress-fill{height:100%;background:linear-gradient(90deg,#8b5cf6,#00d4ff);border-radius:999px;width:5%;transition:width 1s ease}
+      .nc-mm-progress-meta{display:flex;justify-content:space-between;font-size:12px;color:#8b95a5}
+      .nc-mm-progress-meta b{color:#eef4ff}
+      .nc-mm-countdown{font-variant-numeric:tabular-nums}
+      .nc-mm-checklist{display:grid;gap:10px;margin-bottom:28px;text-align:left}
+      .nc-mm-check{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px}
+      .nc-mm-check-done{border-color:rgba(78,220,169,.25);background:rgba(78,220,169,.05)}
+      .nc-mm-check-active{border-color:rgba(139,92,246,.35);background:rgba(139,92,246,.08)}
+      .nc-mm-check-icon{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;color:#8b95a5}
+      .nc-mm-check-done .nc-mm-check-icon{background:rgba(78,220,169,.15);color:#4edca9}
+      .nc-mm-check-active .nc-mm-check-icon{background:rgba(139,92,246,.2);color:#c4b5fd}
+      .nc-mm-spinner-dot{width:8px;height:8px;border-radius:50%;background:#8b5cf6;animation:ncMmPulse 1s ease-in-out infinite}
+      .nc-mm-check div{display:flex;flex-direction:column;gap:2px}
+      .nc-mm-check b{font-size:13px;font-weight:600;color:#eef4ff}
+      .nc-mm-check span{font-size:11px;color:#8b95a5}
+      .nc-mm-trust{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:28px;font-size:12px;color:#8b95a5}
+      .nc-mm-trust-item{display:flex;align-items:center;gap:6px}
+      .nc-mm-trust-item svg{color:#4edca9}
+      .nc-mm-footer{display:flex;flex-direction:column;gap:12px;align-items:center}
+      .nc-mm-retry{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:linear-gradient(135deg,#8b5cf6,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s}
+      .nc-mm-retry:hover{transform:translateY(-1px);box-shadow:0 10px 25px rgba(139,92,246,.35)}
+      .nc-mm-support{font-size:12px;color:#8b95a5}
+      .nc-mm-support a{color:#00d4ff;text-decoration:none}
+    `;
+    document.head.appendChild(style);
+  }
   // ============================================================
   // 🖥️ SCREEN
   // ============================================================
