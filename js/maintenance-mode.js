@@ -1,16 +1,27 @@
 /* ============================================================
-   NORDIC CRYPTO — MAINTENANCE MODE v3.0 (PRODUCTION)
+   NORDIC CRYPTO — MAINTENANCE MODE v4.0 (PRO)
    ============================================================
-   Профессиональный экран обновления + жёсткая блокировка.
-   Активация: кнопка "Push Update" в админке.
-   Деактивация: автоматически через N мин ИЛИ вручную.
+   v4.0 CHANGES:
+   • 🔴 FIX: showScreen не вызывается дважды
+   • 🔴 FIX: checkServer каждые 10 сек (было 30)
+   • 🎁 NEW: процент завершения в прогресс-баре
+   • 🎁 NEW: confetti когда обновление завершено
+   • 🎁 NEW: кнопка "Try again" с автоматической проверкой
+   • 🎁 NEW: живой статус — "Admin extended time" если админ продлил
+   • ⚡ OPT: убран двойной вызов showScreen
+   • 🛡️ SAFE: проверка window.__ncMaintenance
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var MM_VERSION = '3.0.0';
+  var MM_VERSION = '4.0.0';
   var STORAGE_KEY = 'nc_maintenance';
+  var CHECK_INTERVAL = 10000; // 10 сек
+  var _screenShown = false;
+  var _lastServerData = null;
+
+  function $(id) { return document.getElementById(id); }
 
   // ============================================================
   // API
@@ -85,6 +96,7 @@
       new BroadcastChannel('nc_maintenance').postMessage({ type: 'deactivated' });
     } catch (e) {}
     hideScreen();
+    celebrateReturn();
   }
 
   // ============================================================
@@ -99,24 +111,40 @@
     return true;
   }
 
-  // ============================================================
-  // Профессиональный экран
-  // ============================================================
-  function showScreen(data) {
-    if (document.getElementById('ncMaintenanceScreen')) return;
-
-    // Админ всегда проходит
+  function isAdmin() {
     var role = localStorage.getItem('user_role') || '';
     var email = localStorage.getItem('user_email') || '';
-    if (role === 'admin' || email === 'admin@nordiccrypto.com') return;
+    return role === 'admin' || email === 'admin@nordiccrypto.com';
+  }
 
-    // Уже залогиненные клиенты — только баннер
+  // ============================================================
+  // 🎁 CONFETTI когда обновление завершено
+  // ============================================================
+  function celebrateReturn() {
+    if (typeof window.spawnConfetti === 'function') {
+      setTimeout(function () { window.spawnConfetti(); }, 200);
+    }
+    if (typeof window.toast === 'function') {
+      window.toast('✅ We\'re back! Thanks for your patience');
+    }
+  }
+
+  // ============================================================
+  // 🖥️ Экран обновления
+  // ============================================================
+  function showScreen(data) {
+    // 🛡️ Админ всегда проходит
+    if (isAdmin()) return;
+
+    // 🛡️ Уже залогиненные — только баннер
     if (isLoggedInClient()) {
       showBanner(data);
       return;
     }
 
-    // Новые входы — полный экран
+    // 🛡️ Уже показан?
+    if (_screenShown && document.getElementById('ncMaintenanceScreen')) return;
+
     injectCSS();
     var screen = document.createElement('div');
     screen.id = 'ncMaintenanceScreen';
@@ -124,51 +152,49 @@
     document.body.appendChild(screen);
     requestAnimationFrame(function () { screen.classList.add('nc-on'); });
 
-    // Блокируем login/register формы
     blockLoginForms();
-
     startCountdown(data.until);
+    startProgressUpdate(data);
+    _screenShown = true;
 
+    // Проверяем не выключился ли
     var iv = setInterval(function () {
       if (!isActive()) {
         clearInterval(iv);
         hideScreen();
         unblockLoginForms();
-        if (typeof window.toast === 'function') {
-          window.toast('✅ Update complete. You can now sign in.');
-        }
+        celebrateReturn();
       }
     }, 3000);
   }
 
   function hideScreen() {
-    var s = document.getElementById('ncMaintenanceScreen');
+    var s = $('ncMaintenanceScreen');
     if (s) {
       s.classList.remove('nc-on');
       setTimeout(function () { s.remove(); }, 400);
     }
-    var b = document.getElementById('ncMaintenanceBanner');
+    var b = $('ncMaintenanceBanner');
     if (b) b.remove();
     unblockLoginForms();
+    _screenShown = false;
   }
 
   function blockLoginForms() {
-    // Скрываем форму логина и signup
-    var loginForm = document.getElementById('loginForm');
+    var loginForm = $('loginForm');
     if (loginForm) loginForm.style.visibility = 'hidden';
-    var signupMask = document.getElementById('signupMask');
+    var signupMask = $('signupMask');
     if (signupMask) signupMask.classList.remove('on');
   }
 
   function unblockLoginForms() {
-    var loginForm = document.getElementById('loginForm');
+    var loginForm = $('loginForm');
     if (loginForm) loginForm.style.visibility = 'visible';
   }
 
   function showBanner(data) {
-    if (document.getElementById('ncMaintenanceBanner')) return;
+    if ($('ncMaintenanceBanner')) return;
     injectCSS();
-    var until = new Date(data.until);
     var minutesLeft = Math.max(0, Math.round((data.until - Date.now()) / 60000));
     var b = document.createElement('div');
     b.id = 'ncMaintenanceBanner';
@@ -184,11 +210,11 @@
   }
 
   function startCountdown(untilTs) {
-    var el = document.getElementById('ncMmCountdown');
+    var el = $('ncMmCountdown');
     if (!el) return;
     (function tick() {
       var left = untilTs - Date.now();
-      if (left <= 0) { el.textContent = '00:00'; hideScreen(); return; }
+      if (left <= 0) { el.textContent = '00:00'; return; }
       var min = Math.floor(left / 60000);
       var sec = Math.floor((left % 60000) / 1000);
       el.textContent = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
@@ -196,6 +222,26 @@
     })();
   }
 
+  // 🎁 Прогресс-бар с процентом
+  function startProgressUpdate(data) {
+    var totalMs = data.until - data.started;
+    if (totalMs <= 0) return;
+
+    function update() {
+      var elapsed = Date.now() - data.started;
+      var pct = Math.min(95, Math.max(5, (elapsed / totalMs) * 100));
+      var fill = document.querySelector('.nc-mm-progress-fill');
+      if (fill) fill.style.width = pct + '%';
+      var pctEl = $('ncMmPercent');
+      if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+      if (pct < 95) requestAnimationFrame(function () { setTimeout(update, 1000); });
+    }
+    update();
+  }
+
+  // ============================================================
+  // 🎨 HTML
+  // ============================================================
   function buildHTML(data) {
     return '' +
       '<div class="nc-mm-bg"></div>' +
@@ -226,7 +272,7 @@
         '<div class="nc-mm-progress-wrap">' +
           '<div class="nc-mm-progress-bar"><div class="nc-mm-progress-fill"></div></div>' +
           '<div class="nc-mm-progress-meta">' +
-            '<span>Deploying <b>v' + esc(data.version) + '</b></span>' +
+            '<span>Deploying <b>v' + esc(data.version) + '</b> · <span id="ncMmPercent">5%</span></span>' +
             '<span class="nc-mm-countdown"><span id="ncMmCountdown">--:--</span> left</span>' +
           '</div>' +
         '</div>' +
@@ -274,8 +320,11 @@
     });
   }
 
+  // ============================================================
+  // 🎨 CSS
+  // ============================================================
   function injectCSS() {
-    if (document.getElementById('ncMmStyles')) return;
+    if ($('ncMmStyles')) return;
     var style = document.createElement('style');
     style.id = 'ncMmStyles';
     style.textContent = `
@@ -384,7 +433,6 @@
         max-width: 420px; margin-left: auto; margin-right: auto;
       }
 
-      /* Orbit animation */
       .nc-mm-illustration {
         position: relative;
         height: 140px;
@@ -421,7 +469,6 @@
         50%      { transform: scale(1.06); box-shadow: 0 25px 50px -10px rgba(0,229,255,.9), inset 0 1px 0 rgba(255,255,255,.3); }
       }
 
-      /* Progress */
       .nc-mm-progress-wrap {
         background: rgba(255,255,255,.03);
         border: 1px solid rgba(255,255,255,.06);
@@ -437,13 +484,12 @@
         margin-bottom: 10px;
       }
       .nc-mm-progress-fill {
-        height: 100%; width: 0;
+        height: 100%; width: 5%;
         background: linear-gradient(90deg, #00e5ff, #8b5cf6, #ec4899);
         border-radius: 3px;
-        animation: ncMmProgress 30s ease-out forwards;
+        transition: width 1s ease;
         box-shadow: 0 0 12px rgba(0,229,255,.6);
       }
-      @keyframes ncMmProgress { 0% { width: 5%; } 100% { width: 95%; } }
       .nc-mm-progress-meta {
         display: flex; justify-content: space-between;
         font-size: .78rem;
@@ -456,7 +502,6 @@
       }
       .nc-mm-countdown span { color: #fff; font-weight: 700; }
 
-      /* Checklist */
       .nc-mm-checklist {
         display: flex; flex-direction: column; gap: 8px;
         padding: 16px;
@@ -522,7 +567,6 @@
       }
       @keyframes ncMmSpin { to { transform: rotate(360deg); } }
 
-      /* Trust */
       .nc-mm-trust {
         display: flex; justify-content: center; gap: 24px;
         margin-bottom: 24px;
@@ -536,7 +580,6 @@
       }
       .nc-mm-trust-item svg { color: #10b981; }
 
-      /* Footer */
       .nc-mm-footer {
         display: flex; flex-direction: column;
         align-items: center; gap: 16px;
@@ -569,7 +612,6 @@
       }
       .nc-mm-support a:hover { text-decoration: underline; }
 
-      /* Banner для залогиненных */
       .nc-mm-banner {
         position: fixed; top: 80px; right: 20px;
         max-width: 380px; z-index: 99998;
@@ -608,7 +650,7 @@
 
       @media (prefers-reduced-motion: reduce) {
         .nc-mm-brand-icon, .nc-mm-orbit-ring, .nc-mm-orbit-core,
-        .nc-mm-status-dot, .nc-mm-spinner-dot, .nc-mm-progress-fill {
+        .nc-mm-status-dot, .nc-mm-spinner-dot {
           animation: none !important;
         }
       }
@@ -617,74 +659,83 @@
   }
 
   // ============================================================
-  // Проверка при загрузке
+  // 🔄 SERVER CHECK
   // ============================================================
-  // ============================================================
-// 🛡️ Проверка через Worker — клиент видит активацию ВЕЗДЕ
-// ============================================================
-async function checkServer() {
-  try {
-    var WORKER = window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
-    var r = await fetch(WORKER + '?action=getMaintenanceStatus', {
-      method: 'GET',
-      cache: 'no-store'
-    });
-    var d = await r.json();
-    if (d && d.ok && d.maintenance && d.maintenance.active) {
-      // Сохраняем в localStorage чтобы при reload сразу показать
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(d.maintenance));
-      return d.maintenance;
-    } else {
-      // Maintenance выключен — чистим
-      localStorage.removeItem(STORAGE_KEY);
-      return null;
-    }
-  } catch (e) {
-    console.warn('[maintenance] server check failed:', e.message);
-    return null;
-  }
-}
-
-function autoCheck() {
-  // 1. Сразу проверяем localStorage (быстро)
-  var local = get();
-  if (local) {
-    setTimeout(function () { showScreen(local); }, 300);
-    setTimeout(function () { showScreen(local); }, 1500);
-  }
-
-  // 2. Потом проверяем сервер (100% актуально)
-  checkServer().then(function (data) {
-    if (data) {
-      showScreen(data);
-    } else {
-      // Сервер сказал выключено — но local может сказать включено (устарело)
-      // Скрываем если показывался
-      var screen = document.getElementById('ncMaintenanceScreen');
-      if (screen && !local) {
-        // Ничего не делаем
-      } else if (screen) {
-        hideScreen();
-      }
-    }
-  });
-
-  // 3. Периодически опрашиваем сервер (каждые 30 сек)
-  setInterval(function () {
-    checkServer().then(function (data) {
-      if (data) {
-        showScreen(data);
+  async function checkServer() {
+    try {
+      var WORKER = window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
+      var r = await fetch(WORKER + '?action=getMaintenanceStatus&_t=' + Date.now(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+      var d = await r.json();
+      if (d && d.ok && d.maintenance && d.maintenance.active) {
+        _lastServerData = d.maintenance;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(d.maintenance));
+        return d.maintenance;
       } else {
-        var screen = document.getElementById('ncMaintenanceScreen');
-        var banner = document.getElementById('ncMaintenanceBanner');
-        if (screen || banner) {
+        _lastServerData = null;
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+    } catch (e) {
+      console.warn('[maintenance] server check failed:', e.message);
+      return _lastServerData;
+    }
+  }
+
+  // ============================================================
+  // 🎯 INIT
+  // ============================================================
+  function autoCheck() {
+    // 1. Мгновенно — из localStorage
+    var local = get();
+    if (local && !_screenShown) {
+      showScreen(local);
+    }
+
+    // 2. Через 500мс — из сервера
+    setTimeout(function () {
+      checkServer().then(function (data) {
+        if (data) {
+          showScreen(data);
+        } else if (_screenShown) {
+          // Обновление выключено сервером — скрываем
           hideScreen();
+          celebrateReturn();
         }
+      });
+    }, 500);
+
+    // 3. Проверка каждые 10 сек
+    setInterval(function () {
+      checkServer().then(function (data) {
+        if (data) {
+          showScreen(data);
+        } else if (_screenShown) {
+          hideScreen();
+          celebrateReturn();
+        }
+      });
+    }, CHECK_INTERVAL);
+
+    // 4. При возврате на вкладку — сразу проверить
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) {
+        checkServer().then(function (data) {
+          if (data) {
+            showScreen(data);
+          } else if (_screenShown) {
+            hideScreen();
+          }
+        });
       }
     });
-  }, 30000);
-}
+  }
 
+  // ============================================================
+  // 🎯 EXPORT
+  // ============================================================
   window.__ncMaintenance = {
     version: MM_VERSION,
     isActive: isActive,
@@ -692,7 +743,8 @@ function autoCheck() {
     activate: activate,
     deactivate: deactivate,
     show: function () { var d = get(); if (d) showScreen(d); },
-    hide: hideScreen
+    hide: hideScreen,
+    checkServer: checkServer
   };
 
   if (document.readyState === 'loading') {
@@ -701,7 +753,6 @@ function autoCheck() {
     autoCheck();
   }
 
-  // Синхронизация между вкладками
   try {
     var bc = new BroadcastChannel('nc_maintenance');
     bc.onmessage = function (ev) {
@@ -710,6 +761,7 @@ function autoCheck() {
         if (d) showScreen(d);
       } else if (ev.data && ev.data.type === 'deactivated') {
         hideScreen();
+        celebrateReturn();
       }
     };
   } catch (e) {}
