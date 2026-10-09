@@ -1,23 +1,30 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v5.0.0 — LOADER
+   NORDIC CRYPTO — APP.JS v6.0 — LOADER
    ============================================================
-   FIXES v5.0.0:
-   - app.legacy.js path corrected (it lives in ROOT, not js/)
-   - Continues loading chain even if one module fails
-   - Global runtime error trap
-   - Bonus system loaded last
-   - Forces UI refresh after all modules are ready
+   Порядок загрузки оптимизирован:
+   1. core.js        — утилиты
+   2. auth.js        — login/logout (не перезаписывается legacy)
+   3. app.legacy.js  — весь функционал
+   4. legacy-fix.js  — торговля + portfolio
+   5. session-fix.js — очистка сессии
+   6. deposit-flow.js — депозиты (без дублирования polling)
+   7. withdraw-flow.js + confirmations
+   8. fixes.js       — onboarding + withdrawals
+   9. chat-fix.js    — быстрый чат
+   10. trade-terminal.js
+   11. polling-hub.js  — централизованный polling
+   12. bonus-system.js — бонусы
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '5.0.0';
+  var APP_VERSION = '6.0.0';
 
   var MODULES = [
-    'js/core.js',
+    'js/core.js?v=' + APP_VERSION,
     'js/auth.js?v=' + APP_VERSION,
-    'app.legacy.js?v=' + APP_VERSION,             // ⚠️ ROOT — no js/ prefix
+    'app.legacy.js?v=' + APP_VERSION,
     'js/legacy-fix.js?v=' + APP_VERSION,
     'js/session-fix.js?v=' + APP_VERSION,
     'js/deposit-flow.js?v=' + APP_VERSION,
@@ -37,14 +44,12 @@
   window.__NC_MODULES_LOADED = [];
   window.__NC_MODULES_FAILED = [];
 
-  // Global error trap
   window.addEventListener('error', function (e) {
     console.error('[NordicCrypto] 💥 Runtime error:',
       e.message, '\n  File:', e.filename, '\n  Line:', e.lineno);
   });
-
   window.addEventListener('unhandledrejection', function (e) {
-    console.error('[NordicCrypto] 💥 Unhandled promise rejection:', e.reason);
+    console.error('[NordicCrypto] 💥 Unhandled promise:', e.reason);
   });
 
   function loadModules(index) {
@@ -53,14 +58,17 @@
         'color:#10b981;font-weight:bold');
       window.__NC_LEGACY_LOADED = true;
 
-      // Force UI refresh once everything is ready
-      if (window.NC && typeof window.NC.refreshUI === 'function') {
-        window.NC.refreshUI();
-      } else if (window.currentUser) {
-        document.dispatchEvent(new CustomEvent('nc:auth:login', {
-          detail: { user: window.currentUser, restored: true }
-        }));
-      }
+      // Финальный refresh
+      setTimeout(function () {
+        if (window.currentUser) {
+          document.dispatchEvent(new CustomEvent('nc:auth:login', {
+            detail: { user: window.currentUser, restored: true }
+          }));
+        }
+        if (window.NC && typeof window.NC.refreshUI === 'function') {
+          window.NC.refreshUI();
+        }
+      }, 500);
       return;
     }
 
@@ -71,16 +79,14 @@
 
     script.onload = function () {
       window.__NC_MODULES_LOADED.push(src);
-      console.log('%c[NordicCrypto] ✅ Loaded: ' + src, 'color:#10b981');
+      console.log('%c[NordicCrypto] ✅ ' + src, 'color:#10b981');
       loadModules(index + 1);
     };
-
     script.onerror = function () {
       window.__NC_MODULES_FAILED.push(src);
       console.error('[NordicCrypto] ❌ FAILED: ' + src);
-      loadModules(index + 1);            // keep going
+      loadModules(index + 1);
     };
-
     document.head.appendChild(script);
   }
 
@@ -89,5 +95,4 @@
   } else {
     loadModules(0);
   }
-
 })();
