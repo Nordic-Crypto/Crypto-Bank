@@ -1,43 +1,55 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v6.0 — LOADER
+   NORDIC CRYPTO — APP.JS v7.0 — LOADER
    ============================================================
-   Порядок загрузки оптимизирован:
-   1. core.js        — утилиты
-   2. auth.js        — login/logout (не перезаписывается legacy)
-   3. app.legacy.js  — весь функционал
-   4. legacy-fix.js  — торговля + portfolio
-   5. session-fix.js — очистка сессии
-   6. deposit-flow.js — депозиты (без дублирования polling)
-   7. withdraw-flow.js + confirmations
-   8. fixes.js       — onboarding + withdrawals
-   9. chat-fix.js    — быстрый чат
-   10. trade-terminal.js
-   11. polling-hub.js  — централизованный polling
-   12. bonus-system.js — бонусы
+   Порядок загрузки:
+   1. core.js            — утилиты
+   2. auth.js            — login/logout
+   3. app.legacy.js      — основной функционал (Part A + B)
+   4. legacy-part1.js    — продолжение (loadAdminWithdrawals и др.)
+   5. legacy-part2.js    — продолжение (initNav, toast, ...)
+   6. legacy-fix.js      — торговля + portfolio
+   7. session-fix.js     — очистка сессии
+   8. deposit-flow.js    — депозиты
+   9. withdraw-flow.js   — анимация вывода
+   10. withdraw-confirmations.js
+   11. admin-withdrawals-fix.js   🆕 фикс мерцания
+   12. fixes.js          — onboarding + фиксы
+   13. chat-fix.js       — чат
+   14. trade-terminal.js
+   15. polling-hub.js
+   16. bonus-system.js
+   17. bonus-ui.js
+   18. maintenance-mode.js  🆕 Push Update
+   19. current-user-fix.js  🆕 window.currentUser
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '6.0.0';
+  var APP_VERSION = '7.0.0';
 
   var MODULES = [
-  'js/core.js?v=' + APP_VERSION,
-  'js/auth.js?v=' + APP_VERSION,
-  'app.legacy.js?v=' + APP_VERSION,
-  'js/legacy-fix.js?v=' + APP_VERSION,
-  'js/session-fix.js?v=' + APP_VERSION,
-  'js/deposit-flow.js?v=' + APP_VERSION,
-  'js/withdraw-flow.js?v=' + APP_VERSION,
-  'js/withdraw-confirmations.js?v=' + APP_VERSION,
-  'js/fixes.js?v=' + APP_VERSION,
-  'js/chat-fix.js?v=' + APP_VERSION,
-  'js/trade-terminal.js?v=' + APP_VERSION,
-  'js/polling-hub.js?v=' + APP_VERSION,
-  'js/bonus-system.js?v=' + APP_VERSION,
-  'js/bonus-ui.js?v=' + APP_VERSION
-];
-   
+    'js/core.js?v=' + APP_VERSION,
+    'js/auth.js?v=' + APP_VERSION,
+    'app.legacy.js?v=' + APP_VERSION,
+    'js/legacy-part1.js?v=' + APP_VERSION,
+    'js/legacy-part2.js?v=' + APP_VERSION,
+    'js/legacy-fix.js?v=' + APP_VERSION,
+    'js/session-fix.js?v=' + APP_VERSION,
+    'js/deposit-flow.js?v=' + APP_VERSION,
+    'js/withdraw-flow.js?v=' + APP_VERSION,
+    'js/withdraw-confirmations.js?v=' + APP_VERSION,
+    'js/admin-withdrawals-fix.js?v=' + APP_VERSION,
+    'js/fixes.js?v=' + APP_VERSION,
+    'js/chat-fix.js?v=' + APP_VERSION,
+    'js/trade-terminal.js?v=' + APP_VERSION,
+    'js/polling-hub.js?v=' + APP_VERSION,
+    'js/bonus-system.js?v=' + APP_VERSION,
+    'js/bonus-ui.js?v=' + APP_VERSION,
+    'js/maintenance-mode.js?v=' + APP_VERSION,
+    'js/current-user-fix.js?v=' + APP_VERSION
+  ];
+
   console.log('%c[NordicCrypto] 🚀 Loader v' + APP_VERSION + ' starting...',
     'color:#00d4ff;font-weight:bold;font-size:14px');
 
@@ -59,7 +71,6 @@
         'color:#10b981;font-weight:bold');
       window.__NC_LEGACY_LOADED = true;
 
-      // Финальный refresh
       setTimeout(function () {
         if (window.currentUser) {
           document.dispatchEvent(new CustomEvent('nc:auth:login', {
