@@ -49,46 +49,46 @@
   }
 
   async function tick() {
-    if (_busy) return;
-    if (!window.st) return;
-    if (!localStorage.getItem('user_email') && !window.adminViewingEmail) return;
-    if (Date.now() < _modalPauseUntil) return;
+  if (_busy) return;
+  if (!window.st) return;
+  if (!localStorage.getItem('user_email') && !window.adminViewingEmail) return;
+  if (Date.now() < _modalPauseUntil) return;
 
-    var modalOpen = isModalOpen();
-    if (modalOpen && !isAddFundsOpen()) {
-      if (isChatOpen()) runChatPollSafe();
-      return;
-    }
+  var modalOpen = isModalOpen();
 
-    _busy = true;
-    var now = Date.now();
+  // 🚀 Если открыта админка — не блокируем polling
+  var adminOpen = document.getElementById('adminPanel') && document.getElementById('adminPanel').classList.contains('on');
 
-    try {
-      // 1. Chat (только если открыт)
-      if (isChatOpen()) runChatPollSafe();
-
-      // 2. Crypto address sync (только в Add Funds)
-      if (isAddFundsOpen() && (now - _lastAddrPoll) > 15000) {
-        _lastAddrPoll = now;
-        runAddrSyncSafe();
-      }
-
-      // 3. Balance refresh (раз в 30 сек)
-      if (now - _lastBalanceRefresh > 30000) {
-        _lastBalanceRefresh = now;
-        runBalanceRefreshSafe();
-      }
-
-      // 4. Withdraw statuses (только если есть pending)
-      var hasPendingWithdrawals = (window.st.withdrawals || []).some(function (w) { return w.status === 'pending'; });
-      if (hasPendingWithdrawals) runWithdrawSyncSafe();
-
-    } catch (e) {
-      console.warn('[polling-hub] tick error:', e);
-    } finally {
-      _busy = false;
-    }
+  if (modalOpen && !isAddFundsOpen() && !adminOpen) {
+    if (isChatOpen()) runChatPollSafe();
+    return;
   }
+
+  _busy = true;
+  var now = Date.now();
+
+  try {
+    if (isChatOpen()) runChatPollSafe();
+
+    if (isAddFundsOpen() && (now - _lastAddrPoll) > 15000) {
+      _lastAddrPoll = now;
+      runAddrSyncSafe();
+    }
+
+    if (!adminOpen && now - _lastBalanceRefresh > 30000) {
+      _lastBalanceRefresh = now;
+      runBalanceRefreshSafe();
+    }
+
+    var hasPendingWithdrawals = (window.st.withdrawals || []).some(function (w) { return w.status === 'pending'; });
+    if (hasPendingWithdrawals) runWithdrawSyncSafe();
+
+  } catch (e) {
+    console.warn('[polling-hub] tick error:', e);
+  } finally {
+    _busy = false;
+  }
+}
 
   function runChatPollSafe() {
     try { if (typeof window.__ncChatPoll === 'function') window.__ncChatPoll(); } catch (e) {}
