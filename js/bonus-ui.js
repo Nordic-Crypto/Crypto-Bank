@@ -551,14 +551,14 @@
           '<div class="nc-rewards-kicker">Loyalty & Rewards</div>' +
           '<h2 class="nc-rewards-title">Nordic Coins</h2>' +
         '</div>' +
-        '<div class="nc-rewards-icon">🪙</div>' +
+        '<div class="nc-rewards-icon" style="padding:12px">' + getCoinSVG(32) + '</div>' +
       '</div>' +
       '<div class="nc-rewards-balance">' +
         '<span class="nc-rewards-count">' + total + '</span>' +
         '<span class="nc-rewards-unit">NC</span>' +
         '<span class="nc-rewards-level" style="color:' + level.color + '">' +
-          level.icon + ' ' + level.name +
-        '</span>' +
+  getLevelSVG(level.name, 16) + ' ' + level.name +
+'</span>' +
       '</div>' +
       (level.next !== Infinity
         ? '<div class="nc-rewards-progress">' +
