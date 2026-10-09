@@ -3518,20 +3518,36 @@ async function loadAdminUsers() {
   }
 }
 
-window.loadAdminVerifications = async function() {
+var _lastVerifsHash = null;
+var _lastVerifsRendered = false;
+
+window.loadAdminVerifications = async function(opts) {
+  opts = opts || {};
+  var silent = opts.silent === true;
+
   var box = document.getElementById('adminVerifsList');
   if (!box) return;
-  box.innerHTML = '<div class="admin-empty">Loading...</div>';
+
+  // 🛡️ Показываем Loading только при первом рендере
+  if (!_lastVerifsRendered && !silent) {
+    box.innerHTML = '<div class="admin-empty">Loading...</div>';
+  }
 
   try {
     var token = getSessionToken();
-    if (!token) { box.innerHTML = '<div class="admin-empty">No token</div>'; return; }
+    if (!token) {
+      if (!silent) box.innerHTML = '<div class="admin-empty">No token</div>';
+      return;
+    }
     var r = await fetch(WORKER_URL + '?action=listVerifications', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
     });
     var data = await r.json();
-    if (!data.ok) { box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(data.error || 'Failed') + '</div>'; return; }
+    if (!data.ok) {
+      if (!silent) box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(data.error || 'Failed') + '</div>';
+      return;
+    }
 
     var list = data.verifications || [];
     var pendingCount = list.filter(function(v){ return v.status === 'pending'; }).length;
@@ -3541,14 +3557,27 @@ window.loadAdminVerifications = async function() {
       else { navBadge.style.display = 'none'; }
     }
 
-    if (!list.length) { box.innerHTML = '<div class="admin-empty">No verifications yet</div>'; return; }
+    // 🛡️ Hash-проверка — не перерисовываем если ничего не изменилось
+    var newHash = list.map(function(v) {
+      return v.email + '|' + v.status + '|' + (v.submittedAt || 0) + '|' + (v.reviewedAt || 0);
+    }).join(',');
+
+    if (newHash === _lastVerifsHash && _lastVerifsRendered) {
+      return;  // ← ничего не меняем, список стоит
+    }
+    _lastVerifsHash = newHash;
+    _lastVerifsRendered = true;
+
+    if (!list.length) {
+      box.innerHTML = '<div class="admin-empty">No verifications yet</div>';
+      return;
+    }
 
     var html = '';
     list.forEach(function(v){
       var statusColor = v.status === 'approved' ? '#34d399' : v.status === 'rejected' ? '#f87171' : '#fbbf24';
       var statusLabel = v.status === 'approved' ? '✅ Approved' : v.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
       var safeEmail = String(v.email).replace(/'/g, "\\'");
-
       html += '<div class="admin-client-card" style="margin-bottom:14px;">' +
         '<div class="admin-client-top">' +
           '<div class="admin-client-avatar">🪪</div>' +
@@ -3559,11 +3588,8 @@ window.loadAdminVerifications = async function() {
           '</div>' +
           '<div class="admin-client-badge" style="background:rgba(255,255,255,0.05);color:' + statusColor + '">' + statusLabel + '</div>' +
         '</div>' +
-        (v.personalInfo && (v.personalInfo.street || v.personalInfo.city) ?
-          '<div style="font-size:12px;color:#8b95a5;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;">📍 ' +
-            [v.personalInfo.street, v.personalInfo.city, v.personalInfo.zip, v.personalInfo.country].filter(Boolean).map(escapeHtml).join(', ') + '</div>' : '') +
-        (v.status === 'rejected' && v.reason ?
-          '<div style="font-size:12px;color:#ff8a8a;margin:8px 0;">Reason: ' + escapeHtml(v.reason) + '</div>' : '') +
+        (v.personalInfo && (v.personalInfo.street || v.personalInfo.city) ? '<div style="font-size:12px;color:#8b95a5;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;">📍 ' + [v.personalInfo.street, v.personalInfo.city, v.personalInfo.zip, v.personalInfo.country].filter(Boolean).map(escapeHtml).join(', ') + '</div>' : '') +
+        (v.status === 'rejected' && v.reason ? '<div style="font-size:12px;color:#ff8a8a;margin:8px 0;">Reason: ' + escapeHtml(v.reason) + '</div>' : '') +
         '<div class="admin-client-actions" style="margin-top:12px;flex-wrap:wrap;">' +
           '<button class="btn b2" onclick="viewKycDocs(\'' + safeEmail + '\')">👁 View docs</button>' +
           (v.status !== 'approved' ? '<button class="btn b1" onclick="approveKyc(\'' + safeEmail + '\')">✅ Approve</button>' : '') +
@@ -3573,7 +3599,7 @@ window.loadAdminVerifications = async function() {
     });
     box.innerHTML = html;
   } catch(e) {
-    box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(e.message) + '</div>';
+    if (!silent) box.innerHTML = '<div class="admin-empty">Error: ' + escapeHtml(e.message) + '</div>';
   }
 };
 
