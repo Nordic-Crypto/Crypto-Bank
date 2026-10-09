@@ -4509,7 +4509,7 @@ function showAdminTab(tab) {
     if (tab === 'deposits' && typeof loadAdminPendingDeposits === 'function') loadAdminPendingDeposits();
     if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
     if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
-    if (tab === 'verifications' && typeof loadAdminVerifications === 'function') loadAdminVerifications();
+    if (tab === 'verifications' && typeof loadAdminVerifications === 'function') loadAdminVerifications({ silent: isSilent });
   }
 
   // Первый вызов — сразу
