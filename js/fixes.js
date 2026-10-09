@@ -39,10 +39,14 @@
     var _onboardingShown = false;
   var _onboardingWatcher = null;
 
-  function checkNeedOnboarding() {
+    function checkNeedOnboarding() {
     if (!window.st) return false;
     if (localStorage.getItem('user_role') === 'admin') return false;
     if (window.adminViewingEmail) return false;
+
+    // 🛡️ НЕ перебивать если KYC pending/rejected — там свои экраны
+    var vStatus = (window.st.verification && window.st.verification.status) || null;
+    if (vStatus === 'pending' || vStatus === 'rejected') return false;
 
     var accountType = (window.st.user && window.st.user.accountType) || null;
     var vStatus = (window.st.verification && window.st.verification.status) || null;
