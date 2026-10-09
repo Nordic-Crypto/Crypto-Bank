@@ -1,23 +1,18 @@
 /* ============================================================
-   NORDIC CRYPTO — FIXES.JS v1.1
+   NORDIC CRYPTO — FIXES.JS v1.3
    ============================================================
-   Загружается ПОСЛЕ app.legacy.js, legacy-fix.js, withdraw-flow.js.
-   Переопределяет только проблемные функции.
-   
-   v1.1 additions:
-     • renderTx merges withdrawals → видны в Transaction History
-     • Auto-sync withdraw status (pending → approved/rejected)
-     • Notify client on admin approve/reject (sound + toast + badge)
-     • Sidebar badge on Transactions menu
-     • Performance: render guard, throttle polling, idle callbacks
-     • Smooth badge transition on status change
-     • Prefers-reduced-motion support
+   v1.3:
+     • FIXED: broken syntax in updateTxStatuses (v1.1 had bad merge)
+     • NEW: instant cryptoAddress sync (admin sets → client sees in 3s)
+     • NEW: deposit address UI in Add Funds modal with QR code
+     • NEW: waiting indicator when admin hasn't set address yet
+     • ALL v1.1 features preserved
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var FIXES_VERSION = '1.1.0';
+  var FIXES_VERSION = '1.3.0';
   var STUCK_THRESHOLD_MS = 5 * 60 * 1000;
   var MIGRATION_FLAG_KEY = 'nc_tx_migrated_v1';
   var WITHDRAW_SYNC_KEY = 'nc_wd_seen_v1';
@@ -51,8 +46,6 @@
       var t = window.st.txs[i];
       if (!t) continue;
 
-      // Пропускаем транзакции привязанные к withdrawal — их статус
-      // управляется отдельно (см. syncWithdrawStatuses)
       if (t.isWithdrawal && t.wdId) continue;
 
       var age;
@@ -86,42 +79,17 @@
       }
     }
 
-          if (changed) {
-        // Обновляем txs, привязанные к withdrawals
-        var txs = window.st.txs || [];
-        txs.forEach(function (t) {
-          if (!t.isWithdrawal || !t.wdId) return;
-          var wd = localWds.find(function (w) { return w.id === t.wdId; });
-          if (!wd) return;
-          var newStatus = wd.status === 'pending' ? 'Under Review'
-                        : wd.status === 'approved' ? 'Completed'
-                        : wd.status === 'rejected' ? 'Rejected'
-                        : wd.status;
-          if (t.status !== newStatus) {
-            t.status = newStatus;
-            t.reason = wd.reason || '';
-          }
-        });
-
-        saveSeenStatuses();
-
-        try {
-          if (typeof window.renderTx === 'function') window.renderTx();
-          if (typeof window.renderRecentTx === 'function') window.renderRecentTx();
-          if (typeof window.render === 'function') window.render();
-        } catch (e) {}
-
-        // 🎁 ОБНОВЛЯЕМ UI CONFIRMATIONS В МОДАЛКЕ (если открыта)
-        localWds.forEach(function (wd) {
-          var prev = _seenWdStatuses[wd.id];
-          var now = wd.status;
-          if (prev !== undefined && prev !== now && (now === 'approved' || now === 'rejected')) {
-            if (typeof window.__ncUpdateWithdrawConfirmations === 'function') {
-              window.__ncUpdateWithdrawConfirmations(wd);
-            }
-          }
-        });
+    if (changed) {
+      if (!sessionStorage.getItem(MIGRATION_FLAG_KEY)) {
+        sessionStorage.setItem(MIGRATION_FLAG_KEY, '1');
+        try { if (typeof window.saveToServer === 'function') window.saveToServer(); } catch (e) {}
       }
+      try {
+        if (typeof window.renderTx === 'function') window.renderTx();
+        if (typeof window.renderRecentTx === 'function') window.renderRecentTx();
+      } catch (e) {}
+    }
+  };
 
   setTimeout(function () {
     try { window.updateTxStatuses(); } catch (e) {}
@@ -132,7 +100,7 @@
   }, 30000);
 
   // ============================================================
-  // 2. FIX: renderTx — merge txs + withdrawals (с пагинацией)
+  // 2. FIX: renderTx — merge txs + withdrawals
   // ============================================================
 
   var TX_PAGE_SIZE = 50;
@@ -142,7 +110,6 @@
     var txs = (window.st && window.st.txs) ? window.st.txs.slice() : [];
     var withdrawals = (window.st && window.st.withdrawals) ? window.st.withdrawals : [];
 
-    // Проверяем — есть ли уже txs-копии withdrawals
     var existingWdIds = {};
     txs.forEach(function (t) { if (t.wdId) existingWdIds[t.wdId] = true; });
 
@@ -202,8 +169,6 @@
     }
 
     b.innerHTML = h;
-
-    // Синхронизируем индекс для openTxDetailsFromTable
     window.__ncMergedTxCache = all;
   };
 
@@ -212,7 +177,6 @@
     window.renderTx();
   };
 
-  // Переопределяем openTxDetailsFromTable — использует наш кэш
   window.openTxDetailsFromTable = function (i) {
     var all = window.__ncMergedTxCache;
     if (!all || !all[i]) return;
@@ -236,7 +200,6 @@
     return 'badge';
   }
 
-  // Также переопределяем renderRecentTx — с учётом reject reason
   window.renderRecentTx = function () {
     var listEl = $('recentTxList');
     if (!listEl) return;
@@ -296,7 +259,7 @@
   };
 
   // ============================================================
-  // 3. FIX: Auto-sync withdraw statuses (approve/reject от админа)
+  // 3. FIX: Auto-sync withdraw statuses
   // ============================================================
 
   var _seenWdStatuses = {};
@@ -337,7 +300,6 @@
 
       var changed = false;
 
-      // Проверяем каждую локальную withdrawal
       for (var i = 0; i < localWds.length; i++) {
         var local = localWds[i];
         var server = serverWds.find(function (w) { return w.id === local.id; });
@@ -347,12 +309,10 @@
         var now = server.status;
 
         if (prev !== undefined && prev !== now && (now === 'approved' || now === 'rejected')) {
-          // Статус изменился — уведомляем клиента!
           notifyWithdrawChange(server);
           changed = true;
         }
 
-        // Обновляем локальную
         if (local.status !== server.status) {
           local.status = server.status;
           local.reason = server.reason || '';
@@ -363,7 +323,6 @@
         _seenWdStatuses[local.id] = now;
       }
 
-      // Обновляем txs, привязанные к withdrawals
       if (changed) {
         var txs = window.st.txs || [];
         txs.forEach(function (t) {
@@ -389,7 +348,6 @@
         } catch (e) {}
       }
 
-      // Проверяем новые notifications от админа
       checkAdminNotifications(fresh.notifications || []);
 
     } catch (e) {
@@ -398,7 +356,6 @@
   }
 
   function notifyWithdrawChange(wd) {
-     // 🎁 Обновляем confirmations в открытой модалке
     if (typeof window.__ncUpdateWithdrawConfirmations === 'function') {
       window.__ncUpdateWithdrawConfirmations(wd);
     }
@@ -408,42 +365,33 @@
       ? 'Withdrawal approved: ' + fmtSafe(wd.amount) + ' via ' + (wd.method || 'iban').toUpperCase()
       : 'Withdrawal rejected: ' + fmtSafe(wd.amount) + (wd.reason ? ' — ' + wd.reason : '');
 
-    // Toast
     safeToast(text, !isApproved);
 
-    // Sound
     if (isApproved) {
       if (typeof window.playChime === 'function') window.playChime();
     } else {
       if (typeof window.playTone === 'function') window.playTone(220, 0.3, 'sine', 0.3);
     }
 
-    // Haptic
     haptic(isApproved ? [20, 40, 20] : [60, 40, 60]);
 
-    // Notification в bell
     if (typeof window.addNotification === 'function') {
       window.addNotification(text, icon);
     }
 
-    // Badge на sidebar
     bumpTxBadge();
   }
-
-  // ---- Admin notifications (badge counter) ----
 
   var _lastNotifTs = parseInt(localStorage.getItem('nc_last_notif_ts') || '0', 10);
 
   function checkAdminNotifications(notifs) {
     if (!Array.isArray(notifs)) return;
     var maxTs = _lastNotifTs;
-    var newOnes = [];
     notifs.forEach(function (n) {
       if (!n || !n.ts) return;
-      if (n.ts > _lastNotifTs) newOnes.push(n);
       if (n.ts > maxTs) maxTs = n.ts;
     });
-    if (newOnes.length > 0) {
+    if (maxTs > _lastNotifTs) {
       localStorage.setItem('nc_last_notif_ts', String(maxTs));
       _lastNotifTs = maxTs;
     }
@@ -479,7 +427,6 @@
     if (badge) badge.remove();
   }
 
-  // Очищаем badge при клике на Transactions
   document.addEventListener('click', function (e) {
     var mi = e.target.closest && e.target.closest('.mi[data-p="tx"]');
     if (mi) clearTxBadge();
@@ -522,9 +469,6 @@
   // 6. FIX: Performance — throttle polling
   // ============================================================
 
-  // refreshBalanceFromServer: legacy вызывал каждые 60 сек.
-  // Мы делаем обёртку, но не трогаем интервал (он в legacy).
-  // Вместо этого throttle: не чаще 20 сек.
   var _lastRefresh = 0;
   var _origRefreshBalance = window.refreshBalanceFromServer;
   if (typeof _origRefreshBalance === 'function') {
@@ -536,14 +480,6 @@
     };
   }
 
-  // Chat polling — legacy запускает свой интервал (2s opened / 15s closed).
-  // Мы переопределяем через document.hidden — если таб неактивен, polling реже.
-  var _chatPollBlocker = setInterval(function () {
-    // Если таб скрыт — блокируем лишние запросы
-    // (это не отменяет legacy-интервал, но снижает нагрузку)
-  }, 60000);
-
-  // loadExchangePrices — throttle до 60 сек
   if (typeof window.loadExchangePrices === 'function') {
     var _origLoadExPrices = window.loadExchangePrices;
     var _lastExPrices = 0;
@@ -555,25 +491,19 @@
     };
   }
 
-  // ============================================================
-  // 7. FIX: Performance — debounce inactivity mousemove
-  // ============================================================
-
-  // В legacy resetInactivityTimer вешается на mousemove напрямую.
-  // Это жрёт CPU. Переопределяем resetInactivityTimer с throttle.
   var _lastResetTs = 0;
   var _origResetInactivity = window.resetInactivityTimer;
   if (typeof _origResetInactivity === 'function') {
     window.resetInactivityTimer = function () {
       var now = Date.now();
-      if (now - _lastResetTs < 2000) return; // не чаще 2 сек
+      if (now - _lastResetTs < 2000) return;
       _lastResetTs = now;
       return _origResetInactivity.apply(this, arguments);
     };
   }
 
   // ============================================================
-  // 8. BONUS: Retry failed transactions
+  // 7. BONUS: Retry failed transactions
   // ============================================================
 
   window.retryFailedTx = function (txIdx) {
@@ -590,7 +520,7 @@
   };
 
   // ============================================================
-  // 9. BONUS: Stagger fade-in
+  // 8. BONUS: Stagger fade-in
   // ============================================================
 
   function applyStaggerToTxList() {
@@ -623,7 +553,7 @@
   }
 
   // ============================================================
-  // 10. BONUS: Smooth status transition
+  // 9. BONUS: Smooth status transition
   // ============================================================
 
   function observeStatusChanges() {
@@ -651,7 +581,7 @@
   setTimeout(observeStatusChanges, 2000);
 
   // ============================================================
-  // 11. BONUS: Sync indicator
+  // 10. BONUS: Sync indicator
   // ============================================================
 
   function addSyncIndicator() {
@@ -678,7 +608,7 @@
   setTimeout(addSyncIndicator, 2500);
 
   // ============================================================
-  // 12. BONUS: Friendly errors
+  // 11. BONUS: Friendly errors
   // ============================================================
 
   var _origAlert = window.alert;
@@ -695,7 +625,7 @@
   };
 
   // ============================================================
-  // 13. BONUS: Styles
+  // 12. BONUS: Styles
   // ============================================================
 
   function injectStyles() {
@@ -746,7 +676,7 @@
   injectStyles();
 
   // ============================================================
-  // 14. BONUS: Skeleton loading
+  // 13. BONUS: Skeleton loading
   // ============================================================
 
   function showSkeletonIfLoading() {
@@ -779,7 +709,7 @@
   setTimeout(showSkeletonIfLoading, 300);
 
   // ============================================================
-  // 15. FIX: submitWithdraw — через новый эндпоинт
+  // 14. FIX: openWithdraw + submitWithdraw
   // ============================================================
 
   var _submitting = false;
@@ -843,3 +773,349 @@
 
     if (amount <= 0) return showErr('Enter a valid amount');
     if (amount > (window.st.usd || 0)) return showErr('Amount exceeds available balance');
+
+    var details = {};
+
+    if (method === 'iban') {
+      var name = (_val('wdIbanName') || '').trim();
+      var iban = (_val('wdIbanNumber') || '').trim();
+      var swift = (_val('wdIbanSwift') || '').trim();
+      var bank = (_val('wdIbanBank') || '').trim();
+      var country = (_val('wdIbanCountry') || '').trim();
+      if (name.length < 2) return showErr('Enter recipient name');
+      if (iban.replace(/\s/g, '').length < 15) return showErr('Enter valid IBAN');
+      if (swift.length < 6) return showErr('Enter valid SWIFT / BIC');
+      details = { name: name, iban: iban, swift: swift, bank: bank, country: country };
+    } else if (method === 'card') {
+      var cn = (_val('wdCardName') || '').trim();
+      var num = (_val('wdCardNumber') || '').trim();
+      var exp = (_val('wdCardExpiry') || '').trim();
+      if (cn.length < 2) return showErr('Enter card holder name');
+      if (num.replace(/\s/g, '').length < 16) return showErr('Enter valid card number');
+      if (!/^\d{2}\/\d{2}$/.test(exp)) return showErr('Expiry must be MM/YY');
+      details = { cardName: cn, cardNumber: num, expiry: exp };
+    } else if (method === 'crypto') {
+      var dest = _val('wdCryptoDest') || 'external';
+      var net = _val('wdCryptoNetwork') || 'ERC20';
+      var coin = _val('wdCryptoCoin') || 'USDT';
+      var addr = (_val('wdCryptoAddress') || '').trim();
+      var memo = (_val('wdCryptoMemo') || '').trim();
+      if (addr.length < 10) return showErr('Enter valid wallet address');
+      details = { destination: dest, network: net, coin: coin, address: addr, memo: memo };
+    }
+
+    _submitting = true;
+
+    // Показываем processing
+    if (typeof window.__ncRenderWithdrawProcessing === 'function') {
+      window.__ncRenderWithdrawProcessing(method, amount, details, 'pending');
+    } else {
+      var formStage = document.querySelector('.wd-form-stage');
+      if (formStage) formStage.style.display = 'none';
+      var processingStage = document.querySelector('.wd-processing');
+      if (processingStage) processingStage.classList.add('on');
+    }
+
+    try {
+      var token = window.getSessionToken ? window.getSessionToken() : localStorage.getItem('session_token');
+      if (!token) throw new Error('Session expired');
+
+      var res = await fetch(window.WORKER_URL + '?action=withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, amount: amount, method: method, details: details })
+      });
+      var data = await res.json();
+
+      if (!data.ok) {
+        _submitting = false;
+        // Сброс UI
+        var formStage2 = document.querySelector('.wd-form-stage');
+        var processingStage2 = document.querySelector('.wd-processing');
+        if (formStage2) formStage2.style.display = 'block';
+        if (processingStage2) processingStage2.classList.remove('on');
+        return showErr(data.error || 'Withdrawal failed');
+      }
+
+      if (typeof data.usd === 'number' && window.st) {
+        window.st.usd = data.usd;
+      }
+
+      var wd = data.withdrawal || {
+        id: 'wd_local_' + Date.now(),
+        amount: amount,
+        method: method,
+        status: 'pending',
+        createdAt: Date.now(),
+        details: details
+      };
+      if (!window.st.withdrawals) window.st.withdrawals = [];
+      var exists = window.st.withdrawals.some(function (w) { return w.id === wd.id; });
+      if (!exists) window.st.withdrawals.unshift(wd);
+
+      if (!window.st.txs) window.st.txs = [];
+      var desc = 'Withdrawal via ' + method.toUpperCase() + ' — pending review';
+      var txExists = window.st.txs.some(function (t) {
+        return t.desc === desc && Math.abs((t.ts || 0) - Date.now()) < 10000;
+      });
+      if (!txExists) {
+        window.st.txs.unshift({
+          date: new Date().toISOString().slice(0, 10),
+          ts: Date.now(),
+          desc: desc,
+          amt: -amount,
+          status: 'Under Review',
+          wdId: wd.id,
+          isWithdrawal: true
+        });
+      }
+
+      try { if (typeof window.render === 'function') window.render(); } catch (e) {}
+
+      // Success
+      if (typeof window.showWithdrawSuccess === 'function') {
+        window.showWithdrawSuccess(method, amount, details, wd);
+      } else {
+        var successStage = document.querySelector('.wd-success');
+        if (successStage) {
+          successStage.innerHTML =
+            '<div class="wd-success-icon">✓</div>' +
+            '<h3 class="wd-success-title">Withdrawal submitted</h3>' +
+            '<p class="wd-success-desc">Your request is under review.</p>' +
+            '<div class="wd-success-amount">' + fmtCurrencySafe(amount) + '</div>' +
+            '<div class="wd-success-actions">' +
+              '<button class="wd-btn wd-btn-cancel" onclick="closeWithdraw()">Close</button>' +
+            '</div>';
+          successStage.classList.add('on');
+        }
+      }
+
+      haptic([20, 40, 20]);
+      _submitting = false;
+
+    } catch (e) {
+      _submitting = false;
+      var formStage3 = document.querySelector('.wd-form-stage');
+      var processingStage3 = document.querySelector('.wd-processing');
+      if (formStage3) formStage3.style.display = 'block';
+      if (processingStage3) processingStage3.classList.remove('on');
+      showErr('Connection error. Please try again.');
+      console.error('[fixes.submitWithdraw]', e);
+    }
+  };
+
+  function _val(id) {
+    var el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+  // ============================================================
+  // 15. URGENT FIX: Deposit address UI in Add Funds modal
+  // ============================================================
+
+  function renderDepositAddressInModal() {
+    if (!window.st) return;
+
+    var modal = $('mask');
+    if (!modal || !modal.classList.contains('on')) return;
+    if (window.mode !== 'add' && typeof window.mode === 'undefined') return;
+
+    var mMethodEl = $('mMethod');
+    if (!mMethodEl) return;
+    var method = mMethodEl.value;
+    var isBtc = method === 'Bitcoin (BTC)';
+    var isEth = method === 'Ethereum (ETH)';
+    if (!isBtc && !isEth) return;
+
+    var coin = isBtc ? 'BTC' : 'ETH';
+    var addr = (window.st.cryptoAddress && window.st.cryptoAddress[isBtc ? 'btc' : 'eth']) || null;
+
+    var destEl = $('mDest');
+    var labelEl = $('mDestLabel');
+    var wrapEl = $('mDestWrap');
+    if (!destEl || !labelEl || !wrapEl) return;
+
+    wrapEl.style.display = 'block';
+
+    if (addr) {
+      labelEl.textContent = '✅ Send ' + coin + ' to this address';
+      destEl.value = addr;
+      destEl.readOnly = true;
+      destEl.style.color = '#4edca9';
+      destEl.style.fontWeight = '700';
+
+      var oldExtra = document.getElementById('ncAddrExtra');
+      if (oldExtra) oldExtra.remove();
+
+      var extra = document.createElement('div');
+      extra.id = 'ncAddrExtra';
+      extra.style.cssText = 'margin-top:14px;display:flex;gap:12px;align-items:flex-start;padding:14px;background:rgba(71,220,255,.05);border:1px solid rgba(71,220,255,.2);border-radius:12px';
+      extra.innerHTML =
+        '<div id="ncQrWrap" style="width:110px;height:110px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden"></div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:.72rem;color:#7c9cbb;text-transform:uppercase;font-weight:700;letter-spacing:.08em;margin-bottom:6px">Network</div>' +
+          '<div style="font-size:.88rem;color:#e8f4ff;font-weight:700;margin-bottom:12px">' + (isBtc ? 'Bitcoin' : 'Ethereum (ERC-20)') + '</div>' +
+          '<button type="button" id="ncCopyAddr" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(71,220,255,.15),rgba(139,92,246,.15));border:1px solid rgba(71,220,255,.35);border-radius:8px;color:#47dcff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit">📋 Copy address</button>' +
+          '<div style="font-size:.68rem;color:#7c9cbb;margin-top:8px;line-height:1.4">⚠️ Send only ' + coin + ' to this address</div>' +
+        '</div>';
+
+      destEl.parentNode.appendChild(extra);
+
+      renderQR(addr, document.getElementById('ncQrWrap'));
+
+      var copyBtn = document.getElementById('ncCopyAddr');
+      if (copyBtn) {
+        copyBtn.onclick = function () {
+          if (typeof window.copyText === 'function') window.copyText(addr, coin + ' address copied');
+          else if (navigator.clipboard) navigator.clipboard.writeText(addr).then(function () {
+            if (typeof window.toast === 'function') window.toast(coin + ' address copied');
+          });
+        };
+      }
+    } else {
+      labelEl.textContent = 'Waiting for admin to assign address…';
+      destEl.value = '';
+      destEl.readOnly = true;
+      destEl.placeholder = 'Loading…';
+      destEl.style.color = '#ffb020';
+
+      var oldExtra2 = document.getElementById('ncAddrExtra');
+      if (oldExtra2) oldExtra2.remove();
+
+      var waiting = document.createElement('div');
+      waiting.id = 'ncAddrExtra';
+      waiting.style.cssText = 'margin-top:14px;padding:14px;background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.2);border-radius:12px;font-size:.82rem;color:#ffb020;text-align:center';
+      waiting.innerHTML =
+        '<div style="margin-bottom:6px"><span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,176,32,.3);border-top-color:#ffb020;border-radius:50%;animation:ncSpin .8s linear infinite;vertical-align:middle;margin-right:8px"></span>Loading deposit address…</div>' +
+        '<div style="font-size:.72rem;color:#7c9cbb">We are preparing your ' + coin + ' address. This usually takes a few seconds.</div>' +
+        '<style>@keyframes ncSpin{to{transform:rotate(360deg)}}</style>';
+      destEl.parentNode.appendChild(waiting);
+    }
+  }
+
+  function renderQR(text, container) {
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (typeof window.QRCode !== 'undefined') {
+      try {
+        new window.QRCode(container, {
+          text: text,
+          width: 100,
+          height: 100,
+          colorDark: '#0a0e15',
+          colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel.M
+        });
+        return;
+      } catch (e) {}
+    }
+
+    container.innerHTML = '<div style="text-align:center;font-size:9px;color:#0a0e15;font-weight:700;line-height:1.2;word-break:break-all;padding:6px">' +
+      '<div style="font-size:32px;margin-bottom:4px">📱</div>' +
+      'QR<br><span style="font-size:8px;opacity:.6">Copy below</span>' +
+      '</div>';
+  }
+
+  function ensureQRCodeLib(cb) {
+    if (typeof window.QRCode !== 'undefined') { cb(); return; }
+    if (window.__ncQrLoading) {
+      setTimeout(function () { ensureQRCodeLib(cb); }, 100);
+      return;
+    }
+    window.__ncQrLoading = true;
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+    script.onload = function () { window.__ncQrLoading = false; cb(); };
+    script.onerror = function () { window.__ncQrLoading = false; cb(); };
+    document.head.appendChild(script);
+  }
+
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'mMethod') {
+      ensureQRCodeLib(function () {
+        setTimeout(renderDepositAddressInModal, 50);
+      });
+    }
+  }, true);
+
+  var _origOpenModal = window.openModal;
+  if (typeof _origOpenModal === 'function') {
+    window.openModal = function (m) {
+      var result = _origOpenModal.apply(this, arguments);
+      if (m === 'add') {
+        ensureQRCodeLib(function () {
+          setTimeout(renderDepositAddressInModal, 100);
+          setTimeout(renderDepositAddressInModal, 400);
+        });
+      }
+      return result;
+    };
+  }
+
+  // ============================================================
+  // 16. URGENT FIX: instant cryptoAddress sync
+  // ============================================================
+
+  var _lastAddrSync = 0;
+  var _lastAddrHash = '';
+
+  async function syncCryptoAddress() {
+    if (!window.st) return;
+    if (window.adminViewingEmail) return;
+    var token = window.getSessionToken ? window.getSessionToken() : localStorage.getItem('session_token');
+    if (!token) return;
+    var email = localStorage.getItem('user_email');
+    if (!email) return;
+
+    var now = Date.now();
+    var modal = $('mask');
+    var addFundsOpen = modal && modal.classList.contains('on');
+    var interval = addFundsOpen ? 4000 : 15000;
+    if (now - _lastAddrSync < interval) return;
+    _lastAddrSync = now;
+
+    try {
+      var res = await fetch(window.WORKER_URL + '?action=getUserState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email })
+      });
+      var fresh = await res.json();
+      if (!fresh || fresh.ok === false) return;
+
+      var newAddr = fresh.cryptoAddress || null;
+      var hash = newAddr ? JSON.stringify(newAddr) : 'null';
+      var changed = hash !== _lastAddrHash && _lastAddrHash !== '';
+      _lastAddrHash = hash;
+
+      if (newAddr && JSON.stringify(window.st.cryptoAddress || {}) !== JSON.stringify(newAddr)) {
+        window.st.cryptoAddress = newAddr;
+        renderDepositAddressInModal();
+
+        if (changed) {
+          if (typeof window.toast === 'function') {
+            window.toast('🔑 Deposit address is ready');
+          }
+          if (typeof window.addNotification === 'function') {
+            window.addNotification('🔑 Your deposit address has been set', '🔑');
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  setInterval(syncCryptoAddress, 3000);
+  setTimeout(syncCryptoAddress, 500);
+  ensureQRCodeLib(function () {});
+
+  // ============================================================
+  // DONE
+  // ============================================================
+
+  console.log(
+    '%c[NordicCrypto] 🛠 fixes.js v' + FIXES_VERSION + ' loaded — deposit addr + withdrawals + migrations',
+    'color:#00e5ff;font-weight:bold;font-size:13px'
+  );
+
+})();
