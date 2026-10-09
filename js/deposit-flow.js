@@ -121,11 +121,11 @@
     maybePromptPushPermission();
   };
 
-  function renderIncomingHTML(pd) {
+    function renderIncomingHTML(pd) {
     var symbol = (pd.symbol || '').toUpperCase();
     var isBtc = symbol === 'BTC';
-    var coinEmoji = isBtc ? '₿' : 'Ξ';
-    var networkName = isBtc ? 'Bitcoin' : 'Ethereum (ERC-20)';
+    var coinIcon = getCoinIconSVG(symbol);
+    var networkName = isBtc ? 'Bitcoin' : (symbol === 'ETH' ? 'Ethereum (ERC-20)' : symbol);
     var explorerBase = isBtc ? 'https://mempool.space/tx/' : 'https://etherscan.io/tx/';
     var explorerUrl = explorerBase + (pd.txHash || '');
     var hashDisplay = pd.txHash ? (pd.txHash.slice(0, 12) + '…' + pd.txHash.slice(-8)) : '—';
