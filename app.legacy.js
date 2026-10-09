@@ -4410,25 +4410,34 @@ function showAdminTab(tab) {
   document.querySelectorAll('.admin-section').forEach(function(el){
     el.classList.toggle('active', el.getAttribute('data-section') === tab);
   });
-  if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
-  if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
-  if (tab === 'deposits' && typeof loadAdminPendingDeposits === 'function') loadAdminPendingDeposits();
-  if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
-  if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
-  if (tab === 'verifications' && typeof loadAdminVerifications === 'function') loadAdminVerifications();
+
+  // 🚀 Авто-обновление для активной вкладки
+  if (window._adminTabInterval) {
+    clearInterval(window._adminTabInterval);
+    window._adminTabInterval = null;
+  }
+
+  function refreshCurrentTab() {
+    // Не обновляем если админ что-то делает (модалка открыта)
+    if (document.querySelector('#adminBalanceMask.on, #adminMsgMask.on, #kycApproveModal, #kycDocsModal')) return;
+
+    if (tab === 'chats' && typeof loadAdminChats === 'function') loadAdminChats();
+    if (tab === 'withdrawals' && typeof loadAdminWithdrawals === 'function') loadAdminWithdrawals();
+    if (tab === 'deposits' && typeof loadAdminPendingDeposits === 'function') loadAdminPendingDeposits();
+    if (tab === 'clients' && typeof loadAdminUsers === 'function') loadAdminUsers();
+    if (tab === 'deleted' && typeof loadDeletedUsers === 'function') loadDeletedUsers();
+    if (tab === 'verifications' && typeof loadAdminVerifications === 'function') loadAdminVerifications();
+  }
+
+  // Первый вызов — сразу
+  refreshCurrentTab();
+
+  // Потом каждые 8 секунд
+  window._adminTabInterval = setInterval(refreshCurrentTab, 8000);
+
   localStorage.setItem('adminTab', tab);
 }
 window.showAdminTab = showAdminTab;
-
-function filterClients(query) {
-  var q = (query || '').toLowerCase().trim();
-  var cards = document.querySelectorAll('#adminClientsList .admin-client-card');
-  cards.forEach(function(card){
-    var text = (card.textContent || '').toLowerCase();
-    card.style.display = (!q || text.indexOf(q) > -1) ? '' : 'none';
-  });
-}
-window.filterClients = filterClients;
 
 /* ---------- ADMIN CHATS ---------- */
 async function loadAdminChats() {
