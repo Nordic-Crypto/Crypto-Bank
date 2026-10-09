@@ -1078,21 +1078,20 @@
         50% { transform: scale(1.4); opacity: 0; }
       }
       .nc-df-coin {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #47dcff, #238cff);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        font-weight: 800;
-        color: #03111b;
-        box-shadow: 0 8px 24px -8px rgba(71, 220, 255, 0.7);
-        position: relative;
-        z-index: 1;
-        animation: ncDfCoinDrop .7s cubic-bezier(.34, 1.56, .64, 1);
-      }
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #627eea);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 24px -8px rgba(139, 92, 246, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  position: relative;
+  z-index: 1;
+  animation: ncDfCoinDrop .7s cubic-bezier(.34, 1.56, .64, 1);
+}
       @keyframes ncDfCoinDrop {
         0% { transform: translateY(-40px) scale(.5); opacity: 0; }
         60% { transform: translateY(8px) scale(1.1); opacity: 1; }
