@@ -127,11 +127,15 @@
 }
 
 .nc-badge-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: .68rem;
-  opacity: .8;
-  padding: 2px 6px;
+  opacity: .95;
+  padding: 3px 8px;
   background: rgba(255,255,255,.08);
   border-radius: 6px;
+  font-weight: 800;
 }
 
 .nc-rewards-icon svg {
@@ -147,13 +151,7 @@
         color: #fff;
         font-size: .88rem;
       }
-      .nc-badge-level {
-        font-size: .68rem;
-        opacity: .8;
-        padding: 2px 6px;
-        background: rgba(255,255,255,.08);
-        border-radius: 6px;
-      }
+      
 
       /* ===== Rewards card on dashboard ===== */
       .nc-rewards-card {
