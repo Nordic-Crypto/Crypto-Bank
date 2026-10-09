@@ -1,22 +1,24 @@
 /* ============================================================
-   NORDIC CRYPTO — MAINTENANCE MODE v6.0 (SSE LIVE)
+   NORDIC CRYPTO — MAINTENANCE MODE v6.1 (SSE LIVE)
    ============================================================
-   v6.0:
+   v6.1:
    • ⚡ SSE — мгновенная реакция (<1 сек)
    • ⚡ Без F5 — экран появляется/исчезает сам
-   • ⚡ Fallback на polling если SSE не работает
+   • ⚡ Мгновенный показ из localStorage до ответа сервера
+   • 🔄 Fallback polling (15 сек) если SSE недоступен
    • 🔴 Полный экран для всех кроме админа
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var MM_VERSION = '6.0.0';
+  var MM_VERSION = '6.1.0';
   var STORAGE_KEY = 'nc_maintenance';
-  var CHECK_INTERVAL = 15000; // fallback polling — 15 сек
+  var FALLBACK_POLL_MS = 15000;
   var _screenShown = false;
   var _lastServerData = null;
   var _eventSource = null;
+  var _pollTimer = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -46,7 +48,7 @@
   }
 
   // ============================================================
-  // ACTIVATE / DEACTIVATE
+  // ACTIVATE / DEACTIVATE (вызывается из админки)
   // ============================================================
   async function activate(opts) {
     opts = opts || {};
@@ -63,6 +65,7 @@
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try { bcPost({ type: 'activated' }); } catch (e) {}
 
     try {
       var token = localStorage.getItem('session_token');
@@ -83,6 +86,7 @@
 
   async function deactivate() {
     localStorage.removeItem(STORAGE_KEY);
+    try { bcPost({ type: 'deactivated' }); } catch (e) {}
     try {
       var token = localStorage.getItem('session_token');
       if (token) {
@@ -101,7 +105,7 @@
   // ============================================================
   function showScreen(data) {
     if (isAdmin()) return;
-    if (_screenShown && document.getElementById('ncMaintenanceScreen')) return;
+    if (_screenShown && $('ncMaintenanceScreen')) return;
 
     injectCSS();
     var screen = document.createElement('div');
@@ -117,9 +121,9 @@
   }
 
   function hideAllUI() {
-    var side = document.getElementById('sideBar');
-    var main = document.getElementById('mainApp');
-    var login = document.getElementById('loginScreen');
+    var side = $('sideBar');
+    var main = $('mainApp');
+    var login = $('loginScreen');
     if (side) side.style.display = 'none';
     if (main) main.style.display = 'none';
     if (login) login.style.display = 'none';
@@ -133,15 +137,16 @@
       s.classList.remove('nc-on');
       setTimeout(function () { s.remove(); }, 400);
     }
+    var wasShown = _screenShown;
     _screenShown = false;
 
     // Возвращаем UI
-    var login = document.getElementById('loginScreen');
+    var login = $('loginScreen');
     if (login) login.style.display = '';
 
     if (localStorage.getItem('user_email')) {
-      var side = document.getElementById('sideBar');
-      var main = document.getElementById('mainApp');
+      var side = $('sideBar');
+      var main = $('mainApp');
       if (side) side.style.display = 'flex';
       if (main) main.style.display = 'flex';
       if (typeof window.render === 'function') {
@@ -149,11 +154,13 @@
       }
     }
 
-    if (typeof window.spawnConfetti === 'function') {
-      setTimeout(function () { window.spawnConfetti(); }, 200);
-    }
-    if (typeof window.toast === 'function') {
-      window.toast('✅ We\'re back! Thanks for your patience');
+    if (wasShown) {
+      if (typeof window.spawnConfetti === 'function') {
+        setTimeout(function () { window.spawnConfetti(); }, 200);
+      }
+      if (typeof window.toast === 'function') {
+        window.toast('✅ We\'re back! Thanks for your patience');
+      }
     }
   }
 
@@ -275,16 +282,26 @@
   function connectSSE() {
     if (_eventSource) {
       try { _eventSource.close(); } catch (e) {}
+      _eventSource = null;
+    }
+
+    if (typeof EventSource === 'undefined') {
+      console.warn('[maintenance] EventSource not supported — polling only');
+      return;
     }
 
     try {
       var url = getWorker() + '?action=maintenanceStream&_t=' + Date.now();
       _eventSource = new EventSource(url);
 
+      _eventSource.onopen = function () {
+        console.log('[maintenance] ⚡ SSE connected');
+      };
+
       _eventSource.onmessage = function (event) {
         try {
           var data = JSON.parse(event.data);
-          if (data.type === 'status') {
+          if (data && data.type === 'status') {
             handleServerStatus(data.maintenance);
           }
         } catch (e) {}
@@ -296,17 +313,11 @@
         _eventSource = null;
         setTimeout(connectSSE, 3000);
       };
-
-      _eventSource.onopen = function () {
-        console.log('[maintenance] ⚡ SSE connected');
-      };
     } catch (e) {
-      console.warn('[maintenance] SSE not supported, using polling');
-      startPolling();
+      console.warn('[maintenance] SSE init failed, polling only');
     }
   }
 
-  // Реакция на статус с сервера
   function handleServerStatus(maintenance) {
     if (maintenance && maintenance.active) {
       if (maintenance.until && Date.now() > maintenance.until) {
@@ -315,15 +326,17 @@
         return;
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(maintenance));
+      _lastServerData = maintenance;
       showScreen(maintenance);
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      _lastServerData = null;
       if (_screenShown) hideScreen();
     }
   }
 
   // ============================================================
-  // 🔄 FALLBACK POLLING — если SSE не работает
+  // 🔄 FALLBACK POLLING
   // ============================================================
   async function checkServer() {
     try {
@@ -351,32 +364,55 @@
   }
 
   function startPolling() {
-    setInterval(function () {
+    if (_pollTimer) clearInterval(_pollTimer);
+    _pollTimer = setInterval(function () {
       checkServer().then(function (data) {
         if (data) showScreen(data);
         else if (_screenShown) hideScreen();
       });
-    }, CHECK_INTERVAL);
+    }, FALLBACK_POLL_MS);
   }
+
+  // ============================================================
+  // BroadcastChannel — между вкладками
+  // ============================================================
+  var _bc = null;
+  function bcPost(msg) {
+    if (_bc) { try { _bc.postMessage(msg); } catch (e) {} }
+  }
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      _bc = new BroadcastChannel('nc_maintenance');
+      _bc.onmessage = function (ev) {
+        if (!ev || !ev.data) return;
+        if (ev.data.type === 'activated') {
+          var d = get();
+          if (d) showScreen(d);
+        } else if (ev.data.type === 'deactivated') {
+          hideScreen();
+        }
+      };
+    }
+  } catch (e) {}
 
   // ============================================================
   // 🎯 INIT
   // ============================================================
   function autoCheck() {
-    // 1. Мгновенно из localStorage
+    // 1. Мгновенно из localStorage — если уже есть, показываем сразу
     var local = get();
-    if (local && !_screenShown) showScreen(local);
+    if (local && !isAdmin()) showScreen(local);
 
-    // 2. Проверяем сервер сразу
+    // 2. Запускаем SSE (живые обновления)
+    connectSSE();
+
+    // 3. Первая проверка сервера — сразу, чтобы синхронизироваться
     checkServer().then(function (data) {
       if (data) showScreen(data);
       else if (_screenShown) hideScreen();
     });
 
-    // 3. Запускаем SSE (live updates)
-    connectSSE();
-
-    // 4. Fallback polling (если SSE упадёт)
+    // 4. Fallback polling
     startPolling();
 
     // 5. При возврате на вкладку
@@ -398,7 +434,8 @@
     deactivate: deactivate,
     show: function () { var d = get(); if (d) showScreen(d); },
     hide: hideScreen,
-    checkServer: checkServer
+    checkServer: checkServer,
+    reconnectSSE: connectSSE
   };
 
   if (document.readyState === 'loading') {
@@ -407,19 +444,6 @@
     autoCheck();
   }
 
-  // Broadcast в другие вкладки
-  try {
-    var bc = new BroadcastChannel('nc_maintenance');
-    bc.onmessage = function (ev) {
-      if (ev.data && ev.data.type === 'activated') {
-        var d = get();
-        if (d) showScreen(d);
-      } else if (ev.data && ev.data.type === 'deactivated') {
-        hideScreen();
-      }
-    };
-  } catch (e) {}
-
-  console.log('%c[NordicCrypto] ⚙️ maintenance-mode.js v' + MM_VERSION + ' (SSE) loaded',
+  console.log('%c[NordicCrypto] ⚙️ maintenance-mode.js v' + MM_VERSION + ' (SSE LIVE) loaded',
     'color:#8b5cf6;font-weight:bold;font-size:13px');
 })();
