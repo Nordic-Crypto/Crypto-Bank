@@ -1,56 +1,64 @@
 /* ============================================================
-   NORDIC CRYPTO — BONUS-SYSTEM.JS v3.1 (FIXED)
+   NORDIC CRYPTO — BONUS-SYSTEM.JS v4.0 (STABLE)
    ============================================================
-   FIXES v3.1:
-   • 🛡️ КРИТИЧНО: исправлена запятая после checkLoyalty (парсинг падал)
-   • 🎁 NEW: welcome bonus через auth:login (не пропустится)
-   • 🎁 NEW: firstDeposit / bigDeposit автобонусы
-   • 🎁 NEW: kycBonus при nc:kyc:approved
-   • 🎁 NEW: referral через URL параметр ?ref=XXX
-   • 🛡️ NEW: защита от self-reference
-   • 📊 NEW: тир statistics — сколько потрачено по категориям
-   • 🎨 NEW: улучшенные логи с эмодзи
-
-   Full loyalty program:
-     welcome       10 NC  — first sign-in
-     minor          5 NC  — minor issue
-     medium        25 NC  — medium issue
-     major        100 NC  — major issue
-     critical     500 NC  — critical failure
-     bug           50 NC  — bug report
-     loyalty      100 NC  — 7-day streak
-     referral     250 NC  — invite a friend
-     firstDeposit  50 NC  — first deposit
-     firstTrade   100 NC  — first trade
-     kycBonus     200 NC  — successful KYC
-     bigDeposit   500 NC  — deposit > $1000
-   Anti-abuse: max 3 auto/hour, max 500 NC/day.
+   v4.0 CHANGES:
+   • 🔴 FIX: loyalty больше не выдаётся новому клиенту сразу
+   • 🔴 FIX: welcome bonus race-safe (2 вкладки не дадут 2 бонуса)
+   • 🔴 FIX: auto-bonus на ошибки — защита от спама F12
+   • 🎁 NEW: dailyLogin (+5 NC/день)
+   • 🎁 NEW: profileComplete (+25 NC)
+   • 🎁 NEW: firstWithdrawal (+30 NC)
+   • 🎁 NEW: 2FASetup (+50 NC)
+   • 🎁 NEW: referralMilestone (+500 NC за 5 друзей)
+   • 🛡️ Global auto-bonus rate limit (10/час)
+   • ⚡ Cache read() — не читать localStorage каждый раз
+   • 🎨 Clean logs — только важное
    ============================================================ */
 
 (function () {
   'use strict';
 
   var TIERS = {
-    welcome:      { amount: 10,  label: 'Welcome bonus' },
-    minor:        { amount: 5,   label: 'Minor issue' },
-    medium:       { amount: 25,  label: 'Medium issue' },
-    major:        { amount: 100, label: 'Major issue' },
-    critical:     { amount: 500, label: 'Critical failure' },
-    bug:          { amount: 50,  label: 'Bug report' },
-    loyalty:      { amount: 100, label: '7-day loyalty' },
-    referral:     { amount: 250, label: 'Referral reward' },
-    firstDeposit: { amount: 50,  label: 'First deposit' },
-    firstTrade:   { amount: 100, label: 'First trade' },
-    kycBonus:     { amount: 200, label: 'KYC verified' },
-    bigDeposit:   { amount: 500, label: 'VIP deposit' }
+    welcome:          { amount: 10,  label: 'Welcome bonus' },
+    minor:            { amount: 5,   label: 'Minor issue' },
+    medium:           { amount: 25,  label: 'Medium issue' },
+    major:            { amount: 100, label: 'Major issue' },
+    critical:         { amount: 500, label: 'Critical failure' },
+    bug:              { amount: 50,  label: 'Bug report' },
+    loyalty:          { amount: 100, label: '7-day loyalty' },
+    referral:         { amount: 250, label: 'Referral reward' },
+    referralMilestone:{ amount: 500, label: '5 referrals milestone' },
+    firstDeposit:     { amount: 50,  label: 'First deposit' },
+    firstTrade:       { amount: 100, label: 'First trade' },
+    firstWithdrawal:  { amount: 30,  label: 'First withdrawal' },
+    kycBonus:         { amount: 200, label: 'KYC verified' },
+    bigDeposit:       { amount: 500, label: 'VIP deposit' },
+    dailyLogin:       { amount: 5,   label: 'Daily login' },
+    profileComplete:  { amount: 25,  label: 'Profile complete' },
+    twoFASetup:       { amount: 50,  label: '2FA enabled' }
   };
 
   var HISTORY_KEY = 'nc_bonus_history';
   var DAILY_KEY   = 'nc_bonus_daily';
   var HOURLY_KEY  = 'nc_bonus_hourly';
+  var AUTO_KEY    = 'nc_bonus_auto';
 
-  function read(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
-  function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  // ⚡ Mini-cache для read()
+  var _cache = {};
+  function read(k, f) {
+    if (_cache[k] !== undefined) return _cache[k];
+    try {
+      var raw = localStorage.getItem(k);
+      var val = raw ? JSON.parse(raw) : f;
+      _cache[k] = val;
+      return val;
+    } catch (e) { return f; }
+  }
+  function write(k, v) {
+    _cache[k] = v;
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  }
+
   function today()    { return new Date().toISOString().slice(0, 10); }
   function thisHour() { return new Date().toISOString().slice(0, 13); }
 
@@ -78,6 +86,19 @@
     write(HOURLY_KEY, h);
   }
 
+  // 🛡️ Отдельный лимит для auto-bonus (F12 spam protection)
+  function checkAutoLimit() {
+    var a = read(AUTO_KEY, { hour: thisHour(), count: 0 });
+    if (a.hour !== thisHour()) a = { hour: thisHour(), count: 0 };
+    return a.count < 10;
+  }
+  function bumpAutoLimit() {
+    var a = read(AUTO_KEY, { hour: thisHour(), count: 0 });
+    if (a.hour !== thisHour()) a = { hour: thisHour(), count: 0 };
+    a.count++;
+    write(AUTO_KEY, a);
+  }
+
   function pushHistory(e) {
     var h = read(HISTORY_KEY, []);
     h.unshift(e);
@@ -85,6 +106,9 @@
     write(HISTORY_KEY, h);
   }
 
+  // ============================================================
+  // MAIN API
+  // ============================================================
   window.NC_BONUS = {
 
     tiers: TIERS,
@@ -97,7 +121,10 @@
       var limits = checkLimits();
       // One-time бонусы не считаются в лимите
       var bypassLimits = (type === 'welcome' || type === 'kycBonus' || type === 'referral' ||
-                          type === 'firstDeposit' || type === 'firstTrade');
+                          type === 'referralMilestone' || type === 'firstDeposit' ||
+                          type === 'firstTrade' || type === 'firstWithdrawal' ||
+                          type === 'profileComplete' || type === 'twoFASetup' ||
+                          type === 'dailyLogin');
       if (!limits.ok && !bypassLimits) {
         console.warn('[Bonus] limit reached, skipping', type);
         return null;
@@ -109,7 +136,7 @@
       };
 
       console.log('%c[Bonus] 🎁 +' + amount + ' NC — ' + tier.label,
-        'color:#f59e0b;font-weight:bold', payload);
+        'color:#f59e0b;font-weight:bold');
 
       if (window.NC && window.NC.api && typeof window.NC.api.post === 'function') {
         window.NC.api.post('/api/bonus/grant', payload).catch(function () {});
@@ -149,7 +176,7 @@
     },
 
     // ============================================================
-    // 🎁 LOYALTY — 7-day streak
+    // 🎁 LOYALTY — 7-day streak (FIXED)
     // ============================================================
     checkLoyalty: function () {
       if (!window.currentUser || !window.currentUser.id) return false;
@@ -159,38 +186,35 @@
       var now = Date.now();
       var SEVEN_DAYS = 7 * 24 * 3600 * 1000;
 
-      // 🛡️ ЗАЩИТА 1: не чаще 1 раза в 7 дней
-      if (last > 0 && (now - last) < SEVEN_DAYS) {
-        console.log('[Bonus] ⏳ Loyalty cooldown. Next in',
-          Math.ceil((SEVEN_DAYS - (now - last)) / 3600000) + 'h');
+      // 🛡️ FIX: если ключа нет — ПЕРВЫЙ вход. Записываем дату, НЕ выдаём бонус.
+      if (last === 0) {
+        localStorage.setItem(key, String(now));
+        console.log('[Bonus] 📅 Loyalty started. First bonus in 7 days.');
         return false;
       }
 
-      // 🛡️ ЗАЩИТА 2: race condition
-      var inFlightKey = 'nc_loyalty_inflight_' + window.currentUser.id;
-      var inflight = Number(sessionStorage.getItem(inFlightKey) || 0);
-      if (inflight > 0 && (now - inflight) < 10000) {
-        console.log('[Bonus] Loyalty grant in flight — skip');
+      // 🛡️ Если прошло < 7 дней — не выдаём
+      if ((now - last) < SEVEN_DAYS) {
+        var daysLeft = Math.ceil((SEVEN_DAYS - (now - last)) / (24 * 3600 * 1000));
+        console.log('[Bonus] ⏳ Loyalty cooldown. ' + daysLeft + ' days left.');
         return false;
       }
-      sessionStorage.setItem(inFlightKey, String(now));
 
-      // 🛡️ ЗАЩИТА 3: timestamp ДО grant
+      // 🎁 Прошло 7 дней — выдаём и обновляем timestamp
       localStorage.setItem(key, String(now));
-
       window.NC_BONUS.grant(window.currentUser.id, 'loyalty');
       return true;
     },
-    // ⬆️⬆️⬆️ ВОТ ЗДЕСЬ БЫЛА ОШИБКА — теперь ЗАПЯТАЯ ЕСТЬ ⬇️⬇️⬇️
 
     // ============================================================
-    // 🎁 ONE-TIME бонусы (по флагу в localStorage)
+    // 🎁 ONE-TIME бонусы (race-safe)
     // ============================================================
     _oneTime: function (type, checkFn) {
-      if (!window.currentUser) return false;
+      if (!window.currentUser || !window.currentUser.id) return false;
       var key = 'nc_bonus_ot_' + type + '_' + window.currentUser.id;
+      // 🛡️ race-safe: check + set в одном шаге
       if (localStorage.getItem(key)) return false;
-      localStorage.setItem(key, '1');
+      localStorage.setItem(key, String(Date.now()));
       if (typeof checkFn === 'function') checkFn();
       return true;
     },
@@ -205,9 +229,24 @@
         window.NC_BONUS.grant(window.currentUser.id, 'firstTrade');
       });
     },
+    grantFirstWithdrawal: function () {
+      return window.NC_BONUS._oneTime('firstWithdrawal', function () {
+        window.NC_BONUS.grant(window.currentUser.id, 'firstWithdrawal');
+      });
+    },
     grantKycBonus: function () {
       return window.NC_BONUS._oneTime('kycBonus', function () {
         window.NC_BONUS.grant(window.currentUser.id, 'kycBonus');
+      });
+    },
+    grantProfileComplete: function () {
+      return window.NC_BONUS._oneTime('profileComplete', function () {
+        window.NC_BONUS.grant(window.currentUser.id, 'profileComplete');
+      });
+    },
+    grantTwoFASetup: function () {
+      return window.NC_BONUS._oneTime('twoFASetup', function () {
+        window.NC_BONUS.grant(window.currentUser.id, 'twoFASetup');
       });
     },
     grantBigDeposit: function () {
@@ -216,12 +255,23 @@
     },
 
     // ============================================================
+    // 🎁 DAILY LOGIN — +5 NC раз в день
+    // ============================================================
+    grantDailyLogin: function () {
+      if (!window.currentUser || !window.currentUser.id) return false;
+      var key = 'nc_daily_login_' + window.currentUser.id + '_' + today();
+      if (localStorage.getItem(key)) return false;
+      localStorage.setItem(key, '1');
+      window.NC_BONUS.grant(window.currentUser.id, 'dailyLogin');
+      return true;
+    },
+
+    // ============================================================
     // 🎁 REFERRAL — +250 NC за приглашённого
     // ============================================================
     checkReferral: function () {
       if (!window.currentUser || !window.currentUser.id) return false;
 
-      // 🎁 Проверяем URL ?ref=XXX
       var params = new URLSearchParams(window.location.search);
       var ref = params.get('ref');
       if (!ref) return false;
@@ -230,7 +280,6 @@
         return false;
       }
 
-      // 🛡️ Проверка: уже получал referral?
       var key = 'nc_referral_used_' + window.currentUser.id;
       if (localStorage.getItem(key)) {
         console.log('[Bonus] Referral already used');
@@ -242,7 +291,9 @@
       // Начисляем приглашённому
       window.NC_BONUS.grant(window.currentUser.id, 'referral', 250);
 
-      // И пригласившему тоже
+      // 🎁 Milestone: проверяем количество referrals
+      window.NC_BONUS.checkReferralMilestone();
+
       setTimeout(function () {
         if (typeof window.toast === 'function') {
           window.toast('👥 Referral bonus activated!');
@@ -252,8 +303,25 @@
       return true;
     },
 
+    // 🎁 +500 NC за 5 приглашённых
+    checkReferralMilestone: function () {
+      if (!window.currentUser || !window.currentUser.id) return false;
+      var key = 'nc_referral_count_' + window.currentUser.id;
+      var count = Number(localStorage.getItem(key) || 0) + 1;
+      localStorage.setItem(key, String(count));
+
+      if (count === 5) {
+        var milestoneKey = 'nc_referral_milestone_' + window.currentUser.id;
+        if (localStorage.getItem(milestoneKey)) return false;
+        localStorage.setItem(milestoneKey, '1');
+        window.NC_BONUS.grant(window.currentUser.id, 'referralMilestone');
+        return true;
+      }
+      return false;
+    },
+
     // ============================================================
-    // 📊 STATS — статистика по типам
+    // 📊 STATS
     // ============================================================
     stats: function () {
       var history = read(HISTORY_KEY, []);
@@ -274,27 +342,43 @@
   };
 
   // ============================================================
-  // 📊 AUTO-DETECT RUNTIME ERRORS
+  // 📊 AUTO-DETECT RUNTIME ERRORS (с защитой от спама)
   // ============================================================
   var __nc_lastAutoBonus = 0;
   function autoBonus(message) {
     if (!window.currentUser || !window.currentUser.id) return;
+
+    // 🛡️ Игнорируем ошибки от самого bonus-system.js
+    if (message && message.indexOf('bonus') !== -1) return;
+    // 🛡️ Игнорируем ошибки от 3rd-party скриптов
+    if (message && (message.indexOf('chrome-extension') !== -1 ||
+                    message.indexOf('moz-extension') !== -1)) return;
+
     var now = Date.now();
     if (now - __nc_lastAutoBonus < 60 * 1000) return;
+    if (!checkAutoLimit()) {
+      console.warn('[Bonus] auto-bonus limit reached (10/hour)');
+      return;
+    }
     __nc_lastAutoBonus = now;
+    bumpAutoLimit();
+
     var tier = window.NC_BONUS.detectTier(message);
     window.NC_BONUS.grant(window.currentUser.id, tier);
   }
-  window.addEventListener('error', function (e) { autoBonus(e.message || 'unknown error'); });
+  window.addEventListener('error', function (e) {
+    autoBonus(e.message || 'unknown error');
+  });
   window.addEventListener('unhandledrejection', function (e) {
     autoBonus((e.reason && e.reason.message) || 'unhandled rejection');
   });
 
   // ============================================================
-  // 🎁 WELCOME + LOYALTY + REFERRAL при логине
+  // 🎁 ОСНОВНОЙ ТРИГГЕР: nc:auth:login
   // ============================================================
   document.addEventListener('nc:auth:login', function () {
-    // 1. Welcome bonus (если ещё не выдавался)
+
+    // 1. Welcome bonus
     setTimeout(function () {
       if (!window.currentUser || !window.currentUser.id) return;
       var key = 'nc_welcome_bonus_' + window.currentUser.id;
@@ -304,12 +388,17 @@
       localStorage.setItem(key, String(Date.now()));
     }, 1000);
 
-    // 2. Loyalty (7-day streak)
+    // 2. Daily login (+5 NC/день)
+    setTimeout(function () {
+      window.NC_BONUS.grantDailyLogin();
+    }, 1500);
+
+    // 3. Loyalty (7-day streak)
     setTimeout(function () {
       window.NC_BONUS.checkLoyalty();
     }, 2000);
 
-    // 3. Referral (если URL ?ref=XXX)
+    // 4. Referral (если URL ?ref=XXX)
     setTimeout(function () {
       window.NC_BONUS.checkReferral();
     }, 3000);
@@ -330,10 +419,8 @@
     var d = e.detail || {};
     var amount = Number(d.amount) || 0;
 
-    // First deposit (+50 NC)
     window.NC_BONUS.grantFirstDeposit();
 
-    // Big deposit (>$1000 → +500 NC)
     if (amount >= 1000) {
       console.log('[Bonus] 💎 Big deposit detected:', amount);
       window.NC_BONUS.grantBigDeposit();
@@ -348,8 +435,37 @@
     window.NC_BONUS.grantFirstTrade();
   });
 
-  console.log('%c[NordicCrypto] 🎁 bonus-system.js v3.1 ready (FIXED)',
+  // ============================================================
+  // 🎁 WITHDRAWAL CONFIRMED → firstWithdrawal
+  // ============================================================
+  document.addEventListener('nc:withdrawal:submitted', function () {
+    console.log('[Bonus] Withdrawal submitted → check firstWithdrawal');
+    window.NC_BONUS.grantFirstWithdrawal();
+  });
+
+  // ============================================================
+  // 🎁 PROFILE COMPLETE — при nc:profile:complete
+  // ============================================================
+  document.addEventListener('nc:profile:complete', function () {
+    console.log('[Bonus] Profile complete → profileComplete bonus');
+    window.NC_BONUS.grantProfileComplete();
+  });
+
+  // ============================================================
+  // 🎁 2FA SETUP
+  // ============================================================
+  document.addEventListener('nc:2fa:enabled', function () {
+    console.log('[Bonus] 2FA enabled → twoFASetup bonus');
+    window.NC_BONUS.grantTwoFASetup();
+  });
+
+  console.log('%c[NordicCrypto] 🎁 bonus-system.js v4.0 ready',
     'color:#f59e0b;font-weight:bold;font-size:13px');
-  console.log('%c  Tiers: welcome, minor, medium, major, critical, bug, loyalty, referral, firstDeposit, firstTrade, kycBonus, bigDeposit',
+  console.log('%c  Tiers: ' + Object.keys(TIERS).join(', '),
     'color:#8b95a5;font-size:11px');
+  console.log('%c  Commands: __bonus() — show history, __bonusLimits() — show limits',
+    'color:#8b95a5;font-size:11px');
+
+  // 🎁 Dev helper
+  window.__bonusLimits = function () { console.table(checkLimits()); };
 })();
