@@ -36,13 +36,11 @@
   // 0. FIX: Онбординг для banking-клиентов без карты
   // ============================================================
 
-  var _onboardingShown = false;
+    var _onboardingShown = false;
+  var _onboardingWatcher = null;
 
   function checkNeedOnboarding() {
     if (!window.st) return false;
-    if (_onboardingShown) return false;
-
-    // Пропускаем для админа
     if (localStorage.getItem('user_role') === 'admin') return false;
     if (window.adminViewingEmail) return false;
 
@@ -50,47 +48,79 @@
     var vStatus = (window.st.verification && window.st.verification.status) || null;
     var hasCard = !!(window.st.card && window.st.card.num);
 
-    // Онбординг нужен когда: approved + banking + нет карты
     var needOnboarding = (vStatus === 'approved') && (accountType === 'banking') && !hasCard;
 
-    if (!needOnboarding) return false;
-
-    // Проверка: не показывается ли уже модалка депозита (не перебиваем)
-    if (document.querySelector('.nc-df-modal')) {
-      console.log('[fixes] Onboarding deferred — deposit modal open');
+    // Если карта появилась — сбрасываем флаг и останавливаем watcher
+    if (!needOnboarding) {
+      if (_onboardingShown) {
+        _onboardingShown = false;
+        if (_onboardingWatcher) {
+          clearInterval(_onboardingWatcher);
+          _onboardingWatcher = null;
+        }
+      }
       return false;
     }
 
-    var onboardEl = document.getElementById('onboard');
-    var side = document.getElementById('sideBar');
-    var main = document.getElementById('mainApp');
-    var verifyScreen = document.getElementById('verifyScreen');
-    var pendingScreen = document.getElementById('pendingScreen');
+    // Не перебиваем модалку депозита
+    if (document.querySelector('.nc-df-modal')) return false;
 
+    var onboardEl = document.getElementById('onboard');
     if (!onboardEl) return false;
 
-    // Скрываем всё другое
-    if (verifyScreen) verifyScreen.classList.remove('on');
-    if (pendingScreen) pendingScreen.classList.remove('on');
-    if (side) side.style.display = 'none';
-    if (main) main.style.display = 'none';
-
-    // Показываем онбординг
+    // 🎯 Показываем онбординг (первый раз или если его закрыли)
     if (!onboardEl.classList.contains('on')) {
+      // Скрываем всё остальное
+      var side = document.getElementById('sideBar');
+      var main = document.getElementById('mainApp');
+      var dash = document.getElementById('dash');
+      var exDash = document.getElementById('exchangeDash');
+      var verifyScreen = document.getElementById('verifyScreen');
+      var pendingScreen = document.getElementById('pendingScreen');
+
+      if (side) side.style.display = 'none';
+      if (main) main.style.display = 'none';
+      if (dash) { dash.classList.remove('on'); dash.style.display = 'none'; }
+      if (exDash) { exDash.classList.remove('on'); exDash.style.display = 'none'; }
+      if (verifyScreen) { verifyScreen.classList.remove('on'); verifyScreen.style.display = 'none'; }
+      if (pendingScreen) { pendingScreen.classList.remove('on'); pendingScreen.style.display = 'none'; }
+
       onboardEl.classList.add('on');
 
       // Сброс на первый шаг
       var steps = document.querySelectorAll('.onb-step');
-      for (var i = 0; i < steps.length; i++) {
-        steps[i].classList.remove('on');
-      }
+      for (var i = 0; i < steps.length; i++) steps[i].classList.remove('on');
       var step1 = document.getElementById('onbStep1');
       if (step1) step1.classList.add('on');
 
       console.log('%c🎯 Onboarding shown — banking client without card',
         'color:#47dcff;font-weight:bold;font-size:13px');
-
       haptic(20);
+
+      // 🎯 Запускаем watcher — перекрываем любые попытки показать dashboard
+      if (!_onboardingWatcher) {
+        _onboardingWatcher = setInterval(function() {
+          if (!_onboardingShown && !document.getElementById('onboard').classList.contains('on')) return;
+          
+          // Пока онбординг открыт — dashboard должен быть скрыт
+          var ob = document.getElementById('onboard');
+          if (!ob || !ob.classList.contains('on')) return;
+          
+          var side = document.getElementById('sideBar');
+          var main = document.getElementById('mainApp');
+          var dash = document.getElementById('dash');
+          var exDash = document.getElementById('exchangeDash');
+          var verifyScreen = document.getElementById('verifyScreen');
+          var pendingScreen = document.getElementById('pendingScreen');
+
+          if (side && side.style.display !== 'none') side.style.display = 'none';
+          if (main && main.style.display !== 'none') main.style.display = 'none';
+          if (dash && dash.classList.contains('on')) { dash.classList.remove('on'); dash.style.display = 'none'; }
+          if (exDash && exDash.classList.contains('on')) { exDash.classList.remove('on'); exDash.style.display = 'none'; }
+          if (verifyScreen && verifyScreen.classList.contains('on')) { verifyScreen.classList.remove('on'); verifyScreen.style.display = 'none'; }
+          if (pendingScreen && pendingScreen.classList.contains('on')) { pendingScreen.classList.remove('on'); pendingScreen.style.display = 'none'; }
+        }, 500);
+      }
     }
 
     _onboardingShown = true;
