@@ -17,6 +17,16 @@
 
 (function () {
   'use strict';
+   
+     // ============================================================
+  // 🛡️ FIX: гарантируем WORKER_URL до всех fetch-вызовов
+  // ============================================================
+  if (!window.WORKER_URL || typeof window.WORKER_URL !== 'string') {
+    window.WORKER_URL = 'https://nordic-deposit-checker.otis-790.workers.dev';
+  }
+  if (!window.WORKER_LOGIN_URL || typeof window.WORKER_LOGIN_URL !== 'string') {
+    window.WORKER_LOGIN_URL = window.WORKER_URL;
+  }
 
   // ============================================================
   // SECTION 1: UTILITIES
