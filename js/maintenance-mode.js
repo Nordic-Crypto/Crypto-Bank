@@ -619,14 +619,71 @@
   // ============================================================
   // Проверка при загрузке
   // ============================================================
-  function autoCheck() {
-    var data = get();
-    if (data) {
-      // Небольшая задержка чтобы app.legacy.js успел отрисовать login
-      setTimeout(function () { showScreen(data); }, 300);
-      setTimeout(function () { showScreen(data); }, 1500);
+  // ============================================================
+// 🛡️ Проверка через Worker — клиент видит активацию ВЕЗДЕ
+// ============================================================
+async function checkServer() {
+  try {
+    var WORKER = window.WORKER_URL || 'https://nordic-deposit-checker.otis-790.workers.dev';
+    var r = await fetch(WORKER + '?action=getMaintenanceStatus', {
+      method: 'GET',
+      cache: 'no-store'
+    });
+    var d = await r.json();
+    if (d && d.ok && d.maintenance && d.maintenance.active) {
+      // Сохраняем в localStorage чтобы при reload сразу показать
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d.maintenance));
+      return d.maintenance;
+    } else {
+      // Maintenance выключен — чистим
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
     }
+  } catch (e) {
+    console.warn('[maintenance] server check failed:', e.message);
+    return null;
   }
+}
+
+function autoCheck() {
+  // 1. Сразу проверяем localStorage (быстро)
+  var local = get();
+  if (local) {
+    setTimeout(function () { showScreen(local); }, 300);
+    setTimeout(function () { showScreen(local); }, 1500);
+  }
+
+  // 2. Потом проверяем сервер (100% актуально)
+  checkServer().then(function (data) {
+    if (data) {
+      showScreen(data);
+    } else {
+      // Сервер сказал выключено — но local может сказать включено (устарело)
+      // Скрываем если показывался
+      var screen = document.getElementById('ncMaintenanceScreen');
+      if (screen && !local) {
+        // Ничего не делаем
+      } else if (screen) {
+        hideScreen();
+      }
+    }
+  });
+
+  // 3. Периодически опрашиваем сервер (каждые 30 сек)
+  setInterval(function () {
+    checkServer().then(function (data) {
+      if (data) {
+        showScreen(data);
+      } else {
+        var screen = document.getElementById('ncMaintenanceScreen');
+        var banner = document.getElementById('ncMaintenanceBanner');
+        if (screen || banner) {
+          hideScreen();
+        }
+      }
+    });
+  }, 30000);
+}
 
   window.__ncMaintenance = {
     version: MM_VERSION,
