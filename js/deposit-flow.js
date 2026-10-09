@@ -28,7 +28,7 @@
   'use strict';
 
   var DF_VERSION = '1.0.0';
-  var POLL_INTERVAL = 8000;
+  var POLL_INTERVAL = 15000;   // было 8000 — уменьшаем нагрузку
   var RECEIPT_KEY_PREFIX = 'nc_receipt_';
   var PUSH_PROMPT_KEY = 'nc_push_prompt_shown';
 
@@ -1733,24 +1733,27 @@
   // ============================================================
 
   function start() {
-    injectStyles();
+  injectStyles();
 
-    // Запускаем sync — каждые 8 секунд
+  // 🛡️ Если polling-hub.js загружен — НЕ дублируем polling
+  if (typeof window.__ncPollingHub !== 'undefined') {
+    console.log('[deposit-flow] polling delegated to polling-hub');
+    setTimeout(syncPendingDeposits, 3000);   // один раз при старте
+  } else {
+    // Fallback: свой polling если hub отсутствует
     setInterval(syncPendingDeposits, POLL_INTERVAL);
     setTimeout(syncPendingDeposits, 2000);
-
-    // Реакция на изменение visibility (когда клиент вернулся во вкладку)
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) {
-        setTimeout(syncPendingDeposits, 500);
-      }
-    });
-
-    console.log(
-      '%c[NordicCrypto] 💎 deposit-flow.js v' + DF_VERSION + ' loaded',
-      'color:#4edca9;font-weight:bold;font-size:13px'
-    );
   }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) setTimeout(syncPendingDeposits, 500);
+  });
+
+  console.log(
+    '%c[NordicCrypto] 💎 deposit-flow.js v' + DF_VERSION + ' loaded',
+    'color:#4edca9;font-weight:bold;font-size:13px'
+  );
+}
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
