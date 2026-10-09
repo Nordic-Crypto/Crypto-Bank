@@ -83,14 +83,16 @@
     setTimeout(function () { window.playTone(1047, 0.6, 'sine', 0.12); }, 300); // C high
   }
 
-  // ============================================================
+    // ============================================================
   // 1. INCOMING DEPOSIT MODAL
   // ============================================================
 
   window.__ncShowIncomingDeposit = function (pendingDeposit) {
     if (!pendingDeposit) return;
-         if (typeof window.__ncPausePolling === 'function') {
-      window.__ncPausePolling(180000);  // пауза 3 минуты пока модалка открыта
+
+    // 🎯 Пауза polling — чтобы UI был отзывчивым
+    if (typeof window.__ncPausePolling === 'function') {
+      window.__ncPausePolling(180000);  // 3 минуты
     }
 
     // Проверка — не показывали ли уже в этой сессии
