@@ -545,16 +545,7 @@
           if (d.id === pd.id) { d.surveyCompleted = true; d.creditedAt = Date.now(); }
         });
       }
-// 🎁 Триггерим firstDeposit bonus
-if (typeof window.NC_BONUS === 'object' &&
-    typeof window.NC_BONUS.grantFirstDeposit === 'function') {
-  window.NC_BONUS.grantFirstDeposit();
-}
 
-// 🎁 Emit событие — другие модули могут слушать
-document.dispatchEvent(new CustomEvent('nc:deposit:confirmed', {
-  detail: { depositId: pd.id, amount: pd.usdValue, symbol: pd.symbol }
-}));
       playCreditedSound();
       haptic([30, 50, 30, 50, 30]);
 
