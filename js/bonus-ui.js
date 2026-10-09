@@ -114,13 +114,32 @@
         background: linear-gradient(135deg, rgba(245,158,11,.25), rgba(236,72,153,.2));
       }
       .nc-badge-icon {
-        font-size: 1rem;
-        animation: ncCoinSpin 3s linear infinite;
-      }
-      @keyframes ncCoinSpin {
-        0% { transform: rotateY(0deg); }
-        100% { transform: rotateY(360deg); }
-      }
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: ncCoinSpin 3s linear infinite;
+  transform-style: preserve-3d;
+}
+@keyframes ncCoinSpin {
+  0%   { transform: rotateY(0deg); }
+  50%  { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.nc-badge-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nc-rewards-icon svg {
+  filter: drop-shadow(0 4px 12px rgba(245,158,11,.6));
+}
+
+.nc-rewards-level svg,
+.nc-bonus-stat-value svg {
+  vertical-align: middle;
+}
       .nc-badge-amount {
         font-family: ui-monospace, monospace;
         color: #fff;
