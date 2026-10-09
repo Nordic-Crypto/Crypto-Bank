@@ -1,11 +1,11 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.8 — LOADER
+   NORDIC CRYPTO — APP.JS v4.9 — LOADER
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.8.0';
+  var APP_VERSION = '4.9.0';
   var MODULES = [
     'js/core.js',
     'js/auth.js',
@@ -17,7 +17,8 @@
     'js/fixes.js',
     'js/chat-fix.js',
     'js/trade-terminal.js',
-    'js/polling-hub.js'          // ← НОВЫЙ: последний, управляет всеми polling'ами
+    'js/polling-hub.js',
+    'js/session-fix.js'          // ← НОВЫЙ: последний, переопределяет logout
   ];
 
   console.log('%c[NordicCrypto] 🚀 Loader v' + APP_VERSION + ' starting...',
