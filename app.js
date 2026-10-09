@@ -1,11 +1,11 @@
 /* ============================================================
-   NORDIC CRYPTO — APP.JS v4.6 — LOADER
+   NORDIC CRYPTO — APP.JS v4.7 — LOADER
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var APP_VERSION = '4.6.0';
+  var APP_VERSION = '4.7.0';
   var MODULES = [
     'js/core.js',
     'js/auth.js',
@@ -13,6 +13,7 @@
     'js/legacy-fix.js',
     'js/withdraw-flow.js',
     'js/withdraw-confirmations.js',
+    'js/deposit-flow.js',
     'js/fixes.js',
     'js/chat-fix.js',
     'js/trade-terminal.js'
@@ -43,15 +44,9 @@
     document.head.appendChild(script);
   }
 
-  window.__NC_RELOAD = function () {
-    var v = prompt('Введите версию:');
-    if (v) { localStorage.setItem('nc_force_version', v); location.reload(); }
-  };
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { loadModules(0); });
   } else {
     loadModules(0);
   }
-
 })();
