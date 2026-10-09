@@ -1,694 +1,418 @@
 /* ============================================================
-   NORDIC CRYPTO — WITHDRAWAL FLOW v1.0
-   Professional multi-step withdrawal UX.
-   Separate flows for IBAN, Card, Crypto.
+   NORDIC CRYPTO — WITHDRAWAL FLOW v2.0
    ============================================================ */
 
-/* ============================================================
-   BASE — modal backdrop & card
-   ============================================================ */
-
+/* ===== BASE MODAL ===== */
 .wd-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: none;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0; z-index: 10000;
+  display: none; align-items: center; justify-content: center;
   padding: 20px;
 }
-
-.wd-modal.on {
-  display: flex;
-}
-
+.wd-modal.on { display: flex; }
 .wd-modal-bg {
-  position: absolute;
-  inset: 0;
-  background: rgba(3, 6, 11, 0.85);
-  backdrop-filter: blur(16px);
-  animation: wdFadeIn 0.25s ease;
+  position: absolute; inset: 0;
+  background: rgba(3,6,11,.85);
+  backdrop-filter: blur(12px);
+  animation: wdFadeIn .25s ease;
 }
-
-@keyframes wdFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+@keyframes wdFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .wd-modal-card {
   position: relative;
   background: linear-gradient(145deg, #0f1720, #0a0e15);
-  border: 1px solid rgba(139, 92, 246, 0.25);
+  border: 1px solid rgba(139,92,246,.25);
   border-radius: 24px;
-  width: 100%;
-  max-width: 480px;
+  width: 100%; max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
   padding: 28px;
-  box-shadow:
-    0 40px 100px -20px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(255, 255, 255, 0.03);
   color: #e7edf5;
-  animation: wdCardIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 40px 100px -20px rgba(0,0,0,.9);
+  animation: wdCardIn .4s cubic-bezier(.34,1.56,.64,1);
 }
-
 @keyframes wdCardIn {
-  from { opacity: 0; transform: translateY(30px) scale(0.94); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(30px) scale(.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .wd-modal-card::-webkit-scrollbar { width: 6px; }
-.wd-modal-card::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
+.wd-modal-card::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
 
 /* ============================================================
-   FORM STAGE (step 0 — before submit)
+   STAGE 1 — FORM
    ============================================================ */
+.wd-form-stage { display: block; }
 
 .wd-form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: flex; justify-content: space-between; align-items: flex-start;
   margin-bottom: 24px;
 }
-
 .wd-form-title {
-  font-size: 1.4rem;
-  font-weight: 800;
+  font-size: 1.4rem; font-weight: 800;
   background: linear-gradient(100deg, #fff, #c4b5fd);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  margin: 0 0 4px;
-  letter-spacing: -0.02em;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; margin: 0 0 4px;
 }
-
-.wd-form-sub {
-  font-size: 0.85rem;
-  color: #8b95a5;
-  margin: 0;
-}
-
+.wd-form-sub { font-size: .85rem; color: #8b95a5; margin: 0; }
 .wd-form-close {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #8b95a5;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.15s;
-  line-height: 1;
-  font-family: inherit;
-  flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  color: #8b95a5; font-size: 20px; cursor: pointer;
+  font-family: inherit; transition: all .15s;
+  flex-shrink: 0; line-height: 1;
 }
-
-.wd-form-close:hover {
-  background: rgba(255, 84, 112, 0.15);
-  border-color: rgba(255, 84, 112, 0.4);
-  color: #ff5470;
-}
-
-.wd-available {
-  background: linear-gradient(135deg, rgba(71, 220, 255, 0.08), rgba(139, 92, 246, 0.08));
-  border: 1px solid rgba(71, 220, 255, 0.2);
-  border-radius: 14px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.wd-available-label {
-  font-size: 0.72rem;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 700;
-}
-
-.wd-available-value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #47dcff;
-  font-family: ui-monospace, monospace;
-  letter-spacing: -0.02em;
-}
+.wd-form-close:hover { background: rgba(255,84,112,.15); border-color: rgba(255,84,112,.4); color: #ff5470; }
 
 .wd-label {
   display: block;
-  font-size: 0.72rem;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 700;
-  margin: 14px 0 8px;
+  font-size: .72rem; color: #7a8a9e;
+  text-transform: uppercase; letter-spacing: 1px;
+  font-weight: 700; margin: 14px 0 8px;
 }
-
 .wd-input {
-  width: 100%;
-  padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%; padding: 14px 16px;
+  background: rgba(0,0,0,.4);
+  border: 1px solid rgba(255,255,255,.08);
   border-radius: 12px;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  color: #fff; font-size: 15px; font-weight: 600;
   font-family: ui-monospace, monospace;
-  outline: none;
-  transition: all 0.15s;
+  outline: none; transition: all .15s;
   box-sizing: border-box;
 }
-
 .wd-input:focus {
-  border-color: rgba(71, 220, 255, 0.5);
-  box-shadow: 0 0 0 3px rgba(71, 220, 255, 0.1);
+  border-color: rgba(71,220,255,.5);
+  box-shadow: 0 0 0 3px rgba(71,220,255,.1);
 }
-
-select.wd-input {
-  background-color: #0f1720;
-  color: #e7edf5;
-  cursor: pointer;
-}
+select.wd-input { background-color: #0f1720; color: #e7edf5; cursor: pointer; }
 
 .wd-error {
   margin: 12px 0 0;
   padding: 12px 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.3);
   border-radius: 10px;
-  color: #f87171;
-  font-size: 13px;
+  color: #f87171; font-size: 13px;
 }
 
-.wd-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 24px;
-}
-
+.wd-actions { display: flex; gap: 10px; margin-top: 24px; }
 .wd-btn {
-  flex: 1;
-  padding: 14px 20px;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-family: inherit;
+  flex: 1; padding: 14px 20px;
+  border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 800;
+  cursor: pointer; font-family: inherit;
+  transition: all .2s cubic-bezier(.34,1.56,.64,1);
   color: #fff;
 }
-
-.wd-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
-.wd-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-.wd-btn-cancel {
-  background: rgba(255, 255, 255, 0.05);
-  color: #8b95a5;
-}
-
+.wd-btn:hover { transform: translateY(-1px); }
+.wd-btn-cancel { background: rgba(255,255,255,.05); color: #8b95a5; }
 .wd-btn-submit {
   background: linear-gradient(135deg, #8b5cf6, #ec4899);
-  box-shadow: 0 8px 24px -8px rgba(139, 92, 246, 0.6);
+  box-shadow: 0 8px 24px -8px rgba(139,92,246,.6);
 }
 
 /* ============================================================
-   PROCESSING STAGE (step 1 — animations)
+   STAGE 2 — PROCESSING
    ============================================================ */
-
 .wd-processing {
   display: none;
   text-align: center;
   padding: 20px 0;
+  animation: wdStageIn .35s ease;
+}
+.wd-processing[style*="display: block"] { display: block !important; }
+
+@keyframes wdStageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.wd-processing.on { display: block; }
-
-.wd-processing-icon {
-  width: 100px;
-  height: 100px;
+/* 🎯 Большая иконка в центре */
+.wd-stage-icon {
+  width: 96px; height: 96px;
   border-radius: 50%;
   margin: 0 auto 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 42px;
   position: relative;
 }
-
-.wd-processing-icon::after {
-  content: '';
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  opacity: 0.3;
-  animation: wdPulseRing 2s ease-out infinite;
+.wd-stage-icon.bank {
+  background: rgba(71,220,255,.08);
+  border: 2px solid rgba(71,220,255,.35);
+  animation: wdPulse 2s ease-in-out infinite;
 }
-
-@keyframes wdPulseRing {
-  0% { transform: scale(1); opacity: 0.4; }
-  100% { transform: scale(1.4); opacity: 0; }
+.wd-stage-icon.card {
+  background: rgba(236,72,153,.08);
+  border: 2px solid rgba(236,72,153,.35);
+  animation: wdPulse 2s ease-in-out infinite;
 }
-
-.wd-processing-icon.bank {
-  background: linear-gradient(135deg, rgba(71, 220, 255, 0.15), rgba(71, 220, 255, 0.05));
-  color: #47dcff;
-  border: 2px solid rgba(71, 220, 255, 0.3);
+.wd-stage-icon.crypto {
+  background: rgba(167,139,250,.08);
+  border: 2px solid rgba(167,139,250,.35);
+  animation: wdPulse 2s ease-in-out infinite;
 }
-
-.wd-processing-icon.card {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(236, 72, 153, 0.05));
-  color: #ec4899;
-  border: 2px solid rgba(236, 72, 153, 0.3);
-}
-
-.wd-processing-icon.crypto {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
-  color: #a78bfa;
-  border: 2px solid rgba(139, 92, 246, 0.3);
-}
-
-.wd-processing-title {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #fff;
-  margin: 0 0 8px;
-}
-
-.wd-processing-desc {
-  font-size: 0.9rem;
-  color: #8b95a5;
-  margin: 0 0 28px;
-  line-height: 1.5;
-}
-
-/* --- Progress steps --- */
-.wd-progress-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  text-align: left;
-  margin-bottom: 20px;
-}
-
-.wd-step {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  opacity: 0.4;
-  transition: opacity 0.3s;
-}
-
-.wd-step.active,
-.wd-step.done {
-  opacity: 1;
-}
-
-.wd-step-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 900;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  color: #64748b;
-  transition: all 0.3s;
-}
-
-.wd-step.active .wd-step-icon {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.6);
-  color: #a78bfa;
-  animation: wdStepPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes wdStepPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
-}
-
-.wd-step.done .wd-step-icon {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: #10b981;
-  color: #10b981;
-}
-
-.wd-step-text {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 600;
-  color: #cbd5e1;
-}
-
-.wd-step-time {
-  font-size: 11px;
-  color: #64748b;
-  font-family: ui-monospace, monospace;
-}
-
-/* --- Live data panel --- */
-.wd-live-data {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  padding: 16px;
-  text-align: left;
-  margin-bottom: 16px;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-}
-
-.wd-live-data:empty { display: none; }
-
-.wd-live-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  gap: 12px;
-}
-
-.wd-live-row:not(:last-child) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.wd-live-label {
-  color: #64748b;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-
-.wd-live-value {
-  color: #e7edf5;
-  font-weight: 700;
-  text-align: right;
-  word-break: break-all;
-}
-
-.wd-live-value.hash {
-  color: #47dcff;
-  font-size: 11px;
-}
-
-.wd-live-value.hash a {
-  color: #47dcff;
-  text-decoration: none;
-}
-
-.wd-live-value.hash a:hover { text-decoration: underline; }
-
-.wd-live-value.positive { color: #10b981; }
-.wd-live-value.warning { color: #fbbf24; }
-.wd-live-value.muted { color: #64748b; font-weight: 500; }
-
-/* --- Copy button --- */
-.wd-copy-btn {
-  background: transparent;
-  border: none;
-  color: #47dcff;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: background 0.15s;
-}
-.wd-copy-btn:hover { background: rgba(71, 220, 255, 0.1); }
-
-/* ============================================================
-   SUCCESS STAGE
-   ============================================================ */
-
-.wd-success {
-  display: none;
-  text-align: center;
-  padding: 20px 0;
-}
-
-.wd-success.on { display: block; }
-
-.wd-success-icon {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  margin: 0 auto 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 44px;
+.wd-stage-icon.success-icon {
   background: linear-gradient(135deg, #10b981, #34d399);
-  color: #fff;
-  box-shadow: 0 20px 50px -10px rgba(16, 185, 129, 0.7);
-  animation: wdSuccessPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: none;
+  box-shadow: 0 20px 60px -10px rgba(16,185,129,.7);
+  animation: wdPop .6s cubic-bezier(.34,1.56,.64,1);
 }
 
-@keyframes wdSuccessPop {
+@keyframes wdPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(71,220,255,.25); }
+  50%      { transform: scale(1.05); box-shadow: 0 0 50px rgba(71,220,255,.5); }
+}
+@keyframes wdPop {
   0% { transform: scale(0); }
-  50% { transform: scale(1.15); }
+  60% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
 
-.wd-success-title {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #fff;
-  margin: 0 0 8px;
+.wd-stage-title {
+  font-size: 1.3rem; font-weight: 800;
+  color: #fff; margin: 0 0 8px;
+  letter-spacing: -.02em;
+}
+.wd-stage-desc {
+  font-size: .88rem; color: #8b95a5;
+  margin: 0 0 28px; line-height: 1.55;
 }
 
-.wd-success-desc {
-  font-size: 0.9rem;
-  color: #8b95a5;
-  margin: 0 0 24px;
-  line-height: 1.5;
-}
-
-.wd-success-amount {
-  font-size: 2rem;
-  font-weight: 800;
-  background: linear-gradient(100deg, #fff, #7dd3fc);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  margin-bottom: 24px;
-  letter-spacing: -0.03em;
-}
-
-.wd-success-details {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 16px;
-  text-align: left;
-  margin-bottom: 20px;
-}
-
-.wd-success-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.wd-success-actions .wd-btn {
-  flex: 1;
-}
-
-/* ============================================================
-   CRYPTO-SPECIFIC — network visualization
-   ============================================================ */
-
-.wd-network-viz {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 20px 0;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 14px;
-}
-
-.wd-network-node {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(139, 92, 246, 0.3);
-  transition: all 0.5s;
-}
-
-.wd-network-node.active {
-  background: #a78bfa;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
-}
-
-.wd-network-node.done {
-  background: #10b981;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
-}
-
-.wd-network-line {
-  flex: 1;
-  height: 2px;
-  background: rgba(139, 92, 246, 0.15);
-  position: relative;
-  overflow: hidden;
-}
-
-.wd-network-line::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -50%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, #a78bfa, transparent);
-  animation: wdNetworkFlow 1.5s linear infinite;
-}
-
-@keyframes wdNetworkFlow {
-  from { left: -50%; }
-  to { left: 100%; }
-}
-
-/* ============================================================
-   IBAN-SPECIFIC — validation animation
-   ============================================================ */
-
+/* 🎯 IBAN validation rows */
 .wd-iban-validation {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 14px;
-  margin: 20px 0;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px; background: rgba(0,0,0,.3);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 14px; margin: 20px 0;
   text-align: left;
 }
-
 .wd-iban-part {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  opacity: 0;
-  transform: translateX(-10px);
-  animation: wdIbanPartIn 0.3s ease forwards;
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: ui-monospace, monospace; font-size: 12px;
+  opacity: 0; transform: translateX(-10px);
+  animation: wdSlideIn .35s ease forwards;
 }
-
-@keyframes wdIbanPartIn {
+@keyframes wdSlideIn {
   to { opacity: 1; transform: translateX(0); }
 }
-
-.wd-iban-check {
-  color: #10b981;
-  font-weight: 900;
+.wd-iban-label {
+  color: #64748b; font-size: 10px;
+  text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
 }
-
-.wd-iban-part .wd-iban-label {
-  color: #64748b;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
+.wd-iban-value {
+  color: #e7edf5; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 6px;
 }
+.wd-check { color: #10b981; display: inline-flex; }
 
-.wd-iban-part .wd-iban-value {
-  color: #e7edf5;
-  font-weight: 700;
-}
-
-/* ============================================================
-   CARD-SPECIFIC — swipe animation
-   ============================================================ */
-
-.wd-card-swipe {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-}
-
+/* 🎯 Card mini preview */
 .wd-card-mini {
-  width: 200px;
-  height: 120px;
-  border-radius: 12px;
+  width: 240px; height: 140px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #1e293b, #0f172a);
-  border: 1px solid rgba(236, 72, 153, 0.3);
-  position: relative;
-  overflow: hidden;
-  padding: 16px;
-  font-family: ui-monospace, monospace;
-  color: #fff;
+  border: 1px solid rgba(236,72,153,.3);
+  position: relative; overflow: hidden;
+  padding: 18px; margin: 0 auto 20px;
+  font-family: ui-monospace, monospace; color: #fff;
+  text-align: left;
 }
-
 .wd-card-mini::after {
   content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(236, 72, 153, 0.3), transparent);
-  animation: wdCardSwipe 1.8s ease-in-out infinite;
+  position: absolute; top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(236,72,153,.25), transparent);
+  animation: wdCardSwipe 2s ease-in-out infinite;
 }
-
 @keyframes wdCardSwipe {
   0% { left: -100%; }
   50% { left: 100%; }
   100% { left: 100%; }
 }
-
-.wd-card-mini-label {
-  font-size: 9px;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
+.wd-card-mini-chip {
+  width: 32px; height: 24px; border-radius: 4px;
+  background: linear-gradient(135deg, #f5d67a, #a37c0c);
+  margin-bottom: 20px;
 }
-
 .wd-card-mini-num {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 1px; margin-bottom: 12px;
+}
+.wd-card-mini-footer {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: #94a3b8;
 }
 
-.wd-card-mini-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: #94a3b8;
+/* 🎯 Network viz */
+.wd-network-viz {
+  margin: 20px auto;
+  max-width: 300px;
+  padding: 12px;
+  background: rgba(0,0,0,.3);
+  border-radius: 14px;
 }
+
+/* 🎯 Steps list */
+.wd-progress-steps {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 18px; background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 14px; margin: 20px 0;
+  text-align: left;
+}
+.wd-step {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+  opacity: .55;
+  transition: all .3s ease;
+}
+.wd-step.active {
+  opacity: 1;
+  background: rgba(71,220,255,.06);
+  border: 1px solid rgba(71,220,255,.25);
+}
+.wd-step.done {
+  opacity: 1;
+  background: rgba(16,185,129,.06);
+  border: 1px solid rgba(16,185,129,.25);
+}
+.wd-step-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.06);
+  color: #94a3b8;
+  transition: all .3s;
+}
+.wd-step.active .wd-step-icon {
+  background: rgba(71,220,255,.15);
+  color: #47dcff;
+  border: 1px solid rgba(71,220,255,.4);
+}
+.wd-step.done .wd-step-icon {
+  background: rgba(16,185,129,.15);
+  border: 1px solid rgba(16,185,129,.4);
+}
+.wd-spinner {
+  display: inline-block;
+  animation: wdSpin 1s linear infinite;
+}
+@keyframes wdSpin {
+  to { transform: rotate(360deg); }
+}
+.wd-step-text {
+  flex: 1;
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+.wd-step-time {
+  font-size: 11px;
+  color: #64748b;
+  font-family: ui-monospace, monospace;
+}
+.wd-step.done .wd-step-time { color: #10b981; }
+.wd-step.active .wd-step-time { color: #47dcff; }
+
+/* 🎯 Live data */
+.wd-live-data {
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 16px 0;
+  text-align: left;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.wd-live-data:empty { display: none; }
+.wd-live-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; gap: 12px;
+}
+.wd-live-row:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,.03); }
+.wd-live-label {
+  color: #64748b; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
+}
+.wd-live-value {
+  color: #e7edf5; font-weight: 700;
+  text-align: right;
+  display: inline-flex; align-items: center; gap: 6px;
+  justify-content: flex-end;
+  word-break: break-all;
+}
+.wd-live-value.hash { color: #47dcff; font-size: 11px; }
+.wd-live-value.positive { color: #10b981; }
+.wd-live-value.warning { color: #fbbf24; }
+.wd-live-value.muted { color: #64748b; font-weight: 500; }
+
+.wd-copy-btn {
+  background: rgba(71,220,255,.08);
+  border: 1px solid rgba(71,220,255,.2);
+  color: #47dcff;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  font-size: 11px;
+}
+.wd-copy-btn:hover { background: rgba(71,220,255,.2); }
+
+/* ============================================================
+   STAGE 3 — SUCCESS
+   ============================================================ */
+.wd-success {
+  display: none;
+  text-align: center;
+  padding: 20px 0;
+  animation: wdStageIn .4s ease;
+}
+.wd-success[style*="display: block"] { display: block !important; }
+
+.wd-success-title {
+  font-size: 1.5rem; font-weight: 800;
+  margin: 0 0 8px;
+  background: linear-gradient(100deg, #fff, #4edca9);
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+}
+.wd-success-desc {
+  font-size: .88rem; color: #8b95a5;
+  margin: 0 0 24px; line-height: 1.5;
+}
+.wd-success-amount {
+  font-size: 2.2rem; font-weight: 800;
+  font-family: ui-monospace, monospace;
+  color: #4edca9;
+  margin: 0 0 24px;
+  letter-spacing: -.03em;
+  text-shadow: 0 4px 24px rgba(78,220,169,.4);
+}
+.wd-success-details {
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+.wd-success-actions {
+  display: flex; gap: 10px;
+}
+.wd-success-actions .wd-btn { flex: 1; }
 
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-
 @media (max-width: 540px) {
-  .wd-modal-card {
-    padding: 22px;
-    border-radius: 20px;
-    max-height: 95vh;
-  }
+  .wd-modal-card { padding: 22px; border-radius: 20px; }
   .wd-form-title { font-size: 1.2rem; }
   .wd-success-amount { font-size: 1.6rem; }
-  .wd-processing-icon {
-    width: 80px;
-    height: 80px;
-    font-size: 34px;
-  }
+  .wd-stage-icon { width: 80px; height: 80px; }
+  .wd-card-mini { width: 200px; height: 120px; }
 }
