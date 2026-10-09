@@ -744,7 +744,8 @@
 
     // Добавляем в notifications (если функция есть)
     if (typeof window.addNotification === 'function') {
-      window.addNotification('+' + amount + ' NC — ' + label, getBonusIcon(d.type));
+      // Notification иконки оставляем текстовыми, чтобы не ломать grid
+window.addNotification('+' + amount + ' NC — ' + label, '🎁');
     }
 
     // Анимация badge — pulse
