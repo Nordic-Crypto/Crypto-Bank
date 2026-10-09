@@ -4026,8 +4026,13 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="admin-system">
           <div class="admin-system-row">
             <div><div class="admin-system-label">Version</div><div class="admin-system-value" id="adminVersion">1.0.0</div></div>
-            <button class="btn b1" id="adminPushUpdate">🚀 Push version</button>
-            <button class="btn b3" id="adminEndUpdate">⏹ End Update
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <button class="btn b1" id="adminPushUpdate" title="Quick 5-15 min update">🚀 Quick Update</button>
+  <button class="btn b2" id="adminMaintenance" title="1-6 hours maintenance">🌙 Maintenance</button>
+  <button class="btn b3" id="adminWeekendOff" title="1-7 days — full off for weekend">🏖 Weekend Off</button>
+  <button class="btn b3" id="adminEndUpdate" title="End update now">⏹ End Update</button>
+</div>
+<div id="adminMaintStatus" style="margin-top:8px;font-size:.82rem;font-family:ui-monospace,monospace;color:#94a3b8;">🟢 Inactive</div>
           </div>
           <div class="admin-system-row">
             <div><div class="admin-system-label">Send notification</div><div class="admin-system-value" style="color:#94a3b8;font-weight:400;font-size:.82rem;">Message to all clients</div></div>
