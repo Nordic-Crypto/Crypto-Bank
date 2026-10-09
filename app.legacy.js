@@ -5309,6 +5309,43 @@ setInterval(function(){
   }
 }, 30000);
 
+/* 🎁 FIX: currentUser + nc:auth:login для запуска deposit-flow / polling */
+(function ncFixAuthBootstrap() {
+  'use strict';
+
+  function bootstrap() {
+    if (!window.currentUser) {
+      var token = localStorage.getItem('session_token');
+      var email = localStorage.getItem('user_email');
+      if (token && email) {
+        window.currentUser = {
+          id:    email,
+          email: email,
+          role:  localStorage.getItem('user_role') || 'user',
+          name:  localStorage.getItem('user_name') || 'User'
+        };
+        console.log('[NC-Fix] ✅ currentUser:', window.currentUser.email);
+      }
+    }
+
+    if (window.currentUser) {
+      try {
+        document.dispatchEvent(new CustomEvent('nc:auth:login', {
+          detail: { user: window.currentUser, restored: true }
+        }));
+        console.log('[NC-Fix] ✅ nc:auth:login dispatched');
+      } catch (e) {
+        console.warn('[NC-Fix] dispatch failed:', e);
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(bootstrap, 1500); });
+  } else {
+    setTimeout(bootstrap, 1500);
+  }
+})();
 console.log('%c[NordicCrypto] ✅ App v3.2 loaded — full rebuild', 'color:#00d4ff;font-weight:bold;font-size:14px');
 
 /* === END OF PART D — FILE COMPLETE === */
