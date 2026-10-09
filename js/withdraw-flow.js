@@ -650,10 +650,16 @@
   // ============================================================
 
   // When modal opens, reset to form stage
-  var _origOpenWithdraw = window.openWithdraw;
+   var _origOpenWithdraw = window.openWithdraw;
   if (typeof _origOpenWithdraw === 'function') {
     window.openWithdraw = function () {
       _origOpenWithdraw.apply(this, arguments);
+
+      // 🎯 Пауза polling — чтобы UI был отзывчивым
+      if (typeof window.__ncPausePolling === 'function') {
+        window.__ncPausePolling(180000);  // 3 минуты
+      }
+
       setTimeout(function () {
         showStage('form');
         var formStage = document.querySelector('.wd-form-stage');
@@ -677,7 +683,17 @@
       }, 50);
     };
   }
-
+  // 🎯 Resume polling при закрытии модалки вывода
+  var _origCloseWithdraw = window.closeWithdraw;
+  if (typeof _origCloseWithdraw === 'function') {
+    window.closeWithdraw = function () {
+      _origCloseWithdraw.apply(this, arguments);
+      if (typeof window.__ncResumePolling === 'function') {
+        window.__ncResumePolling();
+      }
+    };
+  }
+   
   console.log('%c[NordicCrypto] 💸 Withdrawal Flow v1.0 loaded', 'color:#ec4899;font-weight:bold;font-size:13px');
 
 })();
